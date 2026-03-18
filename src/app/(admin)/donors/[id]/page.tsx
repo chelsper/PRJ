@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { DonorProfileForm } from "@/components/donors/donor-profile-form";
+import { DonorViewShell } from "@/components/donors/donor-view-shell";
 import { OrganizationTab } from "@/components/donors/organization-tab";
 import { SendReceiptButton } from "@/components/gifts/send-receipt-button";
 import { getSessionWithCapability, requireCapability } from "@/server/auth/permissions";
@@ -62,7 +63,8 @@ export default async function DonorProfilePage({
     tab === "giving" || tab === "communications" || tab === "notes" || tab === "organization" ? tab : "profile";
 
   return (
-    <div className="grid">
+    <DonorViewShell>
+      <div className="grid donor-page-grid">
       <section className="hero">
         <p className="eyebrow">Donor Profile</p>
         <h1>{donor.full_name}</h1>
@@ -79,34 +81,34 @@ export default async function DonorProfilePage({
             </Link>
           </div>
         ) : null}
-        <div className="stats">
+        <div className="stats donor-summary-stats">
           <article className="stat">
             <span className="muted">Donor recognition total</span>
-            <strong>${(Number(donor.donor_recognition_cents) / 100).toLocaleString()}</strong>
+            <strong className="stat-value">${(Number(donor.donor_recognition_cents) / 100).toLocaleString()}</strong>
           </article>
           <article className="stat">
             <span className="muted">Hard-credit lifetime</span>
-            <strong>${(Number(donor.donor_hard_credit_cents) / 100).toLocaleString()}</strong>
+            <strong className="stat-value">${(Number(donor.donor_hard_credit_cents) / 100).toLocaleString()}</strong>
           </article>
           <article className="stat">
             <span className="muted">Soft-credit lifetime</span>
-            <strong>${(Number(donor.donor_soft_credit_cents) / 100).toLocaleString()}</strong>
+            <strong className="stat-value">${(Number(donor.donor_soft_credit_cents) / 100).toLocaleString()}</strong>
           </article>
           <article className="stat">
             <span className="muted">Current-year giving level</span>
-            <strong>{donor.giving_level_display ?? "Below giving level threshold"}</strong>
+            <strong className="stat-value">{donor.giving_level_display ?? "Below giving level threshold"}</strong>
           </article>
           <article className="stat">
             <span className="muted">Current-year recognition</span>
-            <strong>${(Number(donor.current_year_recognition_cents) / 100).toLocaleString()}</strong>
+            <strong className="stat-value">${(Number(donor.current_year_recognition_cents) / 100).toLocaleString()}</strong>
           </article>
           <article className="stat">
             <span className="muted">Primary email</span>
-            <strong>{donor.primary_email ?? "None"}</strong>
+            <strong className="stat-value">{donor.primary_email ?? "None"}</strong>
           </article>
           <article className="stat">
             <span className="muted">Last gift</span>
-            <strong>
+            <strong className="stat-value">
               {latestGift
                 ? `${latestGift.gift_date} · $${(latestGift.amount_cents / 100).toLocaleString()}`
                 : "No gifts yet"}
@@ -152,6 +154,7 @@ export default async function DonorProfilePage({
                 </Link>
               ) : null}
             </div>
+            <div className="table-scroll">
             <table>
               <thead>
                 <tr>
@@ -198,10 +201,12 @@ export default async function DonorProfilePage({
                 ))}
               </tbody>
             </table>
+            </div>
           </section>
 
           <section className="table-shell">
             <p className="eyebrow">Soft Credits</p>
+            <div className="table-scroll">
             <table>
               <thead>
                 <tr>
@@ -238,30 +243,32 @@ export default async function DonorProfilePage({
                 )}
               </tbody>
             </table>
+            </div>
           </section>
         </div>
       ) : activeTab === "communications" ? (
         <div className="grid grid-2">
           <section className="card">
             <p className="eyebrow">Communication Summary</p>
-            <div className="stats">
+            <div className="stats donor-summary-stats">
               <article className="stat">
                 <span className="muted">Preferred email</span>
-                <strong>{donor.primary_email ?? "No email on file"}</strong>
+                <strong className="stat-value">{donor.primary_email ?? "No email on file"}</strong>
               </article>
               <article className="stat">
                 <span className="muted">Preferred email type</span>
-                <strong>{donor.primary_email_type ?? "Unspecified"}</strong>
+                <strong className="stat-value">{donor.primary_email_type ?? "Unspecified"}</strong>
               </article>
               <article className="stat">
                 <span className="muted">Most recent gift</span>
-                <strong>{latestGift ? `${latestGift.gift_date} · $${(latestGift.amount_cents / 100).toLocaleString()}` : "No gifts yet"}</strong>
+                <strong className="stat-value">{latestGift ? `${latestGift.gift_date} · $${(latestGift.amount_cents / 100).toLocaleString()}` : "No gifts yet"}</strong>
               </article>
             </div>
           </section>
 
           <section className="table-shell">
             <p className="eyebrow">Receipts and Acknowledgments</p>
+            <div className="table-scroll">
             <table>
               <thead>
                 <tr>
@@ -286,6 +293,7 @@ export default async function DonorProfilePage({
                 </tr>
               </tbody>
             </table>
+            </div>
           </section>
 
           <section className="table-shell full">
@@ -295,6 +303,7 @@ export default async function DonorProfilePage({
                 <p className="muted">This tab is structured for future receipt sending, acknowledgment tracking, and contact history.</p>
               </div>
             </div>
+            <div className="table-scroll">
             <table>
               <thead>
                 <tr>
@@ -313,6 +322,7 @@ export default async function DonorProfilePage({
                 </tr>
               </tbody>
             </table>
+            </div>
           </section>
         </div>
       ) : activeTab === "organization" && donor.donor_type === "ORGANIZATION" ? (
@@ -395,6 +405,7 @@ export default async function DonorProfilePage({
           promoteRelationshipAction={promoteOrganizationRelationshipToDonorAction}
         />
       )}
-    </div>
+      </div>
+    </DonorViewShell>
   );
 }
