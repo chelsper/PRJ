@@ -17,6 +17,7 @@ export function DonorProfileForm({
   titleOptions,
   emailTypeOptions,
   addressTypeOptions,
+  stateOptions,
   relationshipTypeOptions,
   updateAction,
   addRelationshipAction,
@@ -31,6 +32,7 @@ export function DonorProfileForm({
   titleOptions: ConfigLookupOption[];
   emailTypeOptions: ConfigLookupOption[];
   addressTypeOptions: ConfigLookupOption[];
+  stateOptions: ConfigLookupOption[];
   relationshipTypeOptions: ConfigLookupOption[];
   updateAction: FormAction;
   addRelationshipAction: FormAction;
@@ -200,7 +202,14 @@ export function DonorProfileForm({
           </label>
           <label>
             State / Region
-            <input name="stateRegion" defaultValue={donor.state_region ?? ""} />
+            <select name="stateRegion" defaultValue={donor.state_region ?? ""}>
+              <option value="">None</option>
+              {stateOptions.map((option) => (
+                <option key={option.id} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
           </label>
           <label>
             Postal code
@@ -486,7 +495,14 @@ export function DonorProfileForm({
                 </label>
                 <label>
                   State / Region
-                  <input name="organizationStateRegion" />
+                  <select name="organizationStateRegion" defaultValue="">
+                    <option value="">None</option>
+                    {stateOptions.map((option) => (
+                      <option key={option.id} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
                 </label>
                 <label>
                   Postal code

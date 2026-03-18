@@ -424,8 +424,9 @@ export default async function DonorProfilePage({
           relationships={relationships}
           titleOptions={optionSets.titles}
           emailTypeOptions={optionSets.email_types}
-          addressTypeOptions={optionSets.address_types}
-          relationshipTypeOptions={optionSets.donor_relationship_types}
+              addressTypeOptions={optionSets.address_types}
+              stateOptions={optionSets.states}
+              relationshipTypeOptions={optionSets.donor_relationship_types}
           updateAction={updateDonorProfileAction}
           addRelationshipAction={addDonorOrganizationRelationshipAction}
           deleteRelationshipAction={deleteDonorOrganizationRelationshipAction}

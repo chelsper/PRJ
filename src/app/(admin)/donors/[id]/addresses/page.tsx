@@ -20,7 +20,11 @@ export default async function DonorAddressesPage({
     notFound();
   }
 
-  const [addresses, addressTypeOptions] = await Promise.all([listDonorAddresses(id), listConfigOptions("address_types")]);
+  const [addresses, addressTypeOptions, stateOptions] = await Promise.all([
+    listDonorAddresses(id),
+    listConfigOptions("address_types"),
+    listConfigOptions("states")
+  ]);
 
   return (
     <div className="grid">
@@ -91,7 +95,14 @@ export default async function DonorAddressesPage({
             </label>
             <label>
               State / Region
-              <input name="stateRegion" />
+              <select name="stateRegion" defaultValue="">
+                <option value="">None</option>
+                {stateOptions.map((option) => (
+                  <option key={option.id} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
             </label>
             <label>
               Postal code

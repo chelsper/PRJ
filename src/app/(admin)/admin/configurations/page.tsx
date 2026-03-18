@@ -27,6 +27,7 @@ const setLabels: Record<ManagedOptionSetKey, string> = {
   titles: "Titles",
   email_types: "Email Types",
   address_types: "Address Types",
+  states: "States",
   note_categories: "Note Categories",
   donor_relationship_types: "Organization Relationship Types",
   organization_contact_types: "Organization Contact Types"

@@ -29,6 +29,7 @@ export const managedOptionSets = [
   "titles",
   "email_types",
   "address_types",
+  "states",
   "note_categories",
   "donor_relationship_types",
   "organization_contact_types"
