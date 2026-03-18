@@ -1,7 +1,8 @@
 import Link from "next/link";
 
+import { DonorPageSearch } from "@/components/donors/donor-page-search";
 import { requireCapability } from "@/server/auth/permissions";
-import { getDonorLookupRowsByIds, listDonors, listRecentlyAccessedDonors, type DonorListRow } from "@/server/data/donors";
+import { getDonorLookupRowsByIds, listRecentlyAccessedDonors, type DonorListRow } from "@/server/data/donors";
 
 import { createDonorAction } from "./actions";
 
@@ -26,27 +27,14 @@ export default async function DonorsPage({
     .split(",")
     .map((value) => value.trim())
     .filter(Boolean);
-  const search = params.q?.trim() ?? "";
-  const [donors, possibleMatches] = await Promise.all([
-    search ? listDonors(search) : listRecentlyAccessedDonors(),
-    duplicateIds.length > 0 ? getDonorLookupRowsByIds(duplicateIds) : Promise.resolve([])
-  ]);
+  const donors = await listRecentlyAccessedDonors();
+  const possibleMatches = duplicateIds.length > 0 ? await getDonorLookupRowsByIds(duplicateIds) : [];
 
   return (
     <div className="grid">
       <section className="card">
         <p className="eyebrow">Donor Lookup</p>
-        <form method="get" className="form-grid">
-          <label className="full">
-            Search donor name
-            <input name="q" defaultValue={params.q ?? ""} />
-          </label>
-          <div className="full">
-            <button type="submit" className="secondary">
-              Filter
-            </button>
-          </div>
-        </form>
+        <DonorPageSearch />
       </section>
 
       <section className="grid grid-2">
@@ -123,7 +111,7 @@ export default async function DonorsPage({
         </article>
 
         <article className="table-shell">
-          <p className="eyebrow">{search ? "Donor Search Results" : "Recently Accessed Donors"}</p>
+          <p className="eyebrow">Recently Accessed Donors</p>
           <table>
             <thead>
               <tr>
