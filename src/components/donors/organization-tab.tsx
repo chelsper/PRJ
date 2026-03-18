@@ -74,25 +74,12 @@ export function OrganizationTab({
   return (
     <div className="grid">
       <section className="card">
-        <p className="eyebrow">Organization Overview</p>
+        <p className="eyebrow">Primary Contact</p>
         <form action={updateAction} className="form-grid">
           <input type="hidden" name="donorId" value={donorId} />
-          <div className="full form-section-heading">
-            <p className="eyebrow">Organization</p>
-            <p className="muted">Keep the main organization record details current here.</p>
-          </div>
-          <label className="full">
-            Organization name
-            <input name="organizationName" defaultValue={donor.organization_name ?? ""} required />
-          </label>
-          <label>
-            Organization website
-            <input name="organizationWebsite" type="url" defaultValue={donor.organization_website ?? ""} />
-          </label>
-          <label>
-            Organization email
-            <input name="organizationEmail" type="email" defaultValue={donor.organization_email ?? ""} />
-          </label>
+          <input type="hidden" name="organizationName" value={donor.organization_name ?? ""} />
+          <input type="hidden" name="organizationWebsite" value={donor.organization_website ?? ""} />
+          <input type="hidden" name="organizationEmail" value={donor.organization_email ?? ""} />
           <div className="full form-section-heading">
             <p className="eyebrow">Main Contact</p>
             <p className="muted">Link an existing constituent or enter a new contact for this organization.</p>
@@ -197,7 +184,7 @@ export function OrganizationTab({
             />
           </label>
           <div className="full">
-            <button type="submit">Save organization</button>
+            <button type="submit">Save Contact</button>
           </div>
         </form>
       </section>

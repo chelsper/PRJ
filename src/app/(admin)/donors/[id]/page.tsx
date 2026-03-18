@@ -184,7 +184,7 @@ export default async function DonorProfilePage({
         </Link>
         {donor.donor_type === "ORGANIZATION" ? (
           <Link href={`/donors/${id}?tab=organization`} className={activeTab === "organization" ? "tab-link active" : "tab-link"}>
-            Organization
+            Relationships
           </Link>
         ) : null}
         <Link href={`/donors/${id}?tab=notes`} className={activeTab === "notes" ? "tab-link active" : "tab-link"}>

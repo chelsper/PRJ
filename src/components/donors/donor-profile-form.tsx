@@ -123,6 +123,18 @@ export function DonorProfileForm({
             </>
           ) : (
             <>
+              <label className="full">
+                Organization name
+                <input name="organizationName" defaultValue={donor.organization_name ?? ""} required />
+              </label>
+              <label>
+                Organization website
+                <input name="organizationWebsite" type="url" defaultValue={donor.organization_website ?? ""} />
+              </label>
+              <label>
+                Organization email
+                <input name="organizationEmail" type="email" defaultValue={donor.organization_email ?? ""} />
+              </label>
               <input type="hidden" name="title" value={donor.title ?? ""} />
               <input type="hidden" name="firstName" value={donor.first_name ?? ""} />
               <input type="hidden" name="middleName" value={donor.middle_name ?? ""} />
@@ -130,9 +142,13 @@ export function DonorProfileForm({
               <input type="hidden" name="preferredName" value={donor.preferred_name ?? ""} />
             </>
           )}
-          <input type="hidden" name="organizationName" value={donor.organization_name ?? ""} />
-          <input type="hidden" name="organizationWebsite" value={donor.organization_website ?? ""} />
-          <input type="hidden" name="organizationEmail" value={donor.organization_email ?? ""} />
+          {!isOrganization ? (
+            <>
+              <input type="hidden" name="organizationName" value={donor.organization_name ?? ""} />
+              <input type="hidden" name="organizationWebsite" value={donor.organization_website ?? ""} />
+              <input type="hidden" name="organizationEmail" value={donor.organization_email ?? ""} />
+            </>
+          ) : null}
           <input type="hidden" name="organizationContactDonorId" value={donor.organization_contact_donor_id ?? ""} />
           <input type="hidden" name="organizationContactTitle" value={donor.organization_contact_title ?? ""} />
           <input type="hidden" name="organizationContactFirstName" value={donor.organization_contact_first_name ?? ""} />
