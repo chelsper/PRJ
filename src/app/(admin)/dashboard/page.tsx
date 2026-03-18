@@ -97,9 +97,9 @@ export default async function DashboardPage() {
               <span className="muted">➕ Add Gift</span>
               <strong>Record a new contribution or pledge.</strong>
             </Link>
-            <Link href="/donors" className="stat">
+            <Link href="/receipts" className="stat">
               <span className="muted">🧾 Send Receipt</span>
-              <strong>Open a donor record and send an e-receipt from Giving.</strong>
+              <strong>Search a donor, pick a recent gift, and generate a receipt.</strong>
             </Link>
             <Link href="/imports" className="stat">
               <span className="muted">📥 Import Gifts</span>
