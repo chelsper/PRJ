@@ -5,7 +5,7 @@ import { roles, type Role } from "@/server/auth/roles";
 import { listInvitations, listUsers, type UserInvitationRow, type UserRow } from "@/server/data/users";
 import { env } from "@/server/env";
 
-import { createInvitationAction, regenerateInvitationAction, updateUserAction } from "../../users/actions";
+import { createDirectUserAction, createInvitationAction, regenerateInvitationAction, updateUserAction } from "../../users/actions";
 
 export default async function AdminUsersPage({
   searchParams
@@ -14,6 +14,8 @@ export default async function AdminUsersPage({
     invite_token?: string;
     invite_email?: string;
     invite_role?: string;
+    created_email?: string;
+    created_role?: string;
     error?: string;
   }>;
 }) {
@@ -65,6 +67,45 @@ export default async function AdminUsersPage({
             </div>
             <p className="muted">This is a single-use link that expires automatically.</p>
           </div>
+        ) : null}
+      </section>
+
+      <section className="card">
+        <p className="eyebrow">Create User Directly</p>
+        <p className="muted">Use this fallback when you want to skip the invite link and give the user a password directly.</p>
+        <form action={createDirectUserAction} className="form-grid">
+          <label>
+            Email
+            <input name="email" type="email" required />
+          </label>
+          <label>
+            Role
+            <select name="role" defaultValue="staff">
+              {roles.map((role: Role) => (
+                <option key={role} value={role}>
+                  {role}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label>
+            Temporary password
+            <input name="password" type="text" minLength={12} required />
+          </label>
+          <label>
+            Confirm password
+            <input name="confirmPassword" type="text" minLength={12} required />
+          </label>
+          <div className="full">
+            <button type="submit">Create user</button>
+          </div>
+        </form>
+        {params.error === "direct_user_exists" ? <p className="danger">A user with that email already exists.</p> : null}
+        {params.error === "direct_user_failed" ? <p className="danger">The user could not be created.</p> : null}
+        {params.created_email ? (
+          <p className="muted">
+            User created for <strong>{params.created_email}</strong> as <strong>{params.created_role}</strong>. They can now sign in with the password you entered.
+          </p>
         ) : null}
       </section>
 

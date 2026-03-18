@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 
 import { requireCapability } from "@/server/auth/permissions";
 import { roles, type Role } from "@/server/auth/roles";
-import { createInvitation, regenerateInvitation, updateUserAccess } from "@/server/data/users";
+import { createInvitation, createUserDirectly, regenerateInvitation, updateUserAccess } from "@/server/data/users";
 import { assertSameOrigin } from "@/server/security/csrf";
 import { assertRateLimit, recordRateLimitEvent } from "@/server/security/rate-limit";
 import { env } from "@/server/env";
@@ -52,6 +52,44 @@ export async function createInvitationAction(formData: FormData) {
   redirect(
     `/admin/users?invite_token=${encodeURIComponent(invitation.token)}&invite_email=${encodeURIComponent(invitation.email)}&invite_role=${encodeURIComponent(invitation.role)}`
   );
+}
+
+export async function createDirectUserAction(formData: FormData) {
+  await assertSameOrigin();
+  const session = await requireCapability("users:manage");
+  const requestHeaders = await headers();
+  const ipAddress = requestHeaders.get("x-forwarded-for")?.split(",")[0]?.trim() ?? null;
+
+  const email = String(formData.get("email") ?? "").trim().toLowerCase();
+  const role = String(formData.get("role") ?? "") as Role;
+  const password = String(formData.get("password") ?? "");
+  const confirmPassword = String(formData.get("confirmPassword") ?? "");
+
+  try {
+    await createUserDirectly(
+      { email, role, password, confirmPassword },
+      { userId: session.userId, ipAddress }
+    );
+  } catch (error) {
+    await writeAuditLog({
+      actorUserId: session.userId,
+      action: "user.create.direct",
+      entityType: "user",
+      entityId: null,
+      status: "failed",
+      ipAddress,
+      metadata: { email, role, error: error instanceof Error ? error.message : "Unknown error" }
+    });
+
+    let errorCode = "direct_user_failed";
+    if (error instanceof Error && error.message.includes("already exists")) {
+      errorCode = "direct_user_exists";
+    }
+
+    redirect(`/admin/users?error=${encodeURIComponent(errorCode)}`);
+  }
+
+  redirect(`/admin/users?created_email=${encodeURIComponent(email)}&created_role=${encodeURIComponent(role)}`);
 }
 
 export async function updateUserAction(formData: FormData) {

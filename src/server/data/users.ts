@@ -4,7 +4,7 @@ import { writeAuditLog } from "@/server/audit";
 import type { Role } from "@/server/auth/roles";
 import { hashPassword } from "@/server/auth/passwords";
 import { query, transaction } from "@/server/db";
-import { acceptInvitationSchema, inviteUserSchema } from "@/server/validation/auth";
+import { acceptInvitationSchema, adminCreateUserSchema, inviteUserSchema } from "@/server/validation/auth";
 
 type Actor = { userId: string; ipAddress?: string | null };
 
@@ -122,6 +122,57 @@ export async function createInvitation(
     role: values.role,
     token,
     expiresAt: row.expires_at
+  };
+}
+
+export async function createUserDirectly(
+  input: unknown,
+  actor: Actor
+): Promise<{ userId: string; email: string; role: Role }> {
+  const values = adminCreateUserSchema.parse(input);
+
+  const existingUser = await query<{ id: string }>(
+    `select id::text
+     from public.users
+     where email = $1`,
+    [values.email]
+  );
+
+  if (existingUser.rows[0]) {
+    throw new Error("A user with that email already exists.");
+  }
+
+  await query(
+    `delete from public.user_invitations
+     where email = $1
+       and used_at is null`,
+    [values.email]
+  );
+
+  const inserted = await query<{ id: string }>(
+    `insert into public.users (email, password_hash, role, status)
+     values ($1, $2, $3, 'active')
+     returning id::text`,
+    [values.email, hashPassword(values.password), values.role]
+  );
+
+  await writeAuditLog({
+    actorUserId: actor.userId,
+    action: "user.create.direct",
+    entityType: "user",
+    entityId: inserted.rows[0].id,
+    status: "success",
+    ipAddress: actor.ipAddress,
+    metadata: {
+      email: values.email,
+      role: values.role
+    }
+  });
+
+  return {
+    userId: inserted.rows[0].id,
+    email: values.email,
+    role: values.role
   };
 }
 
