@@ -101,6 +101,7 @@ export default async function EditGiftPage({
             initialGiftType={gift.gift_type}
             initialDonorId={gift.donor_id}
             initialValue={gift.parent_pledge_gift_id ?? ""}
+            initialAllowUnlinkedPayment={!gift.parent_pledge_gift_id && (gift.gift_type === "PLEDGE_PAYMENT" || gift.gift_type === "MATCHING_GIFT_PAYMENT")}
             initialOptions={pledges.map((pledge: PledgeOptionRow) => ({
               id: pledge.id,
               giftNumber: pledge.gift_number,
@@ -151,10 +152,6 @@ export default async function EditGiftPage({
               <option value="ANNUAL">Annual</option>
               <option value="CUSTOM">Custom</option>
             </select>
-          </label>
-          <label className="full">
-            <span>Proceed without parent pledge</span>
-            <input name="allowUnlinkedPayment" type="checkbox" value="true" defaultChecked={!gift.parent_pledge_gift_id && (gift.gift_type === "PLEDGE_PAYMENT" || gift.gift_type === "MATCHING_GIFT_PAYMENT")} />
           </label>
           <label>
             Payment method

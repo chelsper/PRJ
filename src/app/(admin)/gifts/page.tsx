@@ -124,10 +124,6 @@ export default async function GiftsPage({
               <option value="CUSTOM">Custom</option>
             </select>
           </label>
-          <label className="full">
-            <span>Proceed without parent pledge</span>
-            <input name="allowUnlinkedPayment" type="checkbox" value="true" />
-          </label>
           <label>
             Payment method
             <select name="paymentMethod" defaultValue="">

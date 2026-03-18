@@ -23,7 +23,8 @@ export function ParentPledgeField({
   initialGiftType,
   initialDonorId,
   initialValue = "",
-  initialOptions = []
+  initialOptions = [],
+  initialAllowUnlinkedPayment = false
 }: {
   donorFieldId: string;
   giftTypeFieldId: string;
@@ -31,10 +32,12 @@ export function ParentPledgeField({
   initialDonorId?: string | null;
   initialValue?: string;
   initialOptions?: PledgeOption[];
+  initialAllowUnlinkedPayment?: boolean;
 }) {
   const [giftType, setGiftType] = useState(initialGiftType);
   const [donorId, setDonorId] = useState(initialDonorId ?? "");
   const [value, setValue] = useState(initialValue);
+  const [allowUnlinkedPayment, setAllowUnlinkedPayment] = useState(initialAllowUnlinkedPayment);
   const [options, setOptions] = useState<PledgeOption[]>(initialOptions);
   const [loading, setLoading] = useState(false);
 
@@ -78,6 +81,7 @@ export function ParentPledgeField({
   useEffect(() => {
     if (!visible) {
       setValue("");
+      setAllowUnlinkedPayment(false);
       return;
     }
 
@@ -131,16 +135,28 @@ export function ParentPledgeField({
   }
 
   return (
-    <label>
-      Parent pledge
-      <select name="parentPledgeGiftId" value={value} onChange={(event) => setValue(event.target.value)}>
-        <option value="">{loading ? "Loading pledges..." : donorId ? "None" : "Select donor first"}</option>
-        {filteredOptions.map((option: PledgeOption) => (
-          <option key={option.id} value={option.id}>
-            {labelForPledge(option)}
-          </option>
-        ))}
-      </select>
-    </label>
+    <>
+      <label>
+        Parent pledge
+        <select name="parentPledgeGiftId" value={value} onChange={(event) => setValue(event.target.value)}>
+          <option value="">{loading ? "Loading pledges..." : donorId ? "None" : "Select donor first"}</option>
+          {filteredOptions.map((option: PledgeOption) => (
+            <option key={option.id} value={option.id}>
+              {labelForPledge(option)}
+            </option>
+          ))}
+        </select>
+      </label>
+      <label className="full">
+        <span>Proceed without parent pledge</span>
+        <input
+          name="allowUnlinkedPayment"
+          type="checkbox"
+          value="true"
+          checked={allowUnlinkedPayment}
+          onChange={(event) => setAllowUnlinkedPayment(event.target.checked)}
+        />
+      </label>
+    </>
   );
 }
