@@ -42,6 +42,16 @@ export type DonorProfileRow = {
   organization_contact_name: string | null;
   spouse_donor_id: string | null;
   spouse_name: string | null;
+  spouse_donor_number: string | null;
+  spouse_primary_email_record: string | null;
+  spouse_title: string | null;
+  spouse_first_name: string | null;
+  spouse_middle_name: string | null;
+  spouse_last_name: string | null;
+  spouse_preferred_email: string | null;
+  spouse_alternate_email: string | null;
+  spouse_primary_phone: string | null;
+  spouse_same_address: boolean;
   primary_email: string | null;
   primary_email_type: string | null;
   alternate_email: string | null;
@@ -70,6 +80,12 @@ export type DonorOrganizationRelationshipRow = {
   organization_donor_id: string | null;
   organization_name: string | null;
   organization_display_name: string;
+  organization_donor_number: string | null;
+  contact_name: string | null;
+  primary_email: string | null;
+  alternate_email: string | null;
+  primary_phone: string | null;
+  same_address: boolean;
   notes: string | null;
 };
 
@@ -196,6 +212,14 @@ async function donorAuditSnapshot(client: PoolClient, donorId: number) {
       'alternate_email_type', d.alternate_email_type,
       'primary_phone', d.primary_phone,
       'spouse_donor_id', d.spouse_donor_id,
+      'spouse_title', d.spouse_title,
+      'spouse_first_name', d.spouse_first_name,
+      'spouse_middle_name', d.spouse_middle_name,
+      'spouse_last_name', d.spouse_last_name,
+      'spouse_preferred_email', d.spouse_preferred_email,
+      'spouse_alternate_email', d.spouse_alternate_email,
+      'spouse_primary_phone', d.spouse_primary_phone,
+      'spouse_same_address', d.spouse_same_address,
       'giving_level', d.giving_level,
       'notes', d.notes,
       'deleted_at', d.deleted_at,
@@ -298,7 +322,7 @@ export async function searchDonorLookupRows(search: string): Promise<DonorConnec
       d.donor_number,
       d.donor_type,
       ${donorFullNameSql} as display_name,
-      d.primary_email
+      d.primary_email::text
     from public.donors d
     where d.deleted_at is null
       and (
@@ -366,7 +390,7 @@ export async function listDonorConnections(currentDonorId?: string): Promise<Don
       d.donor_number,
       d.donor_type,
       ${donorFullNameSql} as display_name,
-      d.primary_email
+      d.primary_email::text
     from public.donors d
     where d.deleted_at is null
       and ($1::bigint is null or d.id <> $1)
@@ -395,6 +419,16 @@ export async function getDonorProfile(donorId: string): Promise<DonorProfileRow 
       d.organization_contact_name,
       d.spouse_donor_id::text,
       ${linkedDonorNameSql("sp")} as spouse_name,
+      sp.donor_number as spouse_donor_number,
+      sp.primary_email::text as spouse_primary_email_record,
+      d.spouse_title,
+      d.spouse_first_name,
+      d.spouse_middle_name,
+      d.spouse_last_name,
+      d.spouse_preferred_email::text,
+      d.spouse_alternate_email::text,
+      d.spouse_primary_phone,
+      d.spouse_same_address,
       d.primary_email,
       d.primary_email_type,
       d.alternate_email,
@@ -525,6 +559,12 @@ export async function listDonorOrganizationRelationships(
       r.organization_donor_id::text,
       r.organization_name,
       coalesce(${linkedDonorNameSql("org")}, r.organization_name, 'Unnamed organization') as organization_display_name,
+      org.donor_number as organization_donor_number,
+      r.contact_name,
+      r.primary_email::text,
+      r.alternate_email::text,
+      r.primary_phone,
+      r.same_address,
       r.notes
     from public.donor_organization_relationships r
     left join public.donors org on org.id = r.organization_donor_id
@@ -594,10 +634,18 @@ export async function createDonor(input: unknown, actor: Actor) {
         alternate_email_type,
         primary_phone,
         spouse_donor_id,
+        spouse_title,
+        spouse_first_name,
+        spouse_middle_name,
+        spouse_last_name,
+        spouse_preferred_email,
+        spouse_alternate_email,
+        spouse_primary_phone,
+        spouse_same_address,
         notes,
         created_by,
         updated_by
-      ) values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $17)
+      ) values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $24)
       returning id::text`,
       [
         values.donorType,
@@ -615,6 +663,14 @@ export async function createDonor(input: unknown, actor: Actor) {
         values.alternateEmailType ?? null,
         values.primaryPhone ?? null,
         values.spouseDonorId ?? null,
+        values.spouseTitle ?? null,
+        values.spouseFirstName ?? null,
+        values.spouseMiddleName ?? null,
+        values.spouseLastName ?? null,
+        values.spousePreferredEmail ?? null,
+        values.spouseAlternateEmail ?? null,
+        values.spousePrimaryPhone ?? null,
+        values.spouseSameAddress ?? false,
         values.notes ?? null,
         actor.userId
       ]
@@ -695,8 +751,16 @@ export async function updateDonorProfile(donorId: string, input: unknown, actor:
            alternate_email_type = $14,
            primary_phone = $15,
            spouse_donor_id = $16,
-           notes = $17,
-           updated_by = $18
+           spouse_title = $17,
+           spouse_first_name = $18,
+           spouse_middle_name = $19,
+           spouse_last_name = $20,
+           spouse_preferred_email = $21,
+           spouse_alternate_email = $22,
+           spouse_primary_phone = $23,
+           spouse_same_address = $24,
+           notes = $25,
+           updated_by = $26
        where id = $1`,
       [
         Number(donorId),
@@ -715,6 +779,14 @@ export async function updateDonorProfile(donorId: string, input: unknown, actor:
         values.alternateEmailType ?? null,
         values.primaryPhone ?? null,
         values.spouseDonorId ?? null,
+        values.spouseTitle ?? null,
+        values.spouseFirstName ?? null,
+        values.spouseMiddleName ?? null,
+        values.spouseLastName ?? null,
+        values.spousePreferredEmail ?? null,
+        values.spouseAlternateEmail ?? null,
+        values.spousePrimaryPhone ?? null,
+        values.spouseSameAddress ?? false,
         values.notes ?? null,
         actor.userId
       ]
@@ -803,12 +875,265 @@ export async function updateDonorProfile(donorId: string, input: unknown, actor:
   });
 }
 
+async function copyPrimaryAddressToDonor(client: PoolClient, sourceDonorId: number, targetDonorId: number, userId: string) {
+  const sourceAddress = await client.query<{
+    address_type: string;
+    street1: string;
+    street2: string | null;
+    city: string;
+    state_region: string | null;
+    postal_code: string | null;
+    country: string;
+  }>(
+    `select
+      address_type,
+      street1,
+      street2,
+      city,
+      state_region,
+      postal_code,
+      country
+    from public.donor_addresses
+    where donor_id = $1
+      and is_primary = true
+    limit 1`,
+    [sourceDonorId]
+  );
+
+  if (!sourceAddress.rows[0]) {
+    return;
+  }
+
+  await client.query(
+    `insert into public.donor_addresses (
+      donor_id,
+      address_type,
+      street1,
+      street2,
+      city,
+      state_region,
+      postal_code,
+      country,
+      is_primary,
+      created_by,
+      updated_by
+    ) values ($1, $2, $3, $4, $5, $6, $7, $8, true, $9, $9)`,
+    [
+      targetDonorId,
+      sourceAddress.rows[0].address_type,
+      sourceAddress.rows[0].street1,
+      sourceAddress.rows[0].street2,
+      sourceAddress.rows[0].city,
+      sourceAddress.rows[0].state_region,
+      sourceAddress.rows[0].postal_code,
+      sourceAddress.rows[0].country,
+      userId
+    ]
+  );
+}
+
+export async function promoteSpouseToDonor(donorId: string, actor: Actor) {
+  return transaction(async (client) => {
+    const source = await client.query<{
+      spouse_donor_id: string | null;
+      spouse_title: string | null;
+      spouse_first_name: string | null;
+      spouse_middle_name: string | null;
+      spouse_last_name: string | null;
+      spouse_preferred_email: string | null;
+      spouse_alternate_email: string | null;
+      spouse_primary_phone: string | null;
+      spouse_same_address: boolean;
+    }>(
+      `select
+        spouse_donor_id::text,
+        spouse_title,
+        spouse_first_name,
+        spouse_middle_name,
+        spouse_last_name,
+        spouse_preferred_email::text,
+        spouse_alternate_email::text,
+        spouse_primary_phone,
+        spouse_same_address
+      from public.donors
+      where id = $1`,
+      [Number(donorId)]
+    );
+
+    const row = source.rows[0];
+
+    if (!row) {
+      throw new Error("Donor not found.");
+    }
+
+    if (row.spouse_donor_id) {
+      return row.spouse_donor_id;
+    }
+
+    if (!row.spouse_first_name || !row.spouse_last_name) {
+      throw new Error("Spouse first and last name are required before promotion.");
+    }
+
+    const inserted = await client.query<{ id: string }>(
+      `insert into public.donors (
+        donor_type,
+        title,
+        first_name,
+        middle_name,
+        last_name,
+        primary_email,
+        alternate_email,
+        primary_phone,
+        created_by,
+        updated_by
+      ) values ('INDIVIDUAL', $1, $2, $3, $4, $5, $6, $7, $8, $8)
+      returning id::text`,
+      [
+        row.spouse_title,
+        row.spouse_first_name,
+        row.spouse_middle_name,
+        row.spouse_last_name,
+        row.spouse_preferred_email,
+        row.spouse_alternate_email,
+        row.spouse_primary_phone,
+        actor.userId
+      ]
+    );
+
+    const spouseId = inserted.rows[0].id;
+
+    if (row.spouse_same_address) {
+      await copyPrimaryAddressToDonor(client, Number(donorId), Number(spouseId), actor.userId);
+    }
+
+    await client.query(
+      `update public.donors
+       set spouse_donor_id = $2,
+           updated_by = $3
+       where id = $1`,
+      [Number(donorId), Number(spouseId), actor.userId]
+    );
+
+    await client.query(
+      `insert into public.audit_log (actor_user_id, action, entity_type, entity_id, status, ip_address, metadata)
+       values ($1, 'donor.spouse.promote', 'donor', $2, 'success', $3, $4::jsonb)`,
+      [
+        actor.userId,
+        donorId,
+        actor.ipAddress ?? null,
+        JSON.stringify({ spouseDonorId: spouseId })
+      ]
+    );
+
+    return spouseId;
+  });
+}
+
+export async function promoteOrganizationRelationshipToDonor(
+  donorId: string,
+  relationshipId: string,
+  actor: Actor
+) {
+  return transaction(async (client) => {
+    const relationship = await client.query<{
+      organization_donor_id: string | null;
+      organization_name: string | null;
+      contact_name: string | null;
+      primary_email: string | null;
+      alternate_email: string | null;
+      primary_phone: string | null;
+      same_address: boolean;
+    }>(
+      `select
+        organization_donor_id::text,
+        organization_name,
+        contact_name,
+        primary_email::text,
+        alternate_email::text,
+        primary_phone,
+        same_address
+      from public.donor_organization_relationships
+      where id = $1
+        and donor_id = $2`,
+      [Number(relationshipId), Number(donorId)]
+    );
+
+    const row = relationship.rows[0];
+
+    if (!row) {
+      throw new Error("Organization relationship not found.");
+    }
+
+    if (row.organization_donor_id) {
+      return row.organization_donor_id;
+    }
+
+    if (!row.organization_name) {
+      throw new Error("Organization name is required before promotion.");
+    }
+
+    const inserted = await client.query<{ id: string }>(
+      `insert into public.donors (
+        donor_type,
+        organization_name,
+        organization_contact_name,
+        primary_email,
+        alternate_email,
+        primary_phone,
+        created_by,
+        updated_by
+      ) values ('ORGANIZATION', $1, $2, $3, $4, $5, $6, $6)
+      returning id::text`,
+      [
+        row.organization_name,
+        row.contact_name,
+        row.primary_email,
+        row.alternate_email,
+        row.primary_phone,
+        actor.userId
+      ]
+    );
+
+    const organizationId = inserted.rows[0].id;
+
+    if (row.same_address) {
+      await copyPrimaryAddressToDonor(client, Number(donorId), Number(organizationId), actor.userId);
+    }
+
+    await client.query(
+      `update public.donor_organization_relationships
+       set organization_donor_id = $2,
+           updated_by = $3
+       where id = $1`,
+      [Number(relationshipId), Number(organizationId), actor.userId]
+    );
+
+    await client.query(
+      `insert into public.audit_log (actor_user_id, action, entity_type, entity_id, status, ip_address, metadata)
+       values ($1, 'donor.relationship.promote', 'donor', $2, 'success', $3, $4::jsonb)`,
+      [
+        actor.userId,
+        donorId,
+        actor.ipAddress ?? null,
+        JSON.stringify({ relationshipId, organizationDonorId: organizationId })
+      ]
+    );
+
+    return organizationId;
+  });
+}
+
 export async function addDonorOrganizationRelationship(
   donorId: string,
   input: {
     relationshipType?: string | null;
     organizationDonorId?: string | null;
     organizationName?: string | null;
+    contactName?: string | null;
+    primaryEmail?: string | null;
+    alternateEmail?: string | null;
+    primaryPhone?: string | null;
+    sameAddress?: boolean;
     notes?: string | null;
   },
   actor: Actor
@@ -826,15 +1151,25 @@ export async function addDonorOrganizationRelationship(
         organization_donor_id,
         organization_name,
         relationship_type,
+        contact_name,
+        primary_email,
+        alternate_email,
+        primary_phone,
+        same_address,
         notes,
         created_by,
         updated_by
-      ) values ($1, $2, $3, $4, $5, $6, $6)`,
+      ) values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $10)`,
       [
         Number(donorId),
         input.organizationDonorId ? Number(input.organizationDonorId) : null,
         input.organizationName?.trim() || null,
         input.relationshipType ?? "OTHER",
+        input.contactName?.trim() || null,
+        input.primaryEmail?.trim() || null,
+        input.alternateEmail?.trim() || null,
+        input.primaryPhone?.trim() || null,
+        input.sameAddress ?? false,
         input.notes?.trim() || null,
         actor.userId
       ]

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 
+import { DonorLookup, type DonorLookupOption } from "@/components/donors/donor-lookup";
 import type {
   DonorConnectionRow,
   DonorOrganizationRelationshipRow,
@@ -11,6 +12,23 @@ import type {
 
 type FormAction = (formData: FormData) => void | Promise<void>;
 
+function toLookupOption(connection: {
+  id: string;
+  donor_number: string | null;
+  donor_type: "INDIVIDUAL" | "ORGANIZATION";
+  display_name?: string;
+  full_name?: string;
+  primary_email: string | null;
+}): DonorLookupOption {
+  return {
+    id: connection.id,
+    donorNumber: connection.donor_number,
+    donorType: connection.donor_type,
+    fullName: connection.display_name ?? connection.full_name ?? "Unnamed donor",
+    email: connection.primary_email
+  };
+}
+
 export function DonorProfileForm({
   donor,
   donorId,
@@ -18,7 +36,9 @@ export function DonorProfileForm({
   relationships,
   updateAction,
   addRelationshipAction,
-  deleteRelationshipAction
+  deleteRelationshipAction,
+  promoteSpouseAction,
+  promoteRelationshipAction
 }: {
   donor: DonorProfileRow;
   donorId: string;
@@ -27,10 +47,41 @@ export function DonorProfileForm({
   updateAction: FormAction;
   addRelationshipAction: FormAction;
   deleteRelationshipAction: FormAction;
+  promoteSpouseAction: FormAction;
+  promoteRelationshipAction: FormAction;
 }) {
   const [donorType, setDonorType] = useState<DonorProfileRow["donor_type"]>(donor.donor_type);
-  const [hasSpouse, setHasSpouse] = useState(Boolean(donor.spouse_donor_id));
+  const [hasSpouse, setHasSpouse] = useState(
+    Boolean(
+      donor.spouse_donor_id ||
+        donor.spouse_first_name ||
+        donor.spouse_last_name ||
+        donor.spouse_preferred_email ||
+        donor.spouse_primary_phone
+    )
+  );
+  const [createSpouseDraft, setCreateSpouseDraft] = useState(
+    !donor.spouse_donor_id &&
+      Boolean(
+        donor.spouse_first_name ||
+          donor.spouse_last_name ||
+          donor.spouse_preferred_email ||
+          donor.spouse_primary_phone
+      )
+  );
   const [hasOrganizationRelationship, setHasOrganizationRelationship] = useState(relationships.length > 0);
+  const [createOrganizationDraft, setCreateOrganizationDraft] = useState(false);
+
+  const spouseSelection =
+    donor.spouse_donor_id && donor.spouse_name
+      ? {
+          id: donor.spouse_donor_id,
+          donorNumber: donor.spouse_donor_number,
+          donorType: "INDIVIDUAL" as const,
+          fullName: donor.spouse_name,
+          email: donor.spouse_primary_email_record
+        }
+      : null;
 
   return (
     <div className="grid">
@@ -85,19 +136,26 @@ export function DonorProfileForm({
           )}
           {donorType === "ORGANIZATION" ? (
             <>
-              <label>
-                Organization contact donor
-                <select name="organizationContactDonorId" defaultValue={donor.organization_contact_donor_id ?? ""}>
-                  <option value="">Select donor</option>
-                  {connections
-                    .filter((connection: DonorConnectionRow) => connection.donor_type === "INDIVIDUAL")
-                    .map((connection: DonorConnectionRow) => (
-                      <option key={connection.id} value={connection.id}>
-                        {connection.display_name} {connection.donor_number ? `(${connection.donor_number})` : ""}
-                      </option>
-                    ))}
-                </select>
-              </label>
+              <DonorLookup
+                label="Organization contact donor"
+                name="organizationContactDonorId"
+                allowedTypes={["INDIVIDUAL"]}
+                initialSelection={
+                  donor.organization_contact_donor_id
+                    ? toLookupOption(
+                        connections.find((connection: DonorConnectionRow) => connection.id === donor.organization_contact_donor_id) ?? {
+                          id: donor.organization_contact_donor_id,
+                          donor_number: null,
+                          donor_type: "INDIVIDUAL",
+                          display_name: donor.organization_contact_name ?? "Selected donor",
+                          primary_email: null
+                        }
+                      )
+                    : null
+                }
+                hiddenInputId="organization-contact-id"
+                placeholder="Search individual donor"
+              />
               <label>
                 Organization contact name
                 <input name="organizationContactName" defaultValue={donor.organization_contact_name ?? ""} />
@@ -167,28 +225,119 @@ export function DonorProfileForm({
                 <input
                   type="checkbox"
                   checked={hasSpouse}
-                  onChange={(event) => setHasSpouse(event.target.checked)}
+                  onChange={(event) => {
+                    const next = event.target.checked;
+                    setHasSpouse(next);
+                    if (!next) {
+                      setCreateSpouseDraft(false);
+                    }
+                  }}
                 />
                 <span>Has Spouse</span>
               </label>
               {hasSpouse ? (
-                <label>
-                  Spouse record
-                  <select name="spouseDonorId" defaultValue={donor.spouse_donor_id ?? ""}>
-                    <option value="">Select donor</option>
-                    {connections.map((connection: DonorConnectionRow) => (
-                      <option key={connection.id} value={connection.id}>
-                        {connection.display_name} {connection.donor_number ? `(${connection.donor_number})` : ""}
-                      </option>
-                    ))}
-                  </select>
-                </label>
+                <>
+                  <DonorLookup
+                    label="Spouse record"
+                    name="spouseDonorId"
+                    allowedTypes={["INDIVIDUAL"]}
+                    initialSelection={spouseSelection}
+                    hiddenInputId="spouse-donor-id"
+                    placeholder="Search spouse by name or email"
+                  />
+                  <label className="toggle-row">
+                    <input
+                      type="checkbox"
+                      checked={createSpouseDraft}
+                      onChange={(event) => setCreateSpouseDraft(event.target.checked)}
+                    />
+                    <span>Create spouse if no record is found</span>
+                  </label>
+                  {createSpouseDraft ? (
+                    <div className="form-grid full">
+                      <label>
+                        Spouse title
+                        <select name="spouseTitle" defaultValue={donor.spouse_title ?? ""}>
+                          <option value="">None</option>
+                          <option value="Mr.">Mr.</option>
+                          <option value="Mrs.">Mrs.</option>
+                          <option value="Ms.">Ms.</option>
+                          <option value="Dr.">Dr.</option>
+                        </select>
+                      </label>
+                      <label>
+                        Spouse first name
+                        <input name="spouseFirstName" defaultValue={donor.spouse_first_name ?? ""} />
+                      </label>
+                      <label>
+                        Spouse middle name
+                        <input name="spouseMiddleName" defaultValue={donor.spouse_middle_name ?? ""} />
+                      </label>
+                      <label>
+                        Spouse last name
+                        <input name="spouseLastName" defaultValue={donor.spouse_last_name ?? ""} />
+                      </label>
+                      <label>
+                        Spouse preferred email
+                        <input name="spousePreferredEmail" type="email" defaultValue={donor.spouse_preferred_email ?? ""} />
+                      </label>
+                      <label>
+                        Spouse additional email
+                        <input name="spouseAlternateEmail" type="email" defaultValue={donor.spouse_alternate_email ?? ""} />
+                      </label>
+                      <label>
+                        Spouse primary phone
+                        <input name="spousePrimaryPhone" defaultValue={donor.spouse_primary_phone ?? ""} />
+                      </label>
+                      <label className="toggle-row full">
+                        <input type="checkbox" name="spouseSameAddress" defaultChecked={donor.spouse_same_address} />
+                        <span>Address is the same</span>
+                      </label>
+                      <div className="full button-row">
+                        <button type="submit" formAction={promoteSpouseAction} className="secondary">
+                          Promote spouse to full donor record
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <>
+                      <input type="hidden" name="spouseTitle" value={donor.spouse_title ?? ""} />
+                      <input type="hidden" name="spouseFirstName" value={donor.spouse_first_name ?? ""} />
+                      <input type="hidden" name="spouseMiddleName" value={donor.spouse_middle_name ?? ""} />
+                      <input type="hidden" name="spouseLastName" value={donor.spouse_last_name ?? ""} />
+                      <input type="hidden" name="spousePreferredEmail" value={donor.spouse_preferred_email ?? ""} />
+                      <input type="hidden" name="spouseAlternateEmail" value={donor.spouse_alternate_email ?? ""} />
+                      <input type="hidden" name="spousePrimaryPhone" value={donor.spouse_primary_phone ?? ""} />
+                      <input type="hidden" name="spouseSameAddress" value={donor.spouse_same_address ? "on" : ""} />
+                    </>
+                  )}
+                </>
               ) : (
-                <input type="hidden" name="spouseDonorId" value="" />
+                <>
+                  <input type="hidden" name="spouseDonorId" value="" />
+                  <input type="hidden" name="spouseTitle" value="" />
+                  <input type="hidden" name="spouseFirstName" value="" />
+                  <input type="hidden" name="spouseMiddleName" value="" />
+                  <input type="hidden" name="spouseLastName" value="" />
+                  <input type="hidden" name="spousePreferredEmail" value="" />
+                  <input type="hidden" name="spouseAlternateEmail" value="" />
+                  <input type="hidden" name="spousePrimaryPhone" value="" />
+                  <input type="hidden" name="spouseSameAddress" value="" />
+                </>
               )}
             </div>
           ) : (
-            <input type="hidden" name="spouseDonorId" value={donor.spouse_donor_id ?? ""} />
+            <>
+              <input type="hidden" name="spouseDonorId" value={donor.spouse_donor_id ?? ""} />
+              <input type="hidden" name="spouseTitle" value={donor.spouse_title ?? ""} />
+              <input type="hidden" name="spouseFirstName" value={donor.spouse_first_name ?? ""} />
+              <input type="hidden" name="spouseMiddleName" value={donor.spouse_middle_name ?? ""} />
+              <input type="hidden" name="spouseLastName" value={donor.spouse_last_name ?? ""} />
+              <input type="hidden" name="spousePreferredEmail" value={donor.spouse_preferred_email ?? ""} />
+              <input type="hidden" name="spouseAlternateEmail" value={donor.spouse_alternate_email ?? ""} />
+              <input type="hidden" name="spousePrimaryPhone" value={donor.spouse_primary_phone ?? ""} />
+              <input type="hidden" name="spouseSameAddress" value={donor.spouse_same_address ? "on" : ""} />
+            </>
           )}
           <div className="full conditional-block">
             <label className="toggle-row">
@@ -200,7 +349,7 @@ export function DonorProfileForm({
               <span>Has Organization Relationship</span>
             </label>
             {hasOrganizationRelationship ? (
-              <p className="muted">Use the organization relationships section below to manage multiple linked organizations.</p>
+              <p className="muted">Use the organization relationships section below to search for existing organizations, create draft organizations, and promote them into full donor records.</p>
             ) : null}
           </div>
           <label className="full">
@@ -220,7 +369,7 @@ export function DonorProfileForm({
           <div className="section-header">
             <div>
               <p className="eyebrow">Organization Relationships</p>
-              <p className="muted">Link existing organization records or keep a named relationship for internal reference.</p>
+              <p className="muted">Link existing organization records or store lightweight organization details until you are ready to promote them.</p>
             </div>
           </div>
           {relationships.length > 0 ? (
@@ -229,24 +378,42 @@ export function DonorProfileForm({
                 <tr>
                   <th>Organization</th>
                   <th>Relationship</th>
-                  <th>Notes</th>
+                  <th>Contact</th>
+                  <th>Primary email</th>
                   <th></th>
                 </tr>
               </thead>
               <tbody>
                 {relationships.map((relationship: DonorOrganizationRelationshipRow) => (
                   <tr key={relationship.id}>
-                    <td>{relationship.organization_display_name}</td>
-                    <td>{relationship.relationship_type.replaceAll("_", " ")}</td>
-                    <td>{relationship.notes ?? "—"}</td>
                     <td>
-                      <form action={deleteRelationshipAction}>
-                        <input type="hidden" name="donorId" value={donorId} />
-                        <input type="hidden" name="relationshipId" value={relationship.id} />
-                        <button type="submit" className="secondary">
-                          Remove
-                        </button>
-                      </form>
+                      {relationship.organization_display_name}
+                      {relationship.organization_donor_number ? (
+                        <div className="muted">{relationship.organization_donor_number}</div>
+                      ) : null}
+                    </td>
+                    <td>{relationship.relationship_type.replaceAll("_", " ")}</td>
+                    <td>{relationship.contact_name ?? "—"}</td>
+                    <td>{relationship.primary_email ?? "—"}</td>
+                    <td>
+                      <div className="button-row">
+                        {!relationship.organization_donor_id && relationship.organization_name ? (
+                          <form action={promoteRelationshipAction}>
+                            <input type="hidden" name="donorId" value={donorId} />
+                            <input type="hidden" name="relationshipId" value={relationship.id} />
+                            <button type="submit" className="secondary">
+                              Promote to donor record
+                            </button>
+                          </form>
+                        ) : null}
+                        <form action={deleteRelationshipAction}>
+                          <input type="hidden" name="donorId" value={donorId} />
+                          <input type="hidden" name="relationshipId" value={relationship.id} />
+                          <button type="submit" className="secondary">
+                            Remove
+                          </button>
+                        </form>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -266,23 +433,57 @@ export function DonorProfileForm({
                 <option value="OTHER">Other</option>
               </select>
             </label>
-            <label>
-              Existing organization donor
-              <select name="organizationDonorId" defaultValue="">
-                <option value="">Select donor</option>
-                {connections
-                  .filter((connection: DonorConnectionRow) => connection.donor_type === "ORGANIZATION")
-                  .map((connection: DonorConnectionRow) => (
-                    <option key={connection.id} value={connection.id}>
-                      {connection.display_name} {connection.donor_number ? `(${connection.donor_number})` : ""}
-                    </option>
-                  ))}
-              </select>
+            <DonorLookup
+              label="Existing organization donor"
+              name="organizationDonorId"
+              allowedTypes={["ORGANIZATION"]}
+              placeholder="Search organization by name or donor ID"
+            />
+            <label className="toggle-row full">
+              <input
+                type="checkbox"
+                checked={createOrganizationDraft}
+                onChange={(event) => setCreateOrganizationDraft(event.target.checked)}
+              />
+              <span>Create organization if no record is found</span>
             </label>
-            <label className="full">
-              Non-constituent organization name
-              <input name="organizationName" />
-            </label>
+            {createOrganizationDraft ? (
+              <>
+                <label className="full">
+                  Organization name
+                  <input name="organizationName" />
+                </label>
+                <label>
+                  Contact name
+                  <input name="contactName" />
+                </label>
+                <label>
+                  Primary email
+                  <input name="organizationPrimaryEmail" type="email" />
+                </label>
+                <label>
+                  Additional email
+                  <input name="organizationAlternateEmail" type="email" />
+                </label>
+                <label>
+                  Primary phone
+                  <input name="organizationPrimaryPhone" />
+                </label>
+                <label className="toggle-row">
+                  <input type="checkbox" name="organizationSameAddress" />
+                  <span>Address is the same</span>
+                </label>
+              </>
+            ) : (
+              <>
+                <input type="hidden" name="organizationName" value="" />
+                <input type="hidden" name="contactName" value="" />
+                <input type="hidden" name="organizationPrimaryEmail" value="" />
+                <input type="hidden" name="organizationAlternateEmail" value="" />
+                <input type="hidden" name="organizationPrimaryPhone" value="" />
+                <input type="hidden" name="organizationSameAddress" value="" />
+              </>
+            )}
             <label className="full">
               Relationship notes
               <input name="relationshipNotes" />

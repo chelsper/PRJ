@@ -25,13 +25,17 @@ export function DonorLookup({
   name,
   required = false,
   initialSelection = null,
-  hiddenInputId
+  hiddenInputId,
+  allowedTypes,
+  placeholder
 }: {
   label: string;
   name: string;
   required?: boolean;
   initialSelection?: DonorLookupOption | null;
   hiddenInputId?: string;
+  allowedTypes?: Array<DonorLookupOption["donorType"]>;
+  placeholder?: string;
 }) {
   const [query, setQuery] = useState(initialSelection ? donorLabel(initialSelection) : "");
   const [selected, setSelected] = useState<DonorLookupOption | null>(initialSelection);
@@ -72,7 +76,10 @@ export function DonorLookup({
         }
 
         const payload = (await response.json()) as { donors: DonorLookupOption[] };
-        setResults(payload.donors);
+        const filtered = allowedTypes?.length
+          ? payload.donors.filter((donor: DonorLookupOption) => allowedTypes.includes(donor.donorType))
+          : payload.donors;
+        setResults(filtered);
       })
       .catch((error: unknown) => {
         if (controller.signal.aborted) {
@@ -89,7 +96,7 @@ export function DonorLookup({
       });
 
     return () => controller.abort();
-  }, [deferredQuery, selected]);
+  }, [allowedTypes, deferredQuery, selected]);
 
   return (
     <label className="full donor-lookup">
@@ -105,7 +112,7 @@ export function DonorLookup({
       <input
         type="text"
         value={query}
-        placeholder="Search donor by name, preferred name, or email"
+        placeholder={placeholder ?? "Search donor by name, preferred name, or email"}
         autoComplete="off"
         onFocus={() => setOpen(true)}
         onChange={(event) => {

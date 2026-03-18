@@ -21,6 +21,8 @@ import {
   addDonorNoteAction,
   addDonorOrganizationRelationshipAction,
   deleteDonorOrganizationRelationshipAction,
+  promoteOrganizationRelationshipToDonorAction,
+  promoteSpouseToDonorAction,
   updateDonorProfileAction
 } from "../actions";
 
@@ -369,6 +371,8 @@ export default async function DonorProfilePage({
           updateAction={updateDonorProfileAction}
           addRelationshipAction={addDonorOrganizationRelationshipAction}
           deleteRelationshipAction={deleteDonorOrganizationRelationshipAction}
+          promoteSpouseAction={promoteSpouseToDonorAction}
+          promoteRelationshipAction={promoteOrganizationRelationshipToDonorAction}
         />
       )}
     </div>

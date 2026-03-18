@@ -2,6 +2,10 @@ import { z } from "zod";
 
 const blankToUndefined = <T extends z.ZodTypeAny>(schema: T) =>
   z.preprocess((value) => {
+    if (value === null || value === undefined) {
+      return undefined;
+    }
+
     if (typeof value === "string" && value.trim() === "") {
       return undefined;
     }
@@ -31,6 +35,14 @@ export const donorInputSchema = z
     alternateEmailType: blankToUndefined(z.string().trim().max(50)),
     primaryPhone: blankToUndefined(z.string().trim().max(30)),
     spouseDonorId: blankToUndefined(z.coerce.number().int().positive()),
+    spouseTitle: blankToUndefined(z.string().trim().max(20)),
+    spouseFirstName: blankToUndefined(z.string().trim().max(100)),
+    spouseMiddleName: blankToUndefined(z.string().trim().max(100)),
+    spouseLastName: blankToUndefined(z.string().trim().max(100)),
+    spousePreferredEmail: blankToUndefined(z.string().trim().email().max(255)),
+    spouseAlternateEmail: blankToUndefined(z.string().trim().email().max(255)),
+    spousePrimaryPhone: blankToUndefined(z.string().trim().max(30)),
+    spouseSameAddress: z.preprocess((value) => value === "on" || value === true, z.boolean()).optional(),
     addressType: blankToUndefined(z.string().trim().max(50)),
     street1: blankToUndefined(z.string().trim().max(200)),
     street2: blankToUndefined(z.string().trim().max(200)),

@@ -12,6 +12,8 @@ import {
   addDonorOrganizationRelationship,
   createDonor,
   deleteDonorOrganizationRelationship,
+  promoteOrganizationRelationshipToDonor,
+  promoteSpouseToDonor,
   softDeleteDonor,
   updateDonorProfile
 } from "@/server/data/donors";
@@ -64,6 +66,14 @@ export async function updateDonorProfileAction(formData: FormData) {
       alternateEmailType: formData.get("alternateEmailType"),
       primaryPhone: formData.get("primaryPhone"),
       spouseDonorId: formData.get("spouseDonorId"),
+      spouseTitle: formData.get("spouseTitle"),
+      spouseFirstName: formData.get("spouseFirstName"),
+      spouseMiddleName: formData.get("spouseMiddleName"),
+      spouseLastName: formData.get("spouseLastName"),
+      spousePreferredEmail: formData.get("spousePreferredEmail"),
+      spouseAlternateEmail: formData.get("spouseAlternateEmail"),
+      spousePrimaryPhone: formData.get("spousePrimaryPhone"),
+      spouseSameAddress: formData.get("spouseSameAddress"),
       addressType: formData.get("addressType"),
       street1: formData.get("street1"),
       street2: formData.get("street2"),
@@ -130,10 +140,83 @@ export async function addDonorOrganizationRelationshipAction(formData: FormData)
       relationshipType: String(formData.get("relationshipType") ?? ""),
       organizationDonorId: String(formData.get("organizationDonorId") ?? ""),
       organizationName: String(formData.get("organizationName") ?? ""),
+      contactName: String(formData.get("contactName") ?? ""),
+      primaryEmail: String(formData.get("organizationPrimaryEmail") ?? ""),
+      alternateEmail: String(formData.get("organizationAlternateEmail") ?? ""),
+      primaryPhone: String(formData.get("organizationPrimaryPhone") ?? ""),
+      sameAddress: formData.get("organizationSameAddress") === "on",
       notes: String(formData.get("relationshipNotes") ?? "")
     },
     { userId: session.userId, ipAddress }
   );
+
+  revalidatePath(`/donors/${donorId}`);
+  redirect(`/donors/${donorId}`);
+}
+
+export async function promoteSpouseToDonorAction(formData: FormData) {
+  await assertSameOrigin();
+  const session = await requireCapability("donors:write");
+  const donorId = String(formData.get("donorId"));
+  const requestHeaders = await headers();
+  const ipAddress = requestHeaders.get("x-forwarded-for")?.split(",")[0]?.trim() ?? null;
+
+  await updateDonorProfile(
+    donorId,
+    {
+      donorType: formData.get("donorType"),
+      title: formData.get("title"),
+      firstName: formData.get("firstName"),
+      middleName: formData.get("middleName"),
+      lastName: formData.get("lastName"),
+      preferredName: formData.get("preferredName"),
+      organizationName: formData.get("organizationName"),
+      organizationContactDonorId: formData.get("organizationContactDonorId"),
+      organizationContactName: formData.get("organizationContactName"),
+      primaryEmail: formData.get("primaryEmail"),
+      primaryEmailType: formData.get("primaryEmailType"),
+      alternateEmail: formData.get("alternateEmail"),
+      alternateEmailType: formData.get("alternateEmailType"),
+      primaryPhone: formData.get("primaryPhone"),
+      spouseDonorId: formData.get("spouseDonorId"),
+      spouseTitle: formData.get("spouseTitle"),
+      spouseFirstName: formData.get("spouseFirstName"),
+      spouseMiddleName: formData.get("spouseMiddleName"),
+      spouseLastName: formData.get("spouseLastName"),
+      spousePreferredEmail: formData.get("spousePreferredEmail"),
+      spouseAlternateEmail: formData.get("spouseAlternateEmail"),
+      spousePrimaryPhone: formData.get("spousePrimaryPhone"),
+      spouseSameAddress: formData.get("spouseSameAddress"),
+      addressType: formData.get("addressType"),
+      street1: formData.get("street1"),
+      street2: formData.get("street2"),
+      city: formData.get("city"),
+      stateRegion: formData.get("stateRegion"),
+      postalCode: formData.get("postalCode"),
+      country: formData.get("country"),
+      notes: formData.get("notes")
+    },
+    { userId: session.userId, ipAddress }
+  );
+
+  await promoteSpouseToDonor(donorId, { userId: session.userId, ipAddress });
+
+  revalidatePath(`/donors/${donorId}`);
+  redirect(`/donors/${donorId}`);
+}
+
+export async function promoteOrganizationRelationshipToDonorAction(formData: FormData) {
+  await assertSameOrigin();
+  const session = await requireCapability("donors:write");
+  const donorId = String(formData.get("donorId"));
+  const relationshipId = String(formData.get("relationshipId"));
+  const requestHeaders = await headers();
+  const ipAddress = requestHeaders.get("x-forwarded-for")?.split(",")[0]?.trim() ?? null;
+
+  await promoteOrganizationRelationshipToDonor(donorId, relationshipId, {
+    userId: session.userId,
+    ipAddress
+  });
 
   revalidatePath(`/donors/${donorId}`);
   redirect(`/donors/${donorId}`);
