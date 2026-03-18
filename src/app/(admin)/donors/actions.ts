@@ -185,7 +185,13 @@ export async function addDonorOrganizationRelationshipAction(formData: FormData)
       primaryEmail: String(formData.get("organizationPrimaryEmail") ?? ""),
       alternateEmail: String(formData.get("organizationAlternateEmail") ?? ""),
       primaryPhone: String(formData.get("organizationPrimaryPhone") ?? ""),
-      sameAddress: formData.get("organizationSameAddress") === "on",
+      addressType: String(formData.get("organizationAddressType") ?? ""),
+      street1: String(formData.get("organizationStreet1") ?? ""),
+      street2: String(formData.get("organizationStreet2") ?? ""),
+      city: String(formData.get("organizationCity") ?? ""),
+      stateRegion: String(formData.get("organizationStateRegion") ?? ""),
+      postalCode: String(formData.get("organizationPostalCode") ?? ""),
+      country: String(formData.get("organizationCountry") ?? ""),
       notes: String(formData.get("relationshipNotes") ?? "")
     },
     { userId: session.userId, ipAddress }

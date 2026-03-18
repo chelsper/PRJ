@@ -98,7 +98,13 @@ export type DonorOrganizationRelationshipRow = {
   primary_email: string | null;
   alternate_email: string | null;
   primary_phone: string | null;
-  same_address: boolean;
+  address_type: string | null;
+  street1: string | null;
+  street2: string | null;
+  city: string | null;
+  state_region: string | null;
+  postal_code: string | null;
+  country: string | null;
   notes: string | null;
 };
 
@@ -292,6 +298,13 @@ async function donorOrganizationRelationshipsSnapshot(client: PoolClient, donorI
           'organization_donor_id', r.organization_donor_id,
           'organization_name', r.organization_name,
           'relationship_type', r.relationship_type,
+          'address_type', r.address_type,
+          'street1', r.street1,
+          'street2', r.street2,
+          'city', r.city,
+          'state_region', r.state_region,
+          'postal_code', r.postal_code,
+          'country', r.country,
           'notes', r.notes
         )
         order by r.id
@@ -619,7 +632,13 @@ export async function listDonorOrganizationRelationships(
       r.primary_email::text,
       r.alternate_email::text,
       r.primary_phone,
-      r.same_address,
+      r.address_type,
+      r.street1,
+      r.street2,
+      r.city,
+      r.state_region,
+      r.postal_code,
+      r.country,
       r.notes
     from public.donor_organization_relationships r
     left join public.donors org on org.id = r.organization_donor_id
@@ -1228,7 +1247,13 @@ export async function promoteOrganizationRelationshipToDonor(
       primary_email: string | null;
       alternate_email: string | null;
       primary_phone: string | null;
-      same_address: boolean;
+      address_type: string | null;
+      street1: string | null;
+      street2: string | null;
+      city: string | null;
+      state_region: string | null;
+      postal_code: string | null;
+      country: string | null;
     }>(
       `select
         organization_donor_id::text,
@@ -1237,7 +1262,13 @@ export async function promoteOrganizationRelationshipToDonor(
         primary_email::text,
         alternate_email::text,
         primary_phone,
-        same_address
+        address_type,
+        street1,
+        street2,
+        city,
+        state_region,
+        postal_code,
+        country
       from public.donor_organization_relationships
       where id = $1
         and donor_id = $2`,
@@ -1282,8 +1313,33 @@ export async function promoteOrganizationRelationshipToDonor(
 
     const organizationId = inserted.rows[0].id;
 
-    if (row.same_address) {
-      await copyPrimaryAddressToDonor(client, Number(donorId), Number(organizationId), actor.userId);
+    if (row.street1 && row.city) {
+      await client.query(
+        `insert into public.donor_addresses (
+          donor_id,
+          address_type,
+          street1,
+          street2,
+          city,
+          state_region,
+          postal_code,
+          country,
+          is_primary,
+          created_by,
+          updated_by
+        ) values ($1, $2, $3, $4, $5, $6, $7, $8, true, $9, $9)`,
+        [
+          Number(organizationId),
+          row.address_type ?? "Primary",
+          row.street1,
+          row.street2,
+          row.city,
+          row.state_region,
+          row.postal_code,
+          row.country ?? "United States",
+          actor.userId
+        ]
+      );
     }
 
     await client.query(
@@ -1319,13 +1375,23 @@ export async function addDonorOrganizationRelationship(
     primaryEmail?: string | null;
     alternateEmail?: string | null;
     primaryPhone?: string | null;
-    sameAddress?: boolean;
+    addressType?: string | null;
+    street1?: string | null;
+    street2?: string | null;
+    city?: string | null;
+    stateRegion?: string | null;
+    postalCode?: string | null;
+    country?: string | null;
     notes?: string | null;
   },
   actor: Actor
 ) {
   if (!input.organizationDonorId?.trim() && !input.organizationName?.trim()) {
     throw new Error("An organization relationship needs an existing organization or a name.");
+  }
+
+  if (input.organizationName?.trim() && (!input.street1?.trim() || !input.city?.trim())) {
+    throw new Error("New organization drafts require an address with at least street and city.");
   }
 
   await transaction(async (client) => {
@@ -1341,11 +1407,17 @@ export async function addDonorOrganizationRelationship(
         primary_email,
         alternate_email,
         primary_phone,
-        same_address,
+        address_type,
+        street1,
+        street2,
+        city,
+        state_region,
+        postal_code,
+        country,
         notes,
         created_by,
         updated_by
-      ) values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $10)`,
+      ) values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $17)`,
       [
         Number(donorId),
         input.organizationDonorId ? Number(input.organizationDonorId) : null,
@@ -1355,7 +1427,13 @@ export async function addDonorOrganizationRelationship(
         input.primaryEmail?.trim() || null,
         input.alternateEmail?.trim() || null,
         input.primaryPhone?.trim() || null,
-        input.sameAddress ?? false,
+        input.addressType?.trim() || "Primary",
+        input.street1?.trim() || null,
+        input.street2?.trim() || null,
+        input.city?.trim() || null,
+        input.stateRegion?.trim() || null,
+        input.postalCode?.trim() || null,
+        input.country?.trim() || "United States",
         input.notes?.trim() || null,
         actor.userId
       ]

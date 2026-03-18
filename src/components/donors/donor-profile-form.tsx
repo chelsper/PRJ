@@ -423,9 +423,33 @@ export function DonorProfileForm({
                   Primary phone
                   <input name="organizationPrimaryPhone" />
                 </label>
-                <label className="toggle-row">
-                  <input type="checkbox" name="organizationSameAddress" />
-                  <span>Address is the same</span>
+                <label>
+                  Address type
+                  <input name="organizationAddressType" defaultValue="Primary" />
+                </label>
+                <label className="full">
+                  Street 1
+                  <input name="organizationStreet1" />
+                </label>
+                <label className="full">
+                  Street 2
+                  <input name="organizationStreet2" />
+                </label>
+                <label>
+                  City
+                  <input name="organizationCity" />
+                </label>
+                <label>
+                  State / Region
+                  <input name="organizationStateRegion" />
+                </label>
+                <label>
+                  Postal code
+                  <input name="organizationPostalCode" />
+                </label>
+                <label>
+                  Country
+                  <input name="organizationCountry" defaultValue="United States" />
                 </label>
               </>
             ) : (
@@ -435,7 +459,13 @@ export function DonorProfileForm({
                 <input type="hidden" name="organizationPrimaryEmail" value="" />
                 <input type="hidden" name="organizationAlternateEmail" value="" />
                 <input type="hidden" name="organizationPrimaryPhone" value="" />
-                <input type="hidden" name="organizationSameAddress" value="" />
+                <input type="hidden" name="organizationAddressType" value="" />
+                <input type="hidden" name="organizationStreet1" value="" />
+                <input type="hidden" name="organizationStreet2" value="" />
+                <input type="hidden" name="organizationCity" value="" />
+                <input type="hidden" name="organizationStateRegion" value="" />
+                <input type="hidden" name="organizationPostalCode" value="" />
+                <input type="hidden" name="organizationCountry" value="" />
               </>
             )}
             <label className="full">
