@@ -45,6 +45,10 @@ export default async function EditGiftPage({
       <section className="card">
         <form action={updateGiftAction} className="form-grid">
           <input type="hidden" name="giftId" value={gift.id} />
+          <div className="full form-section-heading">
+            <p className="eyebrow">Gift Details</p>
+            <p className="muted">Update the donor, classification, and core contribution fields.</p>
+          </div>
           <DonorLookup
             label="Donor"
             name="donorId"
@@ -138,6 +142,10 @@ export default async function EditGiftPage({
             Gift date
             <input name="giftDate" type="date" defaultValue={gift.gift_date} required />
           </label>
+          <div className="full form-section-heading">
+            <p className="eyebrow">Pledge Details</p>
+            <p className="muted">Parent pledge and installment schedule options appear here when applicable.</p>
+          </div>
           <PledgeScheduleFields
             giftTypeFieldId="gift-type"
             amountFieldId="gift-amount"
@@ -152,6 +160,10 @@ export default async function EditGiftPage({
               amount: (installment.amount_cents / 100).toFixed(2)
             }))}
           />
+          <div className="full form-section-heading">
+            <p className="eyebrow">Receipt & Payment</p>
+            <p className="muted">Receipt amount can stay aligned with the gift amount or be overridden.</p>
+          </div>
           <label>
             Payment method
             <select id="gift-payment-method" name="paymentMethod" defaultValue={gift.payment_method ?? ""}>
@@ -170,6 +182,9 @@ export default async function EditGiftPage({
             initialCheckDate={gift.check_date ?? ""}
             initialReferenceNumber={gift.reference_number ?? ""}
           />
+          <div className="full form-section-heading compact">
+            <p className="eyebrow">Notes</p>
+          </div>
           <label className="full">
             Notes
             <textarea name="notes" rows={4} defaultValue={gift.notes ?? ""} />

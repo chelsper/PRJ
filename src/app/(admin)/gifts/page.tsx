@@ -45,6 +45,10 @@ export default async function GiftsPage({
       <section className="card">
         <p className="eyebrow">Gift Entry</p>
         <form action={createGiftAction} className="form-grid">
+          <div className="full form-section-heading">
+            <p className="eyebrow">Gift Details</p>
+            <p className="muted">Choose the donor, gift classification, and contribution context.</p>
+          </div>
           <DonorLookup
             label="Donor"
             name="donorId"
@@ -110,11 +114,19 @@ export default async function GiftsPage({
             Gift date
             <input name="giftDate" type="date" required />
           </label>
+          <div className="full form-section-heading">
+            <p className="eyebrow">Pledge Details</p>
+            <p className="muted">Shown when the selected gift type needs parent pledge or installment tracking.</p>
+          </div>
           <PledgeScheduleFields
             giftTypeFieldId="gift-type"
             amountFieldId="gift-amount"
             initialGiftType={initialGiftType}
           />
+          <div className="full form-section-heading">
+            <p className="eyebrow">Receipt & Payment</p>
+            <p className="muted">Receipt amount defaults to the gift amount unless you change it.</p>
+          </div>
           <label>
             Payment method
             <select id="gift-payment-method" name="paymentMethod" defaultValue="">
@@ -128,6 +140,9 @@ export default async function GiftsPage({
             </select>
           </label>
           <PaymentMethodFields paymentMethodFieldId="gift-payment-method" />
+          <div className="full form-section-heading compact">
+            <p className="eyebrow">Notes</p>
+          </div>
           <label className="full">
             Notes
             <textarea name="notes" rows={4} />

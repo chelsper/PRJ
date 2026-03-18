@@ -168,6 +168,27 @@ a {
   grid-column: 1 / -1;
 }
 
+.form-section-heading {
+  display: grid;
+  gap: 4px;
+  padding-top: 4px;
+  margin-top: 4px;
+  border-top: 1px solid rgba(220, 162, 189, 0.6);
+}
+
+.form-section-heading.compact {
+  padding-top: 0;
+  margin-top: 0;
+}
+
+.form-section-heading .eyebrow {
+  margin-bottom: 0;
+}
+
+.form-section-heading .muted {
+  font-size: 0.9rem;
+}
+
 label {
   display: grid;
   gap: 7px;

@@ -82,6 +82,10 @@ export function DonorProfileForm({
         <form action={updateAction} className="form-grid">
           <input type="hidden" name="donorId" value={donor.id} />
           <input type="hidden" name="donorType" value={donor.donor_type} />
+          <div className="full form-section-heading">
+            <p className="eyebrow">Identity</p>
+            <p className="muted">Core constituent details and how this donor record is identified.</p>
+          </div>
           <label>
             Constituent ID
             <input value={donor.donor_number ?? "Pending"} readOnly disabled />
@@ -137,9 +141,13 @@ export function DonorProfileForm({
           <input type="hidden" name="organizationContactFirstName" value={donor.organization_contact_first_name ?? ""} />
           <input type="hidden" name="organizationContactMiddleName" value={donor.organization_contact_middle_name ?? ""} />
           <input type="hidden" name="organizationContactLastName" value={donor.organization_contact_last_name ?? ""} />
-          <input type="hidden" name="organizationContactName" value={donor.organization_contact_name ?? ""} />
-          <input type="hidden" name="organizationContactEmail" value={donor.organization_contact_email ?? ""} />
-          <input type="hidden" name="organizationContactPhone" value={donor.organization_contact_phone ?? ""} />
+              <input type="hidden" name="organizationContactName" value={donor.organization_contact_name ?? ""} />
+              <input type="hidden" name="organizationContactEmail" value={donor.organization_contact_email ?? ""} />
+              <input type="hidden" name="organizationContactPhone" value={donor.organization_contact_phone ?? ""} />
+          <div className="full form-section-heading">
+            <p className="eyebrow">Contact</p>
+            <p className="muted">Primary communication details and preferred contact channels.</p>
+          </div>
           <label>
             Preferred email
             <input name="primaryEmail" type="email" defaultValue={donor.primary_email ?? ""} />
@@ -178,6 +186,10 @@ export function DonorProfileForm({
             Built full name
             <input value={donor.full_name} disabled readOnly />
           </label>
+          <div className="full form-section-heading">
+            <p className="eyebrow">Address</p>
+            <p className="muted">Primary mailing address for this donor record.</p>
+          </div>
           <label>
             Address type
             <select name="addressType" defaultValue={donor.address_type ?? addressTypeOptions[0]?.value ?? "Primary"}>
@@ -219,6 +231,10 @@ export function DonorProfileForm({
             Country
             <input name="country" defaultValue={donor.country ?? "United States"} />
           </label>
+          <div className="full form-section-heading">
+            <p className="eyebrow">Relationships</p>
+            <p className="muted">Manage spouse and organization relationship context for this donor.</p>
+          </div>
           {donor.donor_type === "INDIVIDUAL" ? (
             <div className="full conditional-block">
               <label className="toggle-row">
@@ -425,6 +441,10 @@ export function DonorProfileForm({
           )}
           <form action={addRelationshipAction} className="form-grid top-gap">
             <input type="hidden" name="donorId" value={donorId} />
+            <div className="full form-section-heading">
+              <p className="eyebrow">Relationship Details</p>
+              <p className="muted">Link an existing organization or create a draft relationship record.</p>
+            </div>
             <label>
               Relationship type
               <select name="relationshipType" defaultValue={relationshipTypeOptions[0]?.value ?? "EMPLOYER"}>
@@ -451,6 +471,9 @@ export function DonorProfileForm({
             </label>
             {createOrganizationDraft ? (
               <>
+                <div className="full form-section-heading compact">
+                  <p className="eyebrow">Organization Details</p>
+                </div>
                 <label className="full">
                   Organization name
                   <input name="organizationName" />
@@ -471,6 +494,9 @@ export function DonorProfileForm({
                   Primary phone
                   <input name="organizationPrimaryPhone" />
                 </label>
+                <div className="full form-section-heading compact">
+                  <p className="eyebrow">Organization Address</p>
+                </div>
                 <label>
                   Address type
                   <select name="organizationAddressType" defaultValue={addressTypeOptions[0]?.value ?? "Primary"}>
