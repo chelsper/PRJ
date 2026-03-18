@@ -1,5 +1,5 @@
 import { requireCapability } from "@/server/auth/permissions";
-import { listDonors, type DonorListRow } from "@/server/data/donors";
+import { DonorLookup } from "@/components/donors/donor-lookup";
 import { listPledgeOptions, listRecentGifts, type PledgeOptionRow, type RecentGiftRow } from "@/server/data/gifts";
 import { listCampaigns, listFunds, type LookupRow } from "@/server/data/lookups";
 
@@ -7,8 +7,7 @@ import { createGiftAction } from "./actions";
 
 export default async function GiftsPage() {
   await requireCapability("gifts:read");
-  const [donors, gifts, funds, campaigns, pledges] = await Promise.all([
-    listDonors(),
+  const [gifts, funds, campaigns, pledges] = await Promise.all([
     listRecentGifts(),
     listFunds(),
     listCampaigns(),
@@ -20,19 +19,7 @@ export default async function GiftsPage() {
       <section className="card">
         <p className="eyebrow">Gift Entry</p>
         <form action={createGiftAction} className="form-grid">
-          <label>
-            Donor
-            <select name="donorId" required>
-              <option value="">Select donor</option>
-              {donors.map((donor: DonorListRow) => {
-                return (
-                  <option key={donor.id} value={donor.id}>
-                    {donor.full_name}
-                  </option>
-                );
-              })}
-            </select>
-          </label>
+          <DonorLookup label="Donor" name="donorId" required />
           <label>
             Fund
             <select name="fundId" required>
@@ -55,17 +42,7 @@ export default async function GiftsPage() {
               ))}
             </select>
           </label>
-          <label>
-            Manual soft credit
-            <select name="softCreditDonorId">
-              <option value="">None</option>
-              {donors.map((donor: DonorListRow) => (
-                <option key={donor.id} value={donor.id}>
-                  {donor.full_name}
-                </option>
-              ))}
-            </select>
-          </label>
+          <DonorLookup label="Manual soft credit" name="softCreditDonorId" />
           <label>
             Parent pledge
             <select name="parentPledgeGiftId">

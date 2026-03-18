@@ -213,11 +213,53 @@ export async function listDonors(search?: string): Promise<DonorListRow[]> {
     where d.deleted_at is null
       and (
         $1::text is null
-        or concat_ws(' ', d.first_name, d.last_name, d.preferred_name, d.organization_name, d.donor_number) ilike '%' || $1 || '%'
+        or concat_ws(
+          ' ',
+          d.first_name,
+          d.last_name,
+          d.preferred_name,
+          d.organization_name,
+          d.donor_number,
+          d.primary_email,
+          d.alternate_email
+        ) ilike '%' || $1 || '%'
       )
     order by d.last_name nulls last, d.organization_name nulls last
     limit 100`,
     [search ?? null]
+  );
+
+  return result.rows;
+}
+
+export async function getDonorLookupRowsByIds(donorIds: string[]): Promise<DonorListRow[]> {
+  const numericIds = [...new Set(donorIds.map((donorId: string) => Number(donorId)).filter(Number.isFinite))];
+
+  if (numericIds.length === 0) {
+    return [];
+  }
+
+  const placeholders = numericIds.map((_: number, index: number) => `$${index + 1}`).join(", ");
+
+  const result = await query<DonorListRow>(
+    `select
+      d.id::text,
+      d.donor_number,
+      d.donor_type,
+      ${donorFullNameSql} as full_name,
+      d.first_name,
+      d.last_name,
+      d.organization_name,
+      d.primary_email,
+      coalesce(t.donor_recognition_cents, 0)::text as donor_recognition_cents,
+      coalesce(t.donor_hard_credit_cents, 0)::text as donor_hard_credit_cents,
+      coalesce(t.donor_soft_credit_cents, 0)::text as donor_soft_credit_cents
+    from public.donors d
+    left join public.donor_giving_totals t on t.donor_id = d.id
+    where d.deleted_at is null
+      and d.id in (${placeholders})
+    order by d.last_name nulls last, d.organization_name nulls last`,
+    numericIds
   );
 
   return result.rows;

@@ -208,6 +208,47 @@ button:hover {
   width: auto;
 }
 
+.donor-lookup {
+  position: relative;
+}
+
+.lookup-selected {
+  font-size: 0.86rem;
+}
+
+.lookup-results {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  right: 0;
+  z-index: 20;
+  background: rgba(255, 253, 253, 0.98);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  box-shadow: 0 20px 40px rgba(138, 38, 84, 0.14);
+  overflow: hidden;
+}
+
+.lookup-result {
+  width: 100%;
+  border-radius: 0;
+  background: transparent;
+  color: var(--ink);
+  border-bottom: 1px solid #f5dce6;
+  padding: 12px 14px;
+  text-align: left;
+  display: grid;
+  gap: 4px;
+}
+
+.lookup-result:last-child {
+  border-bottom: 0;
+}
+
+.lookup-result:hover {
+  background: var(--accent-soft);
+}
+
 table {
   width: 100%;
   border-collapse: collapse;

@@ -1,7 +1,8 @@
 import { notFound } from "next/navigation";
 
+import { DonorLookup } from "@/components/donors/donor-lookup";
 import { requireCapability } from "@/server/auth/permissions";
-import { listDonors, type DonorListRow } from "@/server/data/donors";
+import { getDonorLookupRowsByIds } from "@/server/data/donors";
 import { getGiftById, listPledgeInstallments, listPledgeOptions, type InstallmentRow, type PledgeOptionRow } from "@/server/data/gifts";
 import { listCampaigns, listFunds, type LookupRow } from "@/server/data/lookups";
 
@@ -20,13 +21,15 @@ export default async function EditGiftPage({
     notFound();
   }
 
-  const [donors, funds, campaigns, pledges, installments] = await Promise.all([
-    listDonors(),
+  const [lookupDonors, funds, campaigns, pledges, installments] = await Promise.all([
+    getDonorLookupRowsByIds([gift.donor_id, gift.soft_credit_donor_id ?? ""].filter(Boolean)),
     listFunds(),
     listCampaigns(),
     listPledgeOptions(),
     listPledgeInstallments(giftId)
   ]);
+  const donorSelection = lookupDonors.find((donor) => donor.id === gift.donor_id);
+  const softCreditSelection = lookupDonors.find((donor) => donor.id === gift.soft_credit_donor_id);
 
   return (
     <div className="grid">
@@ -38,16 +41,22 @@ export default async function EditGiftPage({
       <section className="card">
         <form action={updateGiftAction} className="form-grid">
           <input type="hidden" name="giftId" value={gift.id} />
-          <label>
-            Donor
-            <select name="donorId" defaultValue={gift.donor_id} required>
-              {donors.map((donor: DonorListRow) => (
-                <option key={donor.id} value={donor.id}>
-                  {donor.full_name}
-                </option>
-              ))}
-            </select>
-          </label>
+          <DonorLookup
+            label="Donor"
+            name="donorId"
+            required
+            initialSelection={
+              donorSelection
+                ? {
+                    id: donorSelection.id,
+                    donorNumber: donorSelection.donor_number,
+                    donorType: donorSelection.donor_type,
+                    fullName: donorSelection.full_name,
+                    email: donorSelection.primary_email
+                  }
+                : null
+            }
+          />
           <label>
             Fund
             <select name="fundId" defaultValue={gift.fund_id} required>
@@ -69,17 +78,21 @@ export default async function EditGiftPage({
               ))}
             </select>
           </label>
-          <label>
-            Manual soft credit
-            <select name="softCreditDonorId" defaultValue={gift.soft_credit_donor_id ?? ""}>
-              <option value="">None</option>
-              {donors.map((donor: DonorListRow) => (
-                <option key={donor.id} value={donor.id}>
-                  {donor.full_name}
-                </option>
-              ))}
-            </select>
-          </label>
+          <DonorLookup
+            label="Manual soft credit"
+            name="softCreditDonorId"
+            initialSelection={
+              softCreditSelection
+                ? {
+                    id: softCreditSelection.id,
+                    donorNumber: softCreditSelection.donor_number,
+                    donorType: softCreditSelection.donor_type,
+                    fullName: softCreditSelection.full_name,
+                    email: softCreditSelection.primary_email
+                  }
+                : null
+            }
+          />
           <label>
             Parent pledge
             <select name="parentPledgeGiftId" defaultValue={gift.parent_pledge_gift_id ?? ""}>
