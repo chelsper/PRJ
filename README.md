@@ -41,9 +41,10 @@ Use Vercel project settings for all secrets. Do not commit real values.
 1. Create the Neon project and separate databases or roles for development, preview, and production.
 2. Apply [`/Users/chelseasantoro/Downloads/anything-nonprofit-crm-db/sql/schema.sql`](/Users/chelseasantoro/Downloads/anything-nonprofit-crm-db/sql/schema.sql).
 3. Optionally apply [`/Users/chelseasantoro/Downloads/anything-nonprofit-crm-db/sql/seed.sql`](/Users/chelseasantoro/Downloads/anything-nonprofit-crm-db/sql/seed.sql) after replacing the placeholder password hash.
-4. Import the repo into Vercel.
-5. Configure environment variables separately for development, preview, and production.
-6. Never reuse production credentials in preview.
+4. For fake donor testing data, run [`/Users/chelseasantoro/Downloads/anything-nonprofit-crm-db/sql/sample_data.sql`](/Users/chelseasantoro/Downloads/anything-nonprofit-crm-db/sql/sample_data.sql) in a non-production database.
+5. Import the repo into Vercel.
+6. Configure environment variables separately for development, preview, and production.
+7. Never reuse production credentials in preview.
 
 ## Remaining follow-up work
 
