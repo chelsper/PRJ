@@ -2,6 +2,7 @@ import type { DonorLookupOption } from "@/components/donors/donor-lookup";
 import { requireCapability } from "@/server/auth/permissions";
 import { DonorLookup } from "@/components/donors/donor-lookup";
 import { ParentPledgeField } from "@/components/gifts/parent-pledge-field";
+import { PledgeScheduleFields } from "@/components/gifts/pledge-schedule-fields";
 import { getDonorLookupRowsByIds } from "@/server/data/donors";
 import { listPledgeOptions, listRecentGifts, type PledgeOptionRow, type RecentGiftRow } from "@/server/data/gifts";
 import { listCampaigns, listFunds, type LookupRow } from "@/server/data/lookups";
@@ -102,28 +103,7 @@ export default async function GiftsPage({
             Gift date
             <input name="giftDate" type="date" required />
           </label>
-          <label>
-            Pledge start date
-            <input name="pledgeStartDate" type="date" />
-          </label>
-          <label>
-            Expected fulfillment date
-            <input name="expectedFulfillmentDate" type="date" />
-          </label>
-          <label>
-            Installment count
-            <input name="installmentCount" type="number" min="1" step="1" />
-          </label>
-          <label>
-            Installment frequency
-            <select name="installmentFrequency" defaultValue="">
-              <option value="">None</option>
-              <option value="MONTHLY">Monthly</option>
-              <option value="QUARTERLY">Quarterly</option>
-              <option value="ANNUAL">Annual</option>
-              <option value="CUSTOM">Custom</option>
-            </select>
-          </label>
+          <PledgeScheduleFields giftTypeFieldId="gift-type" initialGiftType="CASH" />
           <label>
             Payment method
             <select name="paymentMethod" defaultValue="">

@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 
 import { DonorLookup } from "@/components/donors/donor-lookup";
 import { ParentPledgeField } from "@/components/gifts/parent-pledge-field";
+import { PledgeScheduleFields } from "@/components/gifts/pledge-schedule-fields";
 import { requireCapability } from "@/server/auth/permissions";
 import { getDonorLookupRowsByIds } from "@/server/data/donors";
 import { getGiftById, listPledgeInstallments, listPledgeOptions, type InstallmentRow, type PledgeOptionRow } from "@/server/data/gifts";
@@ -131,28 +132,14 @@ export default async function EditGiftPage({
             Gift date
             <input name="giftDate" type="date" defaultValue={gift.gift_date} required />
           </label>
-          <label>
-            Pledge start date
-            <input name="pledgeStartDate" type="date" defaultValue={gift.pledge_start_date ?? ""} />
-          </label>
-          <label>
-            Expected fulfillment date
-            <input name="expectedFulfillmentDate" type="date" defaultValue={gift.expected_fulfillment_date ?? ""} />
-          </label>
-          <label>
-            Installment count
-            <input name="installmentCount" type="number" min="1" step="1" defaultValue={gift.installment_count ?? ""} />
-          </label>
-          <label>
-            Installment frequency
-            <select name="installmentFrequency" defaultValue={gift.installment_frequency ?? ""}>
-              <option value="">None</option>
-              <option value="MONTHLY">Monthly</option>
-              <option value="QUARTERLY">Quarterly</option>
-              <option value="ANNUAL">Annual</option>
-              <option value="CUSTOM">Custom</option>
-            </select>
-          </label>
+          <PledgeScheduleFields
+            giftTypeFieldId="gift-type"
+            initialGiftType={gift.gift_type}
+            initialPledgeStartDate={gift.pledge_start_date ?? ""}
+            initialExpectedFulfillmentDate={gift.expected_fulfillment_date ?? ""}
+            initialInstallmentCount={gift.installment_count ? String(gift.installment_count) : ""}
+            initialInstallmentFrequency={gift.installment_frequency ?? ""}
+          />
           <label>
             Payment method
             <select name="paymentMethod" defaultValue={gift.payment_method ?? ""}>
