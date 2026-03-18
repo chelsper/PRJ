@@ -1,6 +1,8 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 
 import { getCurrentSession } from "@/server/auth/session-store";
+import { countUsers } from "@/server/data/users";
 
 import { signUpAction } from "@/app/login/actions";
 
@@ -11,16 +13,21 @@ export default async function SignUpPage({
 }) {
   const session = await getCurrentSession();
   const params = await searchParams;
+  const existingUsers = await countUsers();
+
+  if (existingUsers > 0) {
+    redirect("/login?error=invite_required");
+  }
 
   return (
     <main className="shell auth-shell">
       <div className="auth-grid">
         <section className="hero auth-hero">
           <p className="eyebrow">Pink Ribbon Jax</p>
-          <h1>Create an admin account for donor operations</h1>
+          <h1>Create the initial admin account</h1>
           <p className="muted">
-            The first person to sign up becomes the initial admin. Any later self-service signups are created as
-            read-only users until roles are changed by an admin.
+            This bootstrap page is only available before any users exist. After setup, all new users must be invited by
+            an admin.
           </p>
         </section>
 

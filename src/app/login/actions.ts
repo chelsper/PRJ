@@ -7,7 +7,9 @@ import { AUTH_COOKIE } from "@/server/auth/constants";
 import { createSessionToken } from "@/server/auth/session";
 import { env } from "@/server/env";
 import { query } from "@/server/db";
+import { getCurrentSession } from "@/server/auth/session-store";
 import { hashPassword, verifyPassword } from "@/server/auth/passwords";
+import { countUsers } from "@/server/data/users";
 import { assertSameOrigin } from "@/server/security/csrf";
 import { assertRateLimit, recordRateLimitEvent } from "@/server/security/rate-limit";
 import { writeAuditLog } from "@/server/audit";
@@ -76,6 +78,14 @@ export async function loginAction(formData: FormData) {
     role: user.role
   });
 
+  await query(
+    `update public.users
+     set last_login_at = now(),
+         updated_at = now()
+     where id = $1`,
+    [Number(user.id)]
+  );
+
   await writeAuditLog({
     actorUserId: user.id,
     action: "auth.login",
@@ -90,6 +100,20 @@ export async function loginAction(formData: FormData) {
 
 export async function signUpAction(formData: FormData) {
   await assertSameOrigin();
+
+  const existingUsers = await countUsers();
+
+  if (existingUsers > 0) {
+    await writeAuditLog({
+      actorUserId: null,
+      action: "auth.bootstrap_signup",
+      entityType: "user",
+      entityId: null,
+      status: "denied",
+      metadata: { reason: "bootstrap_closed" }
+    });
+    redirect("/login?error=invite_required");
+  }
 
   const values = signUpSchema.parse({
     email: String(formData.get("email") ?? "").trim().toLowerCase(),
@@ -128,12 +152,11 @@ export async function signUpAction(formData: FormData) {
     redirect("/signup?error=exists");
   }
 
-  const countResult = await query<{ count: string }>("select count(*)::text as count from public.users");
-  const role: Role = countResult.rows[0]?.count === "0" ? "admin" : "read_only";
+  const role: Role = "admin";
 
   const inserted = await query<{ id: string }>(
-    `insert into public.users (email, password_hash, role, status)
-     values ($1, $2, $3, 'active')
+    `insert into public.users (email, password_hash, role, status, last_login_at)
+     values ($1, $2, $3, 'active', now())
      returning id::text`,
     [values.email, hashPassword(values.password), role]
   );
@@ -160,6 +183,21 @@ export async function signUpAction(formData: FormData) {
 }
 
 export async function logoutAction() {
+  const session = await getCurrentSession();
+  const requestHeaders = await headers();
+  const ipAddress = requestHeaders.get("x-forwarded-for")?.split(",")[0]?.trim() ?? null;
+
+  if (session) {
+    await writeAuditLog({
+      actorUserId: session.userId,
+      action: "auth.logout",
+      entityType: "user",
+      entityId: session.userId,
+      status: "success",
+      ipAddress
+    });
+  }
+
   const cookieStore = await cookies();
   cookieStore.delete(AUTH_COOKIE);
   redirect("/login");

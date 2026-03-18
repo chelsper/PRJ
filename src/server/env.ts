@@ -6,7 +6,8 @@ const envSchema = z.object({
   APP_URL: z.string().url(),
   RATE_LIMIT_WINDOW_SECONDS: z.coerce.number().int().positive().default(900),
   RATE_LIMIT_MAX_AUTH_ATTEMPTS: z.coerce.number().int().positive().default(10),
-  RATE_LIMIT_MAX_EXPORTS: z.coerce.number().int().positive().default(20)
+  RATE_LIMIT_MAX_EXPORTS: z.coerce.number().int().positive().default(20),
+  RATE_LIMIT_MAX_INVITES: z.coerce.number().int().positive().default(10)
 });
 
 export const env = envSchema.parse({
@@ -15,5 +16,6 @@ export const env = envSchema.parse({
   APP_URL: process.env.APP_URL,
   RATE_LIMIT_WINDOW_SECONDS: process.env.RATE_LIMIT_WINDOW_SECONDS,
   RATE_LIMIT_MAX_AUTH_ATTEMPTS: process.env.RATE_LIMIT_MAX_AUTH_ATTEMPTS,
-  RATE_LIMIT_MAX_EXPORTS: process.env.RATE_LIMIT_MAX_EXPORTS
+  RATE_LIMIT_MAX_EXPORTS: process.env.RATE_LIMIT_MAX_EXPORTS,
+  RATE_LIMIT_MAX_INVITES: process.env.RATE_LIMIT_MAX_INVITES
 });

@@ -2,6 +2,7 @@ import Link from "next/link";
 
 import { logoutAction } from "@/app/login/actions";
 import { getCurrentSession } from "@/server/auth/session-store";
+import { roleHasCapability } from "@/server/auth/roles";
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const session = await getCurrentSession();
@@ -21,8 +22,8 @@ export default async function AdminLayout({ children }: { children: React.ReactN
           <Link href="/gifts">Gifts</Link>
           <Link href="/reports">Reports</Link>
           <Link href="/imports">Imports</Link>
-          <Link href="/users">Users</Link>
-          <Link href="/audit-log">Audit Log</Link>
+          {session && roleHasCapability(session.role, "users:manage") ? <Link href="/users">Users</Link> : null}
+          {session && roleHasCapability(session.role, "audit:read") ? <Link href="/audit-log">Audit Log</Link> : null}
         </nav>
         <form action={logoutAction}>
           <button type="submit" className="secondary">

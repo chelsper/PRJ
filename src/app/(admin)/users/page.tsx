@@ -1,35 +1,141 @@
 import { requireCapability } from "@/server/auth/permissions";
-import { query } from "@/server/db";
+import { roles, type Role } from "@/server/auth/roles";
+import { listInvitations, listUsers, type UserInvitationRow, type UserRow } from "@/server/data/users";
+import { env } from "@/server/env";
 
-export default async function UsersPage() {
+import { createInvitationAction, updateUserAction } from "./actions";
+
+export default async function UsersPage({
+  searchParams
+}: {
+  searchParams: Promise<{
+    invite_token?: string;
+    invite_email?: string;
+    invite_role?: string;
+    error?: string;
+  }>;
+}) {
   await requireCapability("users:manage");
-  const result = await query<{ id: string; email: string; role: string; status: string }>(
-    `select id::text, email, role, status
-     from public.users
-     order by email asc`
-  );
+  const params = await searchParams;
+  const [users, invitations] = await Promise.all([listUsers(), listInvitations()]);
+  const inviteLink = params.invite_token ? `${env.APP_URL}/invite?token=${params.invite_token}` : null;
 
   return (
-    <section className="table-shell">
-      <p className="eyebrow">Users</p>
-      <table>
-        <thead>
-          <tr>
-            <th>Email</th>
-            <th>Role</th>
-            <th>Status</th>
-          </tr>
-        </thead>
-        <tbody>
-          {result.rows.map((user: { id: string; email: string; role: string; status: string }) => (
-            <tr key={user.id}>
-              <td>{user.email}</td>
-              <td>{user.role}</td>
-              <td>{user.status}</td>
+    <div className="grid">
+      <section className="card">
+        <p className="eyebrow">Invite User</p>
+        <form action={createInvitationAction} className="form-grid">
+          <label>
+            Email
+            <input name="email" type="email" required />
+          </label>
+          <label>
+            Role
+            <select name="role" defaultValue="staff">
+              {roles.map((role: Role) => (
+                <option key={role} value={role}>
+                  {role}
+                </option>
+              ))}
+            </select>
+          </label>
+          <div className="full">
+            <button type="submit">Generate invitation</button>
+          </div>
+        </form>
+        {params.error === "invite_failed" ? <p className="danger">The invitation could not be created.</p> : null}
+        {inviteLink ? (
+          <div className="form-grid" style={{ marginTop: 16 }}>
+            <label className="full">
+              Invitation link for {params.invite_email} ({params.invite_role})
+              <input value={inviteLink} readOnly />
+            </label>
+            <p className="muted">This is a single-use link that expires automatically.</p>
+          </div>
+        ) : null}
+      </section>
+
+      <section className="table-shell">
+        <p className="eyebrow">Users</p>
+        <table>
+          <thead>
+            <tr>
+              <th>Email</th>
+              <th>Role</th>
+              <th>Status</th>
+              <th>Last login</th>
+              <th></th>
             </tr>
-          ))}
-        </tbody>
-      </table>
-    </section>
+          </thead>
+          <tbody>
+            {users.map((user: UserRow) => {
+              const formId = `user-form-${user.id}`;
+
+              return (
+                <tr key={user.id}>
+                  <td>{user.email}</td>
+                  <td>
+                    <select name="role" form={formId} defaultValue={user.role}>
+                      {roles.map((role: Role) => (
+                        <option key={role} value={role}>
+                          {role}
+                        </option>
+                      ))}
+                    </select>
+                  </td>
+                  <td>
+                    <select name="status" form={formId} defaultValue={user.status}>
+                      <option value="active">active</option>
+                      <option value="disabled">disabled</option>
+                    </select>
+                  </td>
+                  <td>{user.last_login_at ? user.last_login_at.slice(0, 19).replace("T", " ") : "Never"}</td>
+                  <td>
+                    <form id={formId} action={updateUserAction}>
+                      <input type="hidden" name="userId" value={user.id} />
+                      <button type="submit" className="secondary">
+                        Save
+                      </button>
+                    </form>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+        {params.error === "user_update_failed" ? <p className="danger">The user update could not be saved.</p> : null}
+      </section>
+
+      <section className="table-shell">
+        <p className="eyebrow">Recent Invitations</p>
+        <table>
+          <thead>
+            <tr>
+              <th>Email</th>
+              <th>Role</th>
+              <th>Invited by</th>
+              <th>Expires</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            {invitations.map((invitation: UserInvitationRow) => {
+              const expired = invitation.used_at === null && new Date(invitation.expires_at).getTime() < Date.now();
+              const status = invitation.used_at ? "accepted" : expired ? "expired" : "pending";
+
+              return (
+                <tr key={invitation.id}>
+                  <td>{invitation.email}</td>
+                  <td>{invitation.role}</td>
+                  <td>{invitation.invited_by_email ?? "System"}</td>
+                  <td>{invitation.expires_at.slice(0, 19).replace("T", " ")}</td>
+                  <td>{status}</td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </section>
+    </div>
   );
 }

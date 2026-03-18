@@ -21,6 +21,18 @@ create table if not exists users (
   updated_at timestamptz not null default now()
 );
 
+create table if not exists user_invitations (
+  id bigint generated always as identity primary key,
+  email citext not null,
+  role text not null check (role in ('admin', 'staff', 'read_only')),
+  token_hash text not null unique,
+  expires_at timestamptz not null,
+  used_at timestamptz,
+  invited_by bigint references users(id),
+  accepted_by bigint references users(id),
+  created_at timestamptz not null default now()
+);
+
 create table if not exists funds (
   id bigint generated always as identity primary key,
   name varchar(150) not null unique,
@@ -228,6 +240,8 @@ create table if not exists rate_limit_events (
 );
 
 create index if not exists donors_last_name_idx on donors (last_name) where deleted_at is null;
+create index if not exists user_invitations_email_idx on user_invitations (email, created_at desc);
+create index if not exists user_invitations_expires_idx on user_invitations (expires_at desc);
 create unique index if not exists donors_donor_number_idx on donors (donor_number) where deleted_at is null;
 create unique index if not exists donors_primary_email_idx on donors (primary_email) where primary_email is not null and deleted_at is null;
 create index if not exists gifts_gift_date_idx on gifts (gift_date desc) where deleted_at is null;

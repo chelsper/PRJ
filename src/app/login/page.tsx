@@ -1,5 +1,3 @@
-import Link from "next/link";
-
 import { getCurrentSession } from "@/server/auth/session-store";
 
 import { loginAction } from "./actions";
@@ -29,6 +27,7 @@ export default async function LoginPage({
           <h2>Log in</h2>
           {session ? <p className="muted">An active session is already present. Signing in again will refresh it.</p> : null}
           {params.error === "invalid" ? <p className="danger">Invalid email or password.</p> : null}
+          {params.error === "invite_required" ? <p className="danger">An admin invitation is required to create a new account.</p> : null}
           <form action={loginAction} className="form-grid">
             <label className="full">
               Email
@@ -42,9 +41,7 @@ export default async function LoginPage({
               <button type="submit">Sign in</button>
             </div>
           </form>
-          <p className="muted">
-            Need an account? <Link href="/signup">Create one</Link>
-          </p>
+          <p className="muted">Need access? Ask an admin for an invitation link.</p>
         </section>
       </div>
     </main>
