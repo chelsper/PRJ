@@ -14,6 +14,8 @@ export const giftInputSchema = z.object({
   fundId: z.coerce.number().int().positive(),
   campaignId: blankToUndefined(z.coerce.number().int().positive()),
   softCreditDonorId: blankToUndefined(z.coerce.number().int().positive()),
+  parentPledgeGiftId: blankToUndefined(z.coerce.number().int().positive()),
+  allowUnlinkedPayment: z.coerce.boolean().optional().default(false),
   giftType: z.enum([
     "PLEDGE",
     "PLEDGE_PAYMENT",
@@ -25,7 +27,33 @@ export const giftInputSchema = z.object({
   ]),
   amount: z.coerce.number().positive(),
   giftDate: z.string().date(),
+  pledgeStartDate: blankToUndefined(z.string().date()),
+  expectedFulfillmentDate: blankToUndefined(z.string().date()),
+  installmentCount: blankToUndefined(z.coerce.number().int().positive().max(120)),
+  installmentFrequency: blankToUndefined(z.enum(["MONTHLY", "QUARTERLY", "ANNUAL", "CUSTOM"])),
   paymentMethod: blankToUndefined(z.enum(["ACH", "CARD", "CHECK", "CASH", "WIRE", "OTHER"])),
   referenceNumber: blankToUndefined(z.string().trim().max(100)),
   notes: blankToUndefined(z.string().trim().max(5000))
+}).superRefine((value, ctx) => {
+  const requiresParent =
+    value.giftType === "PLEDGE_PAYMENT" || value.giftType === "MATCHING_GIFT_PAYMENT";
+
+  const isPledgeType =
+    value.giftType === "PLEDGE" || value.giftType === "MATCHING_GIFT_PLEDGE";
+
+  if (requiresParent && !value.parentPledgeGiftId && !value.allowUnlinkedPayment) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "Payment gifts must link to a parent pledge or explicitly proceed as unlinked.",
+      path: ["parentPledgeGiftId"]
+    });
+  }
+
+  if (isPledgeType && value.installmentCount && !value.installmentFrequency) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "Installment frequency is required when installment count is set.",
+      path: ["installmentFrequency"]
+    });
+  }
 });

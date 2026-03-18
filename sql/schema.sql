@@ -135,6 +135,7 @@ create table if not exists gifts (
   donor_id bigint not null references donors(id) on delete restrict,
   fund_id bigint not null references funds(id) on delete restrict,
   campaign_id bigint references campaigns(id) on delete restrict,
+  parent_pledge_gift_id bigint references gifts(id) on delete restrict,
   gift_type varchar(30) not null check (gift_type in (
     'PLEDGE',
     'PLEDGE_PAYMENT',
@@ -146,6 +147,11 @@ create table if not exists gifts (
   )),
   amount_cents integer not null check (amount_cents > 0),
   gift_date date not null,
+  pledge_start_date date,
+  expected_fulfillment_date date,
+  installment_count integer,
+  installment_frequency varchar(20) check (installment_frequency in ('MONTHLY', 'QUARTERLY', 'ANNUAL', 'CUSTOM')),
+  pledge_status varchar(20) check (pledge_status in ('ACTIVE', 'PARTIALLY_PAID', 'FULFILLED', 'WRITTEN_OFF', 'CANCELLED')),
   payment_method text check (payment_method in ('ACH', 'CARD', 'CHECK', 'CASH', 'WIRE', 'OTHER')),
   reference_number varchar(100),
   notes text,
@@ -191,6 +197,18 @@ create table if not exists pledges (
   pledged_on date not null,
   due_on date,
   status text not null default 'open' check (status in ('open', 'fulfilled', 'written_off')),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  created_by bigint references users(id),
+  updated_by bigint references users(id)
+);
+
+create table if not exists pledge_installments (
+  id bigint generated always as identity primary key,
+  pledge_gift_id bigint not null references gifts(id) on delete cascade,
+  installment_number integer not null,
+  due_date date not null,
+  amount_cents integer not null check (amount_cents > 0),
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
   created_by bigint references users(id),
@@ -246,9 +264,11 @@ create unique index if not exists donors_donor_number_idx on donors (donor_numbe
 create unique index if not exists donors_primary_email_idx on donors (primary_email) where primary_email is not null and deleted_at is null;
 create index if not exists gifts_gift_date_idx on gifts (gift_date desc) where deleted_at is null;
 create unique index if not exists gifts_gift_number_idx on gifts (gift_number) where deleted_at is null;
+create index if not exists gifts_parent_pledge_idx on gifts (parent_pledge_gift_id) where deleted_at is null;
 create index if not exists gifts_donor_date_idx on gifts (donor_id, gift_date desc) where deleted_at is null;
 create index if not exists gifts_campaign_idx on gifts (campaign_id) where deleted_at is null;
 create index if not exists gifts_fund_idx on gifts (fund_id) where deleted_at is null;
+create index if not exists pledge_installments_pledge_idx on pledge_installments (pledge_gift_id, installment_number);
 create index if not exists audit_log_occurred_at_idx on audit_log (occurred_at desc);
 create index if not exists audit_log_action_idx on audit_log (action, occurred_at desc);
 create index if not exists rate_limit_events_lookup_idx on rate_limit_events (limiter_key, action, created_at desc);
@@ -275,6 +295,8 @@ drop trigger if exists gift_allocations_set_updated_at on gift_allocations;
 create trigger gift_allocations_set_updated_at before update on gift_allocations for each row execute function set_updated_at();
 drop trigger if exists pledges_set_updated_at on pledges;
 create trigger pledges_set_updated_at before update on pledges for each row execute function set_updated_at();
+drop trigger if exists pledge_installments_set_updated_at on pledge_installments;
+create trigger pledge_installments_set_updated_at before update on pledge_installments for each row execute function set_updated_at();
 drop trigger if exists soft_credits_set_updated_at on soft_credits;
 create trigger soft_credits_set_updated_at before update on soft_credits for each row execute function set_updated_at();
 drop trigger if exists notes_set_updated_at on notes;

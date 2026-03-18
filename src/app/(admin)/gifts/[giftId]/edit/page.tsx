@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 
 import { requireCapability } from "@/server/auth/permissions";
 import { listDonors, type DonorListRow } from "@/server/data/donors";
-import { getGiftById } from "@/server/data/gifts";
+import { getGiftById, listPledgeInstallments, listPledgeOptions, type InstallmentRow, type PledgeOptionRow } from "@/server/data/gifts";
 import { listCampaigns, listFunds, type LookupRow } from "@/server/data/lookups";
 
 import { updateGiftAction } from "../../actions";
@@ -20,7 +20,13 @@ export default async function EditGiftPage({
     notFound();
   }
 
-  const [donors, funds, campaigns] = await Promise.all([listDonors(), listFunds(), listCampaigns()]);
+  const [donors, funds, campaigns, pledges, installments] = await Promise.all([
+    listDonors(),
+    listFunds(),
+    listCampaigns(),
+    listPledgeOptions(),
+    listPledgeInstallments(giftId)
+  ]);
 
   return (
     <div className="grid">
@@ -75,6 +81,17 @@ export default async function EditGiftPage({
             </select>
           </label>
           <label>
+            Parent pledge
+            <select name="parentPledgeGiftId" defaultValue={gift.parent_pledge_gift_id ?? ""}>
+              <option value="">None</option>
+              {pledges.map((pledge: PledgeOptionRow) => (
+                <option key={pledge.id} value={pledge.id}>
+                  {(pledge.gift_number ?? pledge.id) + " · " + pledge.donor_name + " · $" + (pledge.balance_remaining_cents / 100).toLocaleString() + " open"}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label>
             Gift type
             <select name="giftType" defaultValue={gift.gift_type} required>
               <option value="PLEDGE">Pledge</option>
@@ -93,6 +110,32 @@ export default async function EditGiftPage({
           <label>
             Gift date
             <input name="giftDate" type="date" defaultValue={gift.gift_date} required />
+          </label>
+          <label>
+            Pledge start date
+            <input name="pledgeStartDate" type="date" defaultValue={gift.pledge_start_date ?? ""} />
+          </label>
+          <label>
+            Expected fulfillment date
+            <input name="expectedFulfillmentDate" type="date" defaultValue={gift.expected_fulfillment_date ?? ""} />
+          </label>
+          <label>
+            Installment count
+            <input name="installmentCount" type="number" min="1" step="1" defaultValue={gift.installment_count ?? ""} />
+          </label>
+          <label>
+            Installment frequency
+            <select name="installmentFrequency" defaultValue={gift.installment_frequency ?? ""}>
+              <option value="">None</option>
+              <option value="MONTHLY">Monthly</option>
+              <option value="QUARTERLY">Quarterly</option>
+              <option value="ANNUAL">Annual</option>
+              <option value="CUSTOM">Custom</option>
+            </select>
+          </label>
+          <label className="full">
+            <span>Proceed without parent pledge</span>
+            <input name="allowUnlinkedPayment" type="checkbox" value="true" defaultChecked={!gift.parent_pledge_gift_id && (gift.gift_type === "PLEDGE_PAYMENT" || gift.gift_type === "MATCHING_GIFT_PAYMENT")} />
           </label>
           <label>
             Payment method
@@ -114,6 +157,35 @@ export default async function EditGiftPage({
             Notes
             <textarea name="notes" rows={4} defaultValue={gift.notes ?? ""} />
           </label>
+          {gift.pledge_status ? (
+            <div className="full table-shell">
+              <p className="eyebrow">Pledge Tracking</p>
+              <p className="muted">
+                Status: {gift.pledge_status.replaceAll("_", " ")} · Balance remaining: $
+                {((gift.balance_remaining_cents ?? 0) / 100).toLocaleString()}
+              </p>
+              {installments.length > 0 ? (
+                <table>
+                  <thead>
+                    <tr>
+                      <th>#</th>
+                      <th>Due date</th>
+                      <th>Amount</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {installments.map((installment: InstallmentRow) => (
+                      <tr key={installment.id}>
+                        <td>{installment.installment_number}</td>
+                        <td>{installment.due_date}</td>
+                        <td>${(installment.amount_cents / 100).toLocaleString()}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              ) : null}
+            </div>
+          ) : null}
           <div className="full">
             <button type="submit">Save gift</button>
           </div>

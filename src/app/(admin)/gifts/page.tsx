@@ -1,17 +1,18 @@
 import { requireCapability } from "@/server/auth/permissions";
 import { listDonors, type DonorListRow } from "@/server/data/donors";
-import { listRecentGifts, type RecentGiftRow } from "@/server/data/gifts";
+import { listPledgeOptions, listRecentGifts, type PledgeOptionRow, type RecentGiftRow } from "@/server/data/gifts";
 import { listCampaigns, listFunds, type LookupRow } from "@/server/data/lookups";
 
 import { createGiftAction } from "./actions";
 
 export default async function GiftsPage() {
   await requireCapability("gifts:read");
-  const [donors, gifts, funds, campaigns] = await Promise.all([
+  const [donors, gifts, funds, campaigns, pledges] = await Promise.all([
     listDonors(),
     listRecentGifts(),
     listFunds(),
-    listCampaigns()
+    listCampaigns(),
+    listPledgeOptions()
   ]);
 
   return (
@@ -66,6 +67,17 @@ export default async function GiftsPage() {
             </select>
           </label>
           <label>
+            Parent pledge
+            <select name="parentPledgeGiftId">
+              <option value="">None</option>
+              {pledges.map((pledge: PledgeOptionRow) => (
+                <option key={pledge.id} value={pledge.id}>
+                  {(pledge.gift_number ?? pledge.id) + " · " + pledge.donor_name + " · $" + (pledge.balance_remaining_cents / 100).toLocaleString() + " open"}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label>
             Gift type
             <select name="giftType" defaultValue="CASH" required>
               <option value="PLEDGE">Pledge</option>
@@ -84,6 +96,32 @@ export default async function GiftsPage() {
           <label>
             Gift date
             <input name="giftDate" type="date" required />
+          </label>
+          <label>
+            Pledge start date
+            <input name="pledgeStartDate" type="date" />
+          </label>
+          <label>
+            Expected fulfillment date
+            <input name="expectedFulfillmentDate" type="date" />
+          </label>
+          <label>
+            Installment count
+            <input name="installmentCount" type="number" min="1" step="1" />
+          </label>
+          <label>
+            Installment frequency
+            <select name="installmentFrequency" defaultValue="">
+              <option value="">None</option>
+              <option value="MONTHLY">Monthly</option>
+              <option value="QUARTERLY">Quarterly</option>
+              <option value="ANNUAL">Annual</option>
+              <option value="CUSTOM">Custom</option>
+            </select>
+          </label>
+          <label className="full">
+            <span>Proceed without parent pledge</span>
+            <input name="allowUnlinkedPayment" type="checkbox" value="true" />
           </label>
           <label>
             Payment method
