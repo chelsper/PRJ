@@ -1,7 +1,9 @@
 import { query } from "@/server/db";
 
-export async function listFunds() {
-  const result = await query<{ id: string; name: string }>(
+export type LookupRow = { id: string; name: string };
+
+export async function listFunds(): Promise<LookupRow[]> {
+  const result = await query<LookupRow>(
     `select id::text, name
      from funds
      where archived_at is null
@@ -11,8 +13,8 @@ export async function listFunds() {
   return result.rows;
 }
 
-export async function listCampaigns() {
-  const result = await query<{ id: string; name: string }>(
+export async function listCampaigns(): Promise<LookupRow[]> {
+  const result = await query<LookupRow>(
     `select id::text, name
      from campaigns
      where archived_at is null

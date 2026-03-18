@@ -2,14 +2,14 @@ import Link from "next/link";
 
 import { requireCapability } from "@/server/auth/permissions";
 import { listDonors } from "@/server/data/donors";
-import { listRecentGifts } from "@/server/data/gifts";
-import { recentAuditEvents } from "@/server/data/reports";
+import { listRecentGifts, type RecentGiftRow } from "@/server/data/gifts";
+import { recentAuditEvents, type AuditEventRow } from "@/server/data/reports";
 
 export default async function DashboardPage() {
   await requireCapability("reports:read");
 
   const [donors, gifts, auditEvents] = await Promise.all([listDonors(), listRecentGifts(), recentAuditEvents()]);
-  const givingTotal = gifts.reduce((sum: number, gift) => sum + Number(gift.amount_cents), 0) / 100;
+  const givingTotal = gifts.reduce((sum: number, gift: RecentGiftRow) => sum + Number(gift.amount_cents), 0) / 100;
 
   return (
     <div className="grid">
@@ -74,7 +74,7 @@ export default async function DashboardPage() {
               </tr>
             </thead>
             <tbody>
-              {auditEvents.map((event) => (
+              {auditEvents.map((event: AuditEventRow) => (
                 <tr key={`${event.occurred_at}-${event.action}`}>
                   <td>{event.occurred_at.slice(0, 19).replace("T", " ")}</td>
                   <td>{event.action}</td>

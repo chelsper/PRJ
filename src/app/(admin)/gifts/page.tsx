@@ -1,7 +1,7 @@
 import { requireCapability } from "@/server/auth/permissions";
-import { listDonors } from "@/server/data/donors";
-import { listRecentGifts } from "@/server/data/gifts";
-import { listCampaigns, listFunds } from "@/server/data/lookups";
+import { listDonors, type DonorListRow } from "@/server/data/donors";
+import { listRecentGifts, type RecentGiftRow } from "@/server/data/gifts";
+import { listCampaigns, listFunds, type LookupRow } from "@/server/data/lookups";
 
 import { createGiftAction } from "./actions";
 
@@ -23,7 +23,7 @@ export default async function GiftsPage() {
             Donor
             <select name="donorId" required>
               <option value="">Select donor</option>
-              {donors.map((donor) => {
+              {donors.map((donor: DonorListRow) => {
                 const label =
                   donor.donor_type === "ORGANIZATION"
                     ? donor.organization_name
@@ -40,7 +40,7 @@ export default async function GiftsPage() {
             Fund
             <select name="fundId" required>
               <option value="">Select fund</option>
-              {funds.map((fund) => (
+              {funds.map((fund: LookupRow) => (
                 <option key={fund.id} value={fund.id}>
                   {fund.name}
                 </option>
@@ -51,7 +51,7 @@ export default async function GiftsPage() {
             Campaign
             <select name="campaignId">
               <option value="">None</option>
-              {campaigns.map((campaign) => (
+              {campaigns.map((campaign: LookupRow) => (
                 <option key={campaign.id} value={campaign.id}>
                   {campaign.name}
                 </option>
@@ -103,7 +103,7 @@ export default async function GiftsPage() {
             </tr>
           </thead>
           <tbody>
-            {gifts.map((gift) => (
+            {gifts.map((gift: RecentGiftRow) => (
               <tr key={gift.id}>
                 <td>{gift.gift_date}</td>
                 <td>{gift.donor_name}</td>

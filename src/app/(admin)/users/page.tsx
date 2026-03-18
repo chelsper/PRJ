@@ -21,7 +21,7 @@ export default async function UsersPage() {
           </tr>
         </thead>
         <tbody>
-          {result.rows.map((user) => (
+          {result.rows.map((user: { id: string; email: string; role: string; status: string }) => (
             <tr key={user.id}>
               <td>{user.email}</td>
               <td>{user.role}</td>

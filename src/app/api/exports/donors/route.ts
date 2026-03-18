@@ -46,9 +46,9 @@ export async function GET() {
 
   const csv = [
     ["donor_name", "primary_email", "lifetime_giving"].join(","),
-    ...result.rows.map((row) =>
+    ...result.rows.map((row: { donor_name: string; primary_email: string | null; lifetime_giving_cents: number }) =>
       [row.donor_name, row.primary_email ?? "", (row.lifetime_giving_cents / 100).toFixed(2)]
-        .map((value) => `"${String(value).replaceAll('"', '""')}"`)
+        .map((value: string) => `"${String(value).replaceAll('"', '""')}"`)
         .join(",")
     )
   ].join("\n");

@@ -1,5 +1,5 @@
 import { requireCapability } from "@/server/auth/permissions";
-import { listDonors } from "@/server/data/donors";
+import { listDonors, type DonorListRow } from "@/server/data/donors";
 
 import { createDonorAction, deleteDonorAction } from "./actions";
 
@@ -82,7 +82,7 @@ export default async function DonorsPage({
               </tr>
             </thead>
             <tbody>
-              {donors.map((donor) => {
+              {donors.map((donor: DonorListRow) => {
                 const name =
                   donor.donor_type === "ORGANIZATION"
                     ? donor.organization_name

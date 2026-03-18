@@ -4,16 +4,18 @@ import { donorInputSchema } from "@/server/validation/donors";
 
 type Actor = { userId: string; ipAddress?: string | null };
 
-export async function listDonors(search?: string) {
-  const result = await query<{
-    id: string;
-    donor_type: "INDIVIDUAL" | "ORGANIZATION";
-    first_name: string | null;
-    last_name: string | null;
-    organization_name: string | null;
-    primary_email: string | null;
-    lifetime_giving_cents: string | null;
-  }>(
+export type DonorListRow = {
+  id: string;
+  donor_type: "INDIVIDUAL" | "ORGANIZATION";
+  first_name: string | null;
+  last_name: string | null;
+  organization_name: string | null;
+  primary_email: string | null;
+  lifetime_giving_cents: string | null;
+};
+
+export async function listDonors(search?: string): Promise<DonorListRow[]> {
+  const result = await query<DonorListRow>(
     `select
       d.id::text,
       d.donor_type,
