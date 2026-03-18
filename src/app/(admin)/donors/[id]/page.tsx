@@ -47,8 +47,16 @@ export default async function DonorProfilePage({
         </p>
         <div className="stats">
           <article className="stat">
-            <span className="muted">Lifetime giving</span>
-            <strong>${(Number(donor.lifetime_giving_cents) / 100).toLocaleString()}</strong>
+            <span className="muted">Donor recognition total</span>
+            <strong>${(Number(donor.donor_recognition_cents) / 100).toLocaleString()}</strong>
+          </article>
+          <article className="stat">
+            <span className="muted">Hard-credit lifetime</span>
+            <strong>${(Number(donor.donor_hard_credit_cents) / 100).toLocaleString()}</strong>
+          </article>
+          <article className="stat">
+            <span className="muted">Soft-credit lifetime</span>
+            <strong>${(Number(donor.donor_soft_credit_cents) / 100).toLocaleString()}</strong>
           </article>
           <article className="stat">
             <span className="muted">Giving level</span>
@@ -82,6 +90,7 @@ export default async function DonorProfilePage({
                 <tr>
                   <th>Gift ID</th>
                   <th>Date</th>
+                  <th>Gift type</th>
                   <th>Fund</th>
                   <th>Campaign</th>
                   <th>Payment</th>
@@ -94,9 +103,10 @@ export default async function DonorProfilePage({
                   <tr key={gift.id}>
                     <td>{gift.gift_number ?? gift.id}</td>
                     <td>{gift.gift_date}</td>
+                    <td>{gift.gift_type.replaceAll("_", " ")}</td>
                     <td>{gift.fund_name}</td>
                     <td>{gift.campaign_name ?? "—"}</td>
-                    <td>{gift.payment_method}</td>
+                    <td>{gift.payment_method ?? "—"}</td>
                     <td>${(gift.amount_cents / 100).toLocaleString()}</td>
                     <td>
                       <Link href={`/gifts/${gift.id}/edit`} className="inline-link">
@@ -116,6 +126,7 @@ export default async function DonorProfilePage({
                 <tr>
                   <th>Gift ID</th>
                   <th>Date</th>
+                  <th>Gift type</th>
                   <th>Legal donor</th>
                   <th>Fund</th>
                   <th>Campaign</th>
@@ -126,7 +137,7 @@ export default async function DonorProfilePage({
               <tbody>
                 {softCredits.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="muted">
+                    <td colSpan={8} className="muted">
                       No soft credits recorded.
                     </td>
                   </tr>
@@ -135,6 +146,7 @@ export default async function DonorProfilePage({
                     <tr key={credit.soft_credit_id}>
                       <td>{credit.gift_number ?? credit.gift_id}</td>
                       <td>{credit.gift_date}</td>
+                      <td>{credit.gift_type.replaceAll("_", " ")}</td>
                       <td>{credit.legal_donor_name}</td>
                       <td>{credit.fund_name}</td>
                       <td>{credit.campaign_name ?? "—"}</td>

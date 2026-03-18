@@ -80,7 +80,7 @@ export default async function DonorsPage({
               <tr>
                 <th>Donor</th>
                 <th>Email</th>
-                <th>Lifetime Giving</th>
+                <th>Recognition Total</th>
                 <th></th>
               </tr>
             </thead>
@@ -93,7 +93,7 @@ export default async function DonorsPage({
                       <div className="muted">{donor.donor_number ?? "Pending donor number"}</div>
                     </td>
                     <td>{donor.primary_email ?? "—"}</td>
-                    <td>${(Number(donor.lifetime_giving_cents ?? "0") / 100).toLocaleString()}</td>
+                    <td>${(Number(donor.donor_recognition_cents) / 100).toLocaleString()}</td>
                     <td>
                       <DeleteDonorForm donorId={donor.id} />
                     </td>

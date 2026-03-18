@@ -13,7 +13,9 @@ export type DonorListRow = {
   last_name: string | null;
   organization_name: string | null;
   primary_email: string | null;
-  lifetime_giving_cents: string | null;
+  donor_recognition_cents: string;
+  donor_hard_credit_cents: string;
+  donor_soft_credit_cents: string;
 };
 
 export type DonorConnectionRow = {
@@ -53,7 +55,9 @@ export type DonorProfileRow = {
   state_region: string | null;
   postal_code: string | null;
   country: string | null;
-  lifetime_giving_cents: string;
+  donor_recognition_cents: string;
+  donor_hard_credit_cents: string;
+  donor_soft_credit_cents: string;
 };
 
 export type DonorAddressRow = {
@@ -71,11 +75,19 @@ export type DonorAddressRow = {
 export type DonorGiftRow = {
   id: string;
   gift_number: string | null;
+  gift_type:
+    | "PLEDGE"
+    | "PLEDGE_PAYMENT"
+    | "CASH"
+    | "STOCK_PROPERTY"
+    | "GIFT_IN_KIND"
+    | "MATCHING_GIFT_PLEDGE"
+    | "MATCHING_GIFT_PAYMENT";
   gift_date: string;
   amount_cents: number;
   fund_name: string;
   campaign_name: string | null;
-  payment_method: string;
+  payment_method: string | null;
   reference_number: string | null;
 };
 
@@ -84,6 +96,14 @@ export type DonorSoftCreditRow = {
   gift_id: string;
   gift_number: string | null;
   credit_type: "MANUAL" | "AUTO_SPOUSE";
+  gift_type:
+    | "PLEDGE"
+    | "PLEDGE_PAYMENT"
+    | "CASH"
+    | "STOCK_PROPERTY"
+    | "GIFT_IN_KIND"
+    | "MATCHING_GIFT_PLEDGE"
+    | "MATCHING_GIFT_PAYMENT";
   amount_cents: number;
   gift_date: string;
   legal_donor_name: string;
@@ -136,15 +156,16 @@ export async function listDonors(search?: string): Promise<DonorListRow[]> {
       d.last_name,
       d.organization_name,
       d.primary_email,
-      coalesce(sum(g.amount_cents), 0)::text as lifetime_giving_cents
+      coalesce(t.donor_recognition_cents, 0)::text as donor_recognition_cents,
+      coalesce(t.donor_hard_credit_cents, 0)::text as donor_hard_credit_cents,
+      coalesce(t.donor_soft_credit_cents, 0)::text as donor_soft_credit_cents
     from public.donors d
-    left join public.gifts g on g.donor_id = d.id and g.deleted_at is null
+    left join public.donor_giving_totals t on t.donor_id = d.id
     where d.deleted_at is null
       and (
         $1::text is null
         or concat_ws(' ', d.first_name, d.last_name, d.preferred_name, d.organization_name, d.donor_number) ilike '%' || $1 || '%'
       )
-    group by d.id
     order by d.last_name nulls last, d.organization_name nulls last
     limit 100`,
     [search ?? null]
@@ -203,14 +224,16 @@ export async function getDonorProfile(donorId: string): Promise<DonorProfileRow 
       a.state_region,
       a.postal_code,
       a.country,
-      coalesce(sum(g.amount_cents), 0)::text as lifetime_giving_cents
+      coalesce(t.donor_recognition_cents, 0)::text as donor_recognition_cents,
+      coalesce(t.donor_hard_credit_cents, 0)::text as donor_hard_credit_cents,
+      coalesce(t.donor_soft_credit_cents, 0)::text as donor_soft_credit_cents
     from public.donors d
     left join public.donors sp on sp.id = d.spouse_donor_id
     left join public.donor_addresses a on a.donor_id = d.id and a.is_primary = true
-    left join public.gifts g on g.donor_id = d.id and g.deleted_at is null
+    left join public.donor_giving_totals t on t.donor_id = d.id
     where d.id = $1
       and d.deleted_at is null
-    group by d.id, sp.id, a.id`,
+    group by d.id, sp.id, a.id, t.donor_recognition_cents, t.donor_hard_credit_cents, t.donor_soft_credit_cents`,
     [Number(donorId)]
   );
 
@@ -222,6 +245,7 @@ export async function listDonorGiving(donorId: string): Promise<DonorGiftRow[]> 
     `select
       g.id::text,
       g.gift_number,
+      g.gift_type,
       g.gift_date::text,
       g.amount_cents,
       f.name as fund_name,
@@ -247,6 +271,7 @@ export async function listDonorSoftCredits(donorId: string): Promise<DonorSoftCr
       g.id::text as gift_id,
       g.gift_number,
       sc.credit_type,
+      g.gift_type,
       sc.amount_cents,
       g.gift_date::text,
       case

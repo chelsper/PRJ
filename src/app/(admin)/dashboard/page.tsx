@@ -1,15 +1,12 @@
 import Link from "next/link";
 
 import { requireCapability } from "@/server/auth/permissions";
-import { listDonors } from "@/server/data/donors";
-import { listRecentGifts, type RecentGiftRow } from "@/server/data/gifts";
-import { recentAuditEvents, type AuditEventRow } from "@/server/data/reports";
+import { recentAuditEvents, dashboardTotals, type AuditEventRow } from "@/server/data/reports";
 
 export default async function DashboardPage() {
   await requireCapability("reports:read");
 
-  const [donors, gifts, auditEvents] = await Promise.all([listDonors(), listRecentGifts(), recentAuditEvents()]);
-  const givingTotal = gifts.reduce((sum: number, gift: RecentGiftRow) => sum + Number(gift.amount_cents), 0) / 100;
+  const [totals, auditEvents] = await Promise.all([dashboardTotals(), recentAuditEvents()]);
 
   return (
     <div className="grid">
@@ -24,15 +21,19 @@ export default async function DashboardPage() {
       <section className="stats">
         <article className="stat">
           <span className="muted">Visible donors</span>
-          <strong>{donors.length}</strong>
+          <strong>{totals.visible_donors}</strong>
         </article>
         <article className="stat">
-          <span className="muted">Recent gifts</span>
-          <strong>{gifts.length}</strong>
+          <span className="muted">Gift records</span>
+          <strong>{totals.recent_gifts}</strong>
         </article>
         <article className="stat">
-          <span className="muted">Recent total</span>
-          <strong>${givingTotal.toLocaleString()}</strong>
+          <span className="muted">PRJ total received</span>
+          <strong>${(totals.prj_total_received_cents / 100).toLocaleString()}</strong>
+        </article>
+        <article className="stat">
+          <span className="muted">PRJ total pledged</span>
+          <strong>${(totals.prj_total_pledged_cents / 100).toLocaleString()}</strong>
         </article>
       </section>
 
@@ -57,7 +58,7 @@ export default async function DashboardPage() {
                 <td>
                   <Link href="/reports">Reports</Link>
                 </td>
-                <td className="muted">Leaderboard, yearly giving, recent activity</td>
+                <td className="muted">Recognition totals, received totals, pledged totals</td>
               </tr>
             </tbody>
           </table>

@@ -10,6 +10,14 @@ export type RecentGiftRow = {
   gift_number?: string | null;
   donor_id?: string;
   donor_name: string;
+  gift_type:
+    | "PLEDGE"
+    | "PLEDGE_PAYMENT"
+    | "CASH"
+    | "STOCK_PROPERTY"
+    | "GIFT_IN_KIND"
+    | "MATCHING_GIFT_PLEDGE"
+    | "MATCHING_GIFT_PAYMENT";
   amount_cents: number;
   gift_date: string;
   fund_name: string;
@@ -23,9 +31,17 @@ export type GiftDetailRow = {
   fund_id: string;
   campaign_id: string | null;
   soft_credit_donor_id: string | null;
+  gift_type:
+    | "PLEDGE"
+    | "PLEDGE_PAYMENT"
+    | "CASH"
+    | "STOCK_PROPERTY"
+    | "GIFT_IN_KIND"
+    | "MATCHING_GIFT_PLEDGE"
+    | "MATCHING_GIFT_PAYMENT";
   amount_cents: number;
   gift_date: string;
-  payment_method: "ACH" | "CARD" | "CHECK" | "CASH" | "WIRE" | "OTHER";
+  payment_method: "ACH" | "CARD" | "CHECK" | "CASH" | "WIRE" | "OTHER" | null;
   reference_number: string | null;
   notes: string | null;
 };
@@ -82,6 +98,7 @@ export async function listRecentGifts(): Promise<RecentGiftRow[]> {
       g.id::text,
       g.gift_number,
       coalesce(d.organization_name, concat_ws(' ', d.first_name, d.last_name)) as donor_name,
+      g.gift_type,
       g.amount_cents,
       g.gift_date::text,
       f.name as fund_name,
@@ -107,6 +124,7 @@ export async function getGiftById(giftId: string): Promise<GiftDetailRow | null>
       g.fund_id::text,
       g.campaign_id::text,
       sc.donor_id::text as soft_credit_donor_id,
+      g.gift_type,
       g.amount_cents,
       g.gift_date::text,
       g.payment_method,
@@ -131,6 +149,7 @@ export async function createGift(input: unknown, actor: Actor) {
         donor_id,
         fund_id,
         campaign_id,
+        gift_type,
         amount_cents,
         gift_date,
         payment_method,
@@ -144,9 +163,10 @@ export async function createGift(input: unknown, actor: Actor) {
         values.donorId,
         values.fundId,
         values.campaignId ?? null,
+        values.giftType,
         Math.round(values.amount * 100),
         values.giftDate,
-        values.paymentMethod,
+        values.paymentMethod ?? null,
         values.referenceNumber ?? null,
         values.notes ?? null,
         actor.userId
@@ -180,21 +200,23 @@ export async function updateGift(giftId: string, input: unknown, actor: Actor) {
        set donor_id = $2,
            fund_id = $3,
            campaign_id = $4,
-           amount_cents = $5,
-           gift_date = $6,
-           payment_method = $7,
-           reference_number = $8,
-           notes = $9,
-           updated_by = $10
+           gift_type = $5,
+           amount_cents = $6,
+           gift_date = $7,
+           payment_method = $8,
+           reference_number = $9,
+           notes = $10,
+           updated_by = $11
        where id = $1`,
       [
         Number(giftId),
         values.donorId,
         values.fundId,
         values.campaignId ?? null,
+        values.giftType,
         Math.round(values.amount * 100),
         values.giftDate,
-        values.paymentMethod,
+        values.paymentMethod ?? null,
         values.referenceNumber ?? null,
         values.notes ?? null,
         actor.userId

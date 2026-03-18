@@ -75,6 +75,18 @@ export default async function EditGiftPage({
             </select>
           </label>
           <label>
+            Gift type
+            <select name="giftType" defaultValue={gift.gift_type} required>
+              <option value="PLEDGE">Pledge</option>
+              <option value="PLEDGE_PAYMENT">Pledge Payment</option>
+              <option value="CASH">Cash</option>
+              <option value="STOCK_PROPERTY">Stock/Property</option>
+              <option value="GIFT_IN_KIND">Gift-in-Kind</option>
+              <option value="MATCHING_GIFT_PLEDGE">Matching Gift Pledge</option>
+              <option value="MATCHING_GIFT_PAYMENT">Matching Gift Payment</option>
+            </select>
+          </label>
+          <label>
             Amount
             <input name="amount" type="number" min="0.01" step="0.01" defaultValue={(gift.amount_cents / 100).toFixed(2)} required />
           </label>
@@ -84,7 +96,8 @@ export default async function EditGiftPage({
           </label>
           <label>
             Payment method
-            <select name="paymentMethod" defaultValue={gift.payment_method}>
+            <select name="paymentMethod" defaultValue={gift.payment_method ?? ""}>
+              <option value="">Not applicable</option>
               <option value="ACH">ACH</option>
               <option value="CARD">Card</option>
               <option value="CHECK">Check</option>

@@ -37,17 +37,32 @@ export async function GET() {
   const result = await query<{
     donor_name: string;
     primary_email: string | null;
-    lifetime_giving_cents: number;
+    donor_recognition_cents: number;
+    donor_hard_credit_cents: number;
+    donor_soft_credit_cents: number;
   }>(
-    `select donor_name, primary_email, lifetime_giving_cents
-     from public.lifetime_giving_by_donor
+    `select donor_name, primary_email, donor_recognition_cents, donor_hard_credit_cents, donor_soft_credit_cents
+     from public.donor_giving_totals
      order by donor_name asc`
   );
 
   const csv = [
-    ["donor_name", "primary_email", "lifetime_giving"].join(","),
-    ...result.rows.map((row: { donor_name: string; primary_email: string | null; lifetime_giving_cents: number }) =>
-      [row.donor_name, row.primary_email ?? "", (row.lifetime_giving_cents / 100).toFixed(2)]
+    ["donor_name", "primary_email", "donor_recognition_total", "donor_hard_credit_total", "donor_soft_credit_total"].join(","),
+    ...result.rows.map(
+      (row: {
+        donor_name: string;
+        primary_email: string | null;
+        donor_recognition_cents: number;
+        donor_hard_credit_cents: number;
+        donor_soft_credit_cents: number;
+      }) =>
+        [
+          row.donor_name,
+          row.primary_email ?? "",
+          (row.donor_recognition_cents / 100).toFixed(2),
+          (row.donor_hard_credit_cents / 100).toFixed(2),
+          (row.donor_soft_credit_cents / 100).toFixed(2)
+        ]
         .map((value: string) => `"${String(value).replaceAll('"', '""')}"`)
         .join(",")
     )

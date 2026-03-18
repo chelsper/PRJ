@@ -14,9 +14,18 @@ export const giftInputSchema = z.object({
   fundId: z.coerce.number().int().positive(),
   campaignId: blankToUndefined(z.coerce.number().int().positive()),
   softCreditDonorId: blankToUndefined(z.coerce.number().int().positive()),
+  giftType: z.enum([
+    "PLEDGE",
+    "PLEDGE_PAYMENT",
+    "CASH",
+    "STOCK_PROPERTY",
+    "GIFT_IN_KIND",
+    "MATCHING_GIFT_PLEDGE",
+    "MATCHING_GIFT_PAYMENT"
+  ]),
   amount: z.coerce.number().positive(),
   giftDate: z.string().date(),
-  paymentMethod: z.enum(["ACH", "CARD", "CHECK", "CASH", "WIRE", "OTHER"]),
+  paymentMethod: blankToUndefined(z.enum(["ACH", "CARD", "CHECK", "CASH", "WIRE", "OTHER"])),
   referenceNumber: blankToUndefined(z.string().trim().max(100)),
   notes: blankToUndefined(z.string().trim().max(5000))
 });

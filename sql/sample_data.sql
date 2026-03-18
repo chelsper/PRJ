@@ -79,29 +79,30 @@ with fund_lookup as (
 campaign_lookup as (
   select id, code from public.campaigns
 ),
-gift_seed (email, amount_cents, gift_date, fund_code, campaign_code, payment_method, reference_number, notes) as (
+gift_seed (email, gift_type, amount_cents, gift_date, fund_code, campaign_code, payment_method, reference_number, notes) as (
   values
-    ('amelia.hart@example.org', 2500, '2025-02-14', 'GEN', 'SPRING26', 'CARD', 'AH-001', 'Valentine appeal gift'),
-    ('amelia.hart@example.org', 5000, '2025-11-30', 'MAM', 'YE26', 'ACH', 'AH-002', 'Year-end support'),
-    ('amelia.hart@example.org', 7500, '2026-03-10', 'GEN', 'SPRING26', 'CARD', 'AH-003', 'Spring follow-up'),
-    ('benjamin.reed@example.org', 10000, '2024-10-05', 'PSF', 'GALA26', 'CHECK', 'BR-001', 'Event sponsorship gift'),
-    ('benjamin.reed@example.org', 15000, '2025-10-02', 'PSF', 'GALA26', 'WIRE', 'BR-002', 'Renewed gala support'),
-    ('carla.mendez@example.org', 2500, '2026-01-12', 'MAM', 'YE26', 'CARD', 'CM-001', 'Memorial tribute'),
-    ('daniel.foster@example.org', 20000, '2025-12-28', 'GEN', 'YE26', 'ACH', 'DF-001', 'Major year-end commitment'),
-    ('daniel.foster@example.org', 5000, '2026-02-18', 'GEN', 'SPRING26', 'ACH', 'DF-002', 'Follow-up gift'),
-    ('elise.nguyen@example.org', 1000, '2026-01-20', 'MAM', 'SPRING26', 'CARD', 'EN-001', 'First gift'),
-    ('faith.collins@example.org', 3000, '2026-03-03', 'PSF', 'SPRING26', 'CARD', 'FC-001', 'New donor online appeal'),
-    ('grant.wilson@example.org', 12000, '2025-06-15', 'GEN', null, 'CHECK', 'GW-001', 'Employer match pending'),
-    ('grant.wilson@example.org', 12000, '2025-07-12', 'GEN', null, 'ACH', 'GW-002', 'Matching gift received'),
-    ('harbor.care@example.org', 50000, '2025-09-20', 'PSF', 'GALA26', 'WIRE', 'HC-001', 'Corporate sponsorship'),
-    ('sunrise.logistics@example.org', 25000, '2026-03-01', 'GEN', 'SPRING26', 'CHECK', 'SL-001', 'Community partnership gift'),
-    ('violet.family.office@example.org', 100000, '2025-12-15', 'MAM', 'YE26', 'WIRE', 'VF-001', 'Leadership contribution'),
-    ('violet.family.office@example.org', 25000, '2026-03-05', 'PSF', 'SPRING26', 'WIRE', 'VF-002', 'Challenge match commitment')
+    ('amelia.hart@example.org', 'CASH', 2500, '2025-02-14', 'GEN', 'SPRING26', 'CARD', 'AH-001', 'Valentine appeal gift'),
+    ('amelia.hart@example.org', 'CASH', 5000, '2025-11-30', 'MAM', 'YE26', 'ACH', 'AH-002', 'Year-end support'),
+    ('amelia.hart@example.org', 'CASH', 7500, '2026-03-10', 'GEN', 'SPRING26', 'CARD', 'AH-003', 'Spring follow-up'),
+    ('benjamin.reed@example.org', 'CASH', 10000, '2024-10-05', 'PSF', 'GALA26', 'CHECK', 'BR-001', 'Event sponsorship gift'),
+    ('benjamin.reed@example.org', 'CASH', 15000, '2025-10-02', 'PSF', 'GALA26', 'WIRE', 'BR-002', 'Renewed gala support'),
+    ('carla.mendez@example.org', 'GIFT_IN_KIND', 2500, '2026-01-12', 'MAM', 'YE26', null, 'CM-001', 'Memorial tribute'),
+    ('daniel.foster@example.org', 'PLEDGE', 20000, '2025-12-28', 'GEN', 'YE26', null, 'DF-001', 'Major year-end commitment'),
+    ('daniel.foster@example.org', 'PLEDGE_PAYMENT', 5000, '2026-02-18', 'GEN', 'SPRING26', 'ACH', 'DF-002', 'Follow-up gift'),
+    ('elise.nguyen@example.org', 'CASH', 1000, '2026-01-20', 'MAM', 'SPRING26', 'CARD', 'EN-001', 'First gift'),
+    ('faith.collins@example.org', 'CASH', 3000, '2026-03-03', 'PSF', 'SPRING26', 'CARD', 'FC-001', 'New donor online appeal'),
+    ('grant.wilson@example.org', 'MATCHING_GIFT_PLEDGE', 12000, '2025-06-15', 'GEN', null, null, 'GW-001', 'Employer match pending'),
+    ('grant.wilson@example.org', 'MATCHING_GIFT_PAYMENT', 12000, '2025-07-12', 'GEN', null, 'ACH', 'GW-002', 'Matching gift received'),
+    ('harbor.care@example.org', 'CASH', 50000, '2025-09-20', 'PSF', 'GALA26', 'WIRE', 'HC-001', 'Corporate sponsorship'),
+    ('sunrise.logistics@example.org', 'STOCK_PROPERTY', 25000, '2026-03-01', 'GEN', 'SPRING26', null, 'SL-001', 'Community partnership gift'),
+    ('violet.family.office@example.org', 'CASH', 100000, '2025-12-15', 'MAM', 'YE26', 'WIRE', 'VF-001', 'Leadership contribution'),
+    ('violet.family.office@example.org', 'PLEDGE', 25000, '2026-03-05', 'PSF', 'SPRING26', null, 'VF-002', 'Challenge match commitment')
 )
 insert into public.gifts (
   donor_id,
   fund_id,
   campaign_id,
+  gift_type,
   amount_cents,
   gift_date,
   payment_method,
@@ -112,6 +113,7 @@ select
   d.id,
   f.id,
   c.id,
+  gs.gift_type,
   gs.amount_cents,
   gs.gift_date::date,
   gs.payment_method,

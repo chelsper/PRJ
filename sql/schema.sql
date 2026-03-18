@@ -123,9 +123,18 @@ create table if not exists gifts (
   donor_id bigint not null references donors(id) on delete restrict,
   fund_id bigint not null references funds(id) on delete restrict,
   campaign_id bigint references campaigns(id) on delete restrict,
+  gift_type varchar(30) not null check (gift_type in (
+    'PLEDGE',
+    'PLEDGE_PAYMENT',
+    'CASH',
+    'STOCK_PROPERTY',
+    'GIFT_IN_KIND',
+    'MATCHING_GIFT_PLEDGE',
+    'MATCHING_GIFT_PAYMENT'
+  )),
   amount_cents integer not null check (amount_cents > 0),
   gift_date date not null,
-  payment_method text not null check (payment_method in ('ACH', 'CARD', 'CHECK', 'CASH', 'WIRE', 'OTHER')),
+  payment_method text check (payment_method in ('ACH', 'CARD', 'CHECK', 'CASH', 'WIRE', 'OTHER')),
   reference_number varchar(100),
   notes text,
   created_at timestamptz not null default now(),
@@ -257,45 +266,108 @@ create trigger soft_credits_set_updated_at before update on soft_credits for eac
 drop trigger if exists notes_set_updated_at on notes;
 create trigger notes_set_updated_at before update on notes for each row execute function set_updated_at();
 
-create or replace view lifetime_giving_by_donor as
+create or replace view donor_giving_totals as
 select
   d.id as donor_id,
   coalesce(d.organization_name, concat_ws(' ', d.first_name, d.last_name)) as donor_name,
   d.primary_email,
-  coalesce(sum(g.amount_cents), 0) as lifetime_giving_cents
+  coalesce(h.donor_hard_credit_cents, 0) as donor_hard_credit_cents,
+  coalesce(s.donor_soft_credit_cents, 0) as donor_soft_credit_cents,
+  coalesce(h.donor_hard_credit_cents, 0) + coalesce(s.donor_soft_credit_cents, 0) as donor_recognition_cents
 from donors d
-left join gifts g on g.donor_id = d.id and g.deleted_at is null
-where d.deleted_at is null
-group by d.id;
+left join (
+  select
+    g.donor_id,
+    sum(g.amount_cents) as donor_hard_credit_cents
+  from gifts g
+  where g.deleted_at is null
+    and g.gift_type in ('PLEDGE', 'CASH', 'STOCK_PROPERTY', 'GIFT_IN_KIND', 'MATCHING_GIFT_PLEDGE')
+  group by g.donor_id
+) h on h.donor_id = d.id
+left join (
+  select
+    sc.donor_id,
+    sum(sc.amount_cents) as donor_soft_credit_cents
+  from soft_credits sc
+  inner join gifts g on g.id = sc.gift_id
+  where g.deleted_at is null
+    and g.gift_type in ('PLEDGE', 'CASH', 'STOCK_PROPERTY', 'GIFT_IN_KIND', 'MATCHING_GIFT_PLEDGE')
+  group by sc.donor_id
+) s on s.donor_id = d.id
+where d.deleted_at is null;
+
+create or replace view lifetime_giving_by_donor as
+select
+  donor_id,
+  donor_name,
+  primary_email,
+  donor_recognition_cents as lifetime_giving_cents
+from donor_giving_totals;
+
+create or replace view prj_total_received_to_date as
+select
+  coalesce(sum(g.amount_cents), 0) as total_received_cents
+from gifts g
+where g.deleted_at is null
+  and g.gift_type in ('CASH', 'STOCK_PROPERTY', 'GIFT_IN_KIND', 'PLEDGE_PAYMENT', 'MATCHING_GIFT_PAYMENT');
+
+create or replace view prj_total_pledged_to_date as
+select
+  coalesce(sum(g.amount_cents), 0) as total_pledged_cents
+from gifts g
+where g.deleted_at is null
+  and g.gift_type in ('PLEDGE', 'MATCHING_GIFT_PLEDGE');
+
+create or replace view prj_total_received_by_calendar_year as
+select
+  extract(year from g.gift_date)::int as calendar_year,
+  sum(g.amount_cents) as total_received_cents
+from gifts g
+where g.deleted_at is null
+  and g.gift_type in ('CASH', 'STOCK_PROPERTY', 'GIFT_IN_KIND', 'PLEDGE_PAYMENT', 'MATCHING_GIFT_PAYMENT')
+group by extract(year from g.gift_date);
+
+create or replace view prj_total_pledged_by_calendar_year as
+select
+  extract(year from g.gift_date)::int as calendar_year,
+  sum(g.amount_cents) as total_pledged_cents
+from gifts g
+where g.deleted_at is null
+  and g.gift_type in ('PLEDGE', 'MATCHING_GIFT_PLEDGE')
+group by extract(year from g.gift_date);
 
 create or replace view giving_by_calendar_year as
 select
-  donor_id,
-  extract(year from gift_date)::int as calendar_year,
-  sum(amount_cents) as total_giving_cents
-from gifts
-where deleted_at is null
-group by donor_id, extract(year from gift_date);
+  g.donor_id,
+  extract(year from g.gift_date)::int as calendar_year,
+  sum(g.amount_cents) as total_giving_cents
+from gifts g
+where g.deleted_at is null
+  and g.gift_type in ('PLEDGE', 'CASH', 'STOCK_PROPERTY', 'GIFT_IN_KIND', 'MATCHING_GIFT_PLEDGE')
+group by g.donor_id, extract(year from g.gift_date);
 
 create or replace view giving_by_fiscal_year as
 select
-  donor_id,
+  g.donor_id,
   case
-    when extract(month from gift_date) >= 7 then extract(year from gift_date)::int + 1
-    else extract(year from gift_date)::int
+    when extract(month from g.gift_date) >= 7 then extract(year from g.gift_date)::int + 1
+    else extract(year from g.gift_date)::int
   end as fiscal_year,
-  sum(amount_cents) as total_giving_cents
-from gifts
-where deleted_at is null
-group by donor_id, case
-  when extract(month from gift_date) >= 7 then extract(year from gift_date)::int + 1
-  else extract(year from gift_date)::int
+  sum(g.amount_cents) as total_giving_cents
+from gifts g
+where g.deleted_at is null
+  and g.gift_type in ('PLEDGE', 'CASH', 'STOCK_PROPERTY', 'GIFT_IN_KIND', 'MATCHING_GIFT_PLEDGE')
+group by g.donor_id, case
+  when extract(month from g.gift_date) >= 7 then extract(year from g.gift_date)::int + 1
+  else extract(year from g.gift_date)::int
 end;
 
 create or replace view largest_gifts as
 select
   g.id as gift_id,
+  g.gift_number,
   g.gift_date,
+  g.gift_type,
   g.amount_cents,
   coalesce(d.organization_name, concat_ws(' ', d.first_name, d.last_name)) as donor_name,
   f.name as fund_name
@@ -308,7 +380,9 @@ order by g.amount_cents desc, g.gift_date desc;
 create or replace view recent_gifts as
 select
   g.id as gift_id,
+  g.gift_number,
   g.gift_date,
+  g.gift_type,
   g.amount_cents,
   coalesce(d.organization_name, concat_ws(' ', d.first_name, d.last_name)) as donor_name,
   f.name as fund_name,

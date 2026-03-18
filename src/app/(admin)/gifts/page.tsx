@@ -66,6 +66,18 @@ export default async function GiftsPage() {
             </select>
           </label>
           <label>
+            Gift type
+            <select name="giftType" defaultValue="CASH" required>
+              <option value="PLEDGE">Pledge</option>
+              <option value="PLEDGE_PAYMENT">Pledge Payment</option>
+              <option value="CASH">Cash</option>
+              <option value="STOCK_PROPERTY">Stock/Property</option>
+              <option value="GIFT_IN_KIND">Gift-in-Kind</option>
+              <option value="MATCHING_GIFT_PLEDGE">Matching Gift Pledge</option>
+              <option value="MATCHING_GIFT_PAYMENT">Matching Gift Payment</option>
+            </select>
+          </label>
+          <label>
             Amount
             <input name="amount" type="number" min="0.01" step="0.01" required />
           </label>
@@ -75,7 +87,8 @@ export default async function GiftsPage() {
           </label>
           <label>
             Payment method
-            <select name="paymentMethod" defaultValue="ACH">
+            <select name="paymentMethod" defaultValue="">
+              <option value="">Not applicable</option>
               <option value="ACH">ACH</option>
               <option value="CARD">Card</option>
               <option value="CHECK">Check</option>
@@ -103,8 +116,10 @@ export default async function GiftsPage() {
         <table>
           <thead>
             <tr>
+              <th>Gift ID</th>
               <th>Date</th>
               <th>Donor</th>
+              <th>Gift type</th>
               <th>Fund</th>
               <th>Amount</th>
             </tr>
@@ -112,8 +127,10 @@ export default async function GiftsPage() {
           <tbody>
             {gifts.map((gift: RecentGiftRow) => (
               <tr key={gift.id}>
+                <td>{gift.gift_number ?? gift.id}</td>
                 <td>{gift.gift_date}</td>
                 <td>{gift.donor_name}</td>
+                <td>{gift.gift_type.replaceAll("_", " ")}</td>
                 <td>{gift.fund_name}</td>
                 <td>${(gift.amount_cents / 100).toLocaleString()}</td>
               </tr>
