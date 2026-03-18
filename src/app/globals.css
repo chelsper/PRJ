@@ -72,6 +72,13 @@ a {
   flex-wrap: wrap;
 }
 
+.topbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
 .hero,
 .card,
 .table-shell {
@@ -395,14 +402,15 @@ h2 {
   max-width: 520px;
 }
 
-.donor-view-shell {
-  display: grid;
-  gap: 16px;
-}
-
 .view-mode-toolbar {
   display: flex;
   justify-content: flex-end;
+  align-items: center;
+  gap: 10px;
+}
+
+.topbar-view-mode {
+  display: flex;
   align-items: center;
   gap: 10px;
 }
@@ -436,45 +444,41 @@ h2 {
   color: white;
 }
 
-.donor-page-grid {
-  min-width: 0;
-}
-
 .donor-summary-stats {
   align-items: stretch;
 }
 
-.donor-view-mobile .hero h1 {
+body.app-view-mobile .hero h1 {
   max-width: none;
   font-size: clamp(2rem, 9vw, 3rem);
 }
 
-.donor-view-mobile .stats,
-.donor-view-mobile .grid-2 {
+body.app-view-mobile .stats,
+body.app-view-mobile .grid-2 {
   grid-template-columns: 1fr;
 }
 
-.donor-view-mobile .tab-row {
+body.app-view-mobile .tab-row {
   flex-wrap: nowrap;
   overflow-x: auto;
   padding-bottom: 6px;
 }
 
-.donor-view-mobile .tab-link {
+body.app-view-mobile .tab-link {
   white-space: nowrap;
 }
 
-.donor-view-mobile .button-row {
+body.app-view-mobile .button-row {
   align-items: stretch;
 }
 
-.donor-view-mobile .button-link,
-.donor-view-mobile button {
+body.app-view-mobile .button-link,
+body.app-view-mobile button {
   width: 100%;
   justify-content: center;
 }
 
-.donor-view-mobile .table-scroll table {
+body.app-view-mobile .table-scroll table {
   min-width: 720px;
 }
 
@@ -498,6 +502,11 @@ h2 {
   .topbar {
     align-items: flex-start;
     flex-direction: column;
+  }
+
+  .topbar-actions {
+    width: 100%;
+    justify-content: space-between;
   }
 
   .hero,

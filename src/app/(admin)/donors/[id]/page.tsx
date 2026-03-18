@@ -2,7 +2,6 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { DonorProfileForm } from "@/components/donors/donor-profile-form";
-import { DonorViewShell } from "@/components/donors/donor-view-shell";
 import { OrganizationTab } from "@/components/donors/organization-tab";
 import { SendReceiptButton } from "@/components/gifts/send-receipt-button";
 import { getSessionWithCapability, requireCapability } from "@/server/auth/permissions";
@@ -66,7 +65,6 @@ export default async function DonorProfilePage({
   const noteCategoryLabels = Object.fromEntries(optionSets.note_categories.map((option) => [option.value, option.label]));
 
   return (
-    <DonorViewShell>
       <div className="grid donor-page-grid">
       <section className="hero">
         <p className="eyebrow">Donor Profile</p>
@@ -416,6 +414,5 @@ export default async function DonorProfilePage({
         />
       )}
       </div>
-    </DonorViewShell>
   );
 }

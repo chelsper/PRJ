@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import { logoutAction } from "@/app/login/actions";
+import { ViewModeToggle } from "@/components/ui/view-mode-toggle";
 import { getCurrentSession } from "@/server/auth/session-store";
 import { roleHasCapability } from "@/server/auth/roles";
 
@@ -26,11 +27,14 @@ export default async function AdminLayout({ children }: { children: React.ReactN
             <Link href="/admin">Admin</Link>
           ) : null}
         </nav>
-        <form action={logoutAction}>
-          <button type="submit" className="secondary">
-            Sign out
-          </button>
-        </form>
+        <div className="topbar-actions">
+          <ViewModeToggle />
+          <form action={logoutAction}>
+            <button type="submit" className="secondary">
+              Sign out
+            </button>
+          </form>
+        </div>
       </header>
       {children}
     </main>

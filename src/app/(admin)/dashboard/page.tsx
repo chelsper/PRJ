@@ -12,9 +12,9 @@ export default async function DashboardPage() {
     <div className="grid">
       <section className="hero">
         <p className="eyebrow">Dashboard</p>
-        <h1>Pink Ribbon Jax donor workspace</h1>
+        <h1>Pink Ribbon Jax Workspace</h1>
         <p className="muted">
-          Start with the core tasks staff use most: find a donor, enter a gift, review reporting, or manage imports.
+          Quickly find donors, add gifts, send receipts, and track your impact.
         </p>
         <div className="button-row">
           <Link href="/donors" className="button-link">
