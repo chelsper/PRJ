@@ -4,9 +4,17 @@ export type DonorRecognitionRow = {
   donor_id: string;
   donor_name: string;
   primary_email: string | null;
+  giving_level_internal: string | null;
+  giving_level_display: string | null;
   donor_recognition_cents: number;
   donor_hard_credit_cents: number;
   donor_soft_credit_cents: number;
+};
+
+export type GivingLevelSnapshotRow = {
+  giving_level_internal: string;
+  giving_level_display: string;
+  donor_count: number;
 };
 
 export type PrjTotalSnapshot = {
@@ -37,18 +45,50 @@ export type AuditEventRow = {
   metadata_text: string;
 };
 
-export async function donorRecognitionLeaderboard(): Promise<DonorRecognitionRow[]> {
+export async function donorRecognitionLeaderboard(givingLevel?: string): Promise<DonorRecognitionRow[]> {
   const result = await query<DonorRecognitionRow>(
     `select
-      donor_id::text,
-      donor_name,
-      primary_email,
-      donor_recognition_cents,
-      donor_hard_credit_cents,
-      donor_soft_credit_cents
-     from public.donor_giving_totals
-     order by donor_recognition_cents desc, donor_name asc
-     limit 100`
+      t.donor_id::text,
+      t.donor_name,
+      t.primary_email,
+      gl.giving_level_internal,
+      gl.giving_level_display,
+      t.donor_recognition_cents,
+      t.donor_hard_credit_cents,
+      t.donor_soft_credit_cents
+     from public.donor_giving_totals t
+     left join public.donor_current_year_giving_levels gl on gl.donor_id = t.donor_id
+     where ($1::text is null or gl.giving_level_internal = $1)
+     order by t.donor_recognition_cents desc, t.donor_name asc
+     limit 100`,
+    [givingLevel ?? null]
+  );
+
+  return result.rows;
+}
+
+export async function givingLevelSnapshot(): Promise<GivingLevelSnapshotRow[]> {
+  const result = await query<GivingLevelSnapshotRow>(
+    `select
+      gl.giving_level_internal,
+      gl.giving_level_display,
+      count(*)::int as donor_count
+     from public.donor_current_year_giving_levels gl
+     where gl.giving_level_internal is not null
+     group by gl.giving_level_internal, gl.giving_level_display
+     order by case gl.giving_level_internal
+       when 'TITLE_SPONSOR' then 1
+       when 'PREEMINENT_SPONSOR' then 2
+       when 'PINK_ADVOCATE_SPONSOR' then 3
+       when 'PINK_WARRIOR_SPONSOR' then 4
+       when 'PREMIER_SPONSOR' then 5
+       when 'CHAMPION_SPONSOR' then 6
+       when 'HOPE_SPONSOR' then 7
+       when 'PINK_HERO_SPONSOR' then 8
+       when 'PINK_HEART_SPONSOR' then 9
+       when 'PINK_RIBBON_FRIEND' then 10
+       else 999
+     end asc`
   );
 
   return result.rows;

@@ -1,12 +1,25 @@
 import Link from "next/link";
 
 import { requireCapability } from "@/server/auth/permissions";
-import { dashboardTotals } from "@/server/data/reports";
+import { dashboardTotals, givingLevelSnapshot, type GivingLevelSnapshotRow } from "@/server/data/reports";
+
+function dashboardGivingLevelLabel(level: GivingLevelSnapshotRow) {
+  switch (level.giving_level_internal) {
+    case "PINK_HEART_SPONSOR":
+      return "Pink Heart";
+    case "HOPE_SPONSOR":
+      return "Hope";
+    case "PINK_RIBBON_FRIEND":
+      return "Friends";
+    default:
+      return level.giving_level_display.replace(/ Sponsor$/, "");
+  }
+}
 
 export default async function DashboardPage() {
   await requireCapability("reports:read");
 
-  const totals = await dashboardTotals();
+  const [totals, levelSnapshot] = await Promise.all([dashboardTotals(), givingLevelSnapshot()]);
 
   return (
     <div className="grid">
@@ -97,6 +110,27 @@ export default async function DashboardPage() {
               <strong>Open reporting and exports.</strong>
             </Link>
           </div>
+        </article>
+      </section>
+
+      <section className="grid grid-2">
+        <article className="card">
+          <p className="eyebrow">Giving Level Snapshot</p>
+          <h2>Giving Levels (This Year)</h2>
+          {levelSnapshot.length === 0 ? (
+            <p className="muted">No donors currently qualify for a giving level this year.</p>
+          ) : (
+            <div className="grid">
+              {levelSnapshot.map((level: GivingLevelSnapshotRow) => (
+                <div key={level.giving_level_internal} className="stat stat-row">
+                  <Link href={`/reports?givingLevel=${encodeURIComponent(level.giving_level_internal)}`} className="inline-link stat-inline-link">
+                    {level.donor_count}
+                  </Link>
+                  <strong>{dashboardGivingLevelLabel(level)}</strong>
+                </div>
+              ))}
+            </div>
+          )}
         </article>
       </section>
     </div>

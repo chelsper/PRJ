@@ -120,6 +120,17 @@ a {
   margin-top: 6px;
 }
 
+.stat-row {
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  gap: 12px;
+}
+
+.stat-inline-link {
+  font-size: 1.6rem;
+  font-weight: 800;
+}
+
 .stat-value {
   font-size: clamp(1.4rem, 3vw, 2.4rem);
   line-height: 0.98;

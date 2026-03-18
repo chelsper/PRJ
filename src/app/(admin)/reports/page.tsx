@@ -1,22 +1,41 @@
+import Link from "next/link";
+
 import { requireCapability } from "@/server/auth/permissions";
 import {
   donorRecognitionLeaderboard,
+  givingLevelSnapshot,
   prjPledgedByCalendarYear,
   prjReceivedByCalendarYear,
   prjTotalSnapshot,
   type DonorRecognitionRow,
+  type GivingLevelSnapshotRow,
   type PrjYearRow
 } from "@/server/data/reports";
 
-export default async function ReportsPage() {
-  await requireCapability("reports:read");
+function reportGivingLevelLabel(level: string | null, snapshot: GivingLevelSnapshotRow[]) {
+  if (!level) {
+    return null;
+  }
 
-  const [donorTotals, prjTotals, receivedByYear, pledgedByYear] = await Promise.all([
-    donorRecognitionLeaderboard(),
+  return snapshot.find((row: GivingLevelSnapshotRow) => row.giving_level_internal === level)?.giving_level_display ?? level;
+}
+
+export default async function ReportsPage({
+  searchParams
+}: {
+  searchParams: Promise<{ givingLevel?: string }>;
+}) {
+  await requireCapability("reports:read");
+  const { givingLevel } = await searchParams;
+
+  const [donorTotals, prjTotals, receivedByYear, pledgedByYear, levelSnapshot] = await Promise.all([
+    donorRecognitionLeaderboard(givingLevel),
     prjTotalSnapshot(),
     prjReceivedByCalendarYear(),
-    prjPledgedByCalendarYear()
+    prjPledgedByCalendarYear(),
+    givingLevelSnapshot()
   ]);
+  const selectedGivingLevelLabel = reportGivingLevelLabel(givingLevel ?? null, levelSnapshot);
 
   return (
     <div className="grid">
@@ -41,6 +60,14 @@ export default async function ReportsPage() {
 
       <section className="table-shell">
         <p className="eyebrow">Donor Recognition Totals</p>
+        {selectedGivingLevelLabel ? (
+          <p className="muted">
+            Showing donors in current-year giving level: <strong>{selectedGivingLevelLabel}</strong>.{" "}
+            <Link href="/reports" className="inline-link">
+              Clear filter
+            </Link>
+          </p>
+        ) : null}
         <table>
           <thead>
             <tr>
