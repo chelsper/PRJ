@@ -24,13 +24,9 @@ export default async function GiftsPage() {
             <select name="donorId" required>
               <option value="">Select donor</option>
               {donors.map((donor: DonorListRow) => {
-                const label =
-                  donor.donor_type === "ORGANIZATION"
-                    ? donor.organization_name
-                    : [donor.first_name, donor.last_name].filter(Boolean).join(" ");
                 return (
                   <option key={donor.id} value={donor.id}>
-                    {label}
+                    {donor.full_name}
                   </option>
                 );
               })}

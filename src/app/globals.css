@@ -168,6 +168,46 @@ button:hover {
   color: var(--ink);
 }
 
+.button-row {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.tab-row {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.tab-link {
+  padding: 10px 14px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: var(--paper);
+}
+
+.tab-link.active {
+  background: var(--accent-soft);
+  border-color: rgba(217, 75, 135, 0.3);
+  color: var(--accent-strong);
+}
+
+.inline-link {
+  color: var(--accent-strong);
+}
+
+.checkbox-line {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.checkbox-line input {
+  width: auto;
+}
+
 table {
   width: 100%;
   border-collapse: collapse;

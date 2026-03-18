@@ -1,7 +1,10 @@
+import Link from "next/link";
+
 import { requireCapability } from "@/server/auth/permissions";
 import { listDonors, type DonorListRow } from "@/server/data/donors";
+import { DeleteDonorForm } from "@/components/donors/delete-donor-form";
 
-import { createDonorAction, deleteDonorAction } from "./actions";
+import { createDonorAction } from "./actions";
 
 export default async function DonorsPage({
   searchParams
@@ -83,23 +86,16 @@ export default async function DonorsPage({
             </thead>
             <tbody>
               {donors.map((donor: DonorListRow) => {
-                const name =
-                  donor.donor_type === "ORGANIZATION"
-                    ? donor.organization_name
-                    : [donor.first_name, donor.last_name].filter(Boolean).join(" ");
-
                 return (
                   <tr key={donor.id}>
-                    <td>{name || "Unnamed donor"}</td>
+                    <td>
+                      <Link href={`/donors/${donor.id}`}>{donor.full_name || "Unnamed donor"}</Link>
+                      <div className="muted">{donor.donor_number ?? "Pending donor number"}</div>
+                    </td>
                     <td>{donor.primary_email ?? "—"}</td>
                     <td>${(Number(donor.lifetime_giving_cents ?? "0") / 100).toLocaleString()}</td>
                     <td>
-                      <form action={deleteDonorAction}>
-                        <input type="hidden" name="donorId" value={donor.id} />
-                        <button type="submit" className="secondary">
-                          Soft delete
-                        </button>
-                      </form>
+                      <DeleteDonorForm donorId={donor.id} />
                     </td>
                   </tr>
                 );

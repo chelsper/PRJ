@@ -42,15 +42,16 @@ Use Vercel project settings for all secrets. Do not commit real values.
 2. Apply [`/Users/chelseasantoro/Downloads/anything-nonprofit-crm-db/sql/schema.sql`](/Users/chelseasantoro/Downloads/anything-nonprofit-crm-db/sql/schema.sql).
 3. Optionally apply [`/Users/chelseasantoro/Downloads/anything-nonprofit-crm-db/sql/seed.sql`](/Users/chelseasantoro/Downloads/anything-nonprofit-crm-db/sql/seed.sql) after replacing the placeholder password hash.
 4. For fake donor testing data, run [`/Users/chelseasantoro/Downloads/anything-nonprofit-crm-db/sql/sample_data.sql`](/Users/chelseasantoro/Downloads/anything-nonprofit-crm-db/sql/sample_data.sql) in a non-production database.
-5. Import the repo into Vercel.
-6. Configure environment variables separately for development, preview, and production.
-7. Never reuse production credentials in preview.
+5. On an existing database, apply [`/Users/chelseasantoro/Downloads/anything-nonprofit-crm-db/sql/migrations/20260318_donor_profiles.sql`](/Users/chelseasantoro/Downloads/anything-nonprofit-crm-db/sql/migrations/20260318_donor_profiles.sql) before using the donor profile pages.
+6. Import the repo into Vercel.
+7. Configure environment variables separately for development, preview, and production.
+8. Never reuse production credentials in preview.
 
 ## Remaining follow-up work
 
 - Replace the built-in `scrypt` password helper with Argon2id before real use.
 - Add user management flows for invite/reset/disable.
-- Add richer donor detail pages, saved filters, yearly reports, LYBUNT/SYBUNT calculations, and imports.
+- Add saved filters, yearly reports, LYBUNT/SYBUNT calculations, and imports.
 - Add database-generated TypeScript types if you adopt a migration workflow or codegen tool.
 - Add more test coverage for reporting calculations and authorization edges.
 

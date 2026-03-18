@@ -43,12 +43,23 @@ create table if not exists campaigns (
 
 create table if not exists donors (
   id bigint generated always as identity primary key,
+  donor_number varchar(6) unique,
   donor_type text not null check (donor_type in ('INDIVIDUAL', 'ORGANIZATION')),
+  title varchar(20),
   first_name varchar(100),
+  middle_name varchar(100),
   last_name varchar(100),
+  preferred_name varchar(100),
   organization_name varchar(200),
+  organization_contact_donor_id bigint references donors(id),
+  organization_contact_name varchar(200),
   primary_email citext,
+  primary_email_type varchar(50),
+  alternate_email citext,
+  alternate_email_type varchar(50),
   primary_phone varchar(30),
+  spouse_donor_id bigint references donors(id),
+  giving_level varchar(100),
   notes text,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
@@ -78,6 +89,21 @@ create table if not exists donor_addresses (
   created_by bigint references users(id),
   updated_by bigint references users(id)
 );
+
+create sequence if not exists donor_number_seq start 500000;
+
+create or replace function set_donor_number()
+returns trigger
+language plpgsql
+as $$
+begin
+  if new.donor_number is null then
+    new.donor_number := nextval('donor_number_seq')::text;
+  end if;
+
+  return new;
+end;
+$$;
 
 create table if not exists donor_contacts (
   id bigint generated always as identity primary key,
@@ -176,6 +202,7 @@ create table if not exists rate_limit_events (
 );
 
 create index if not exists donors_last_name_idx on donors (last_name) where deleted_at is null;
+create unique index if not exists donors_donor_number_idx on donors (donor_number) where deleted_at is null;
 create unique index if not exists donors_primary_email_idx on donors (primary_email) where primary_email is not null and deleted_at is null;
 create index if not exists gifts_gift_date_idx on gifts (gift_date desc) where deleted_at is null;
 create index if not exists gifts_donor_date_idx on gifts (donor_id, gift_date desc) where deleted_at is null;
@@ -193,6 +220,8 @@ drop trigger if exists campaigns_set_updated_at on campaigns;
 create trigger campaigns_set_updated_at before update on campaigns for each row execute function set_updated_at();
 drop trigger if exists donors_set_updated_at on donors;
 create trigger donors_set_updated_at before update on donors for each row execute function set_updated_at();
+drop trigger if exists donors_set_donor_number on donors;
+create trigger donors_set_donor_number before insert on donors for each row execute function set_donor_number();
 drop trigger if exists donor_addresses_set_updated_at on donor_addresses;
 create trigger donor_addresses_set_updated_at before update on donor_addresses for each row execute function set_updated_at();
 drop trigger if exists donor_contacts_set_updated_at on donor_contacts;
