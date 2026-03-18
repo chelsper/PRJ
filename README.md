@@ -1,101 +1,63 @@
-# Nonprofit Donor Database Starter
+# Nonprofit CRM Admin
 
-This repository is now structured as a simple Vercel-ready admin app and API backed by PostgreSQL for donor and gift records.
+This repository is now a Next.js TypeScript skeleton for a secure, admin-only donor database on Vercel with Neon Postgres.
 
-## What is included
+## Current architecture
 
-- `sql/schema.sql`: the core donor and gift schema
-- `index.html`, `styles.css`, `app.js`: no-build admin interface
-- `api/health.js`: database health check
-- `api/donors/index.js`: list and create donor records
-- `api/gifts/index.js`: list and create gift records
-- `lib/auth.js`: bearer-token protection for every data endpoint
+- Next.js app router with server-rendered admin pages in [`/Users/chelseasantoro/Downloads/anything-nonprofit-crm-db/src/app`](/Users/chelseasantoro/Downloads/anything-nonprofit-crm-db/src/app)
+- Single server-side data layer in [`/Users/chelseasantoro/Downloads/anything-nonprofit-crm-db/src/server/data`](/Users/chelseasantoro/Downloads/anything-nonprofit-crm-db/src/server/data)
+- Server-side auth, roles, and session helpers in [`/Users/chelseasantoro/Downloads/anything-nonprofit-crm-db/src/server/auth`](/Users/chelseasantoro/Downloads/anything-nonprofit-crm-db/src/server/auth)
+- Audit logging and rate-limit helpers in [`/Users/chelseasantoro/Downloads/anything-nonprofit-crm-db/src/server/audit`](/Users/chelseasantoro/Downloads/anything-nonprofit-crm-db/src/server/audit) and [`/Users/chelseasantoro/Downloads/anything-nonprofit-crm-db/src/server/security`](/Users/chelseasantoro/Downloads/anything-nonprofit-crm-db/src/server/security)
+- Normalized PostgreSQL schema and reporting views in [`/Users/chelseasantoro/Downloads/anything-nonprofit-crm-db/sql/schema.sql`](/Users/chelseasantoro/Downloads/anything-nonprofit-crm-db/sql/schema.sql)
 
-## Security model
+## Security posture
 
-- The database connection lives in `DATABASE_URL`, not in source control.
-- Every donor and gift endpoint requires `Authorization: Bearer <API_TOKEN>`.
-- The admin UI stores the token in browser local storage for same-origin API calls.
-- Gift amounts are stored as integer cents rather than floating point values.
-- The schema uses check constraints, foreign keys, and indexes for data integrity.
+- No database credentials are exposed to the browser.
+- All database reads and writes are server-side.
+- Queries are parameterized.
+- Writes are validated with Zod.
+- Roles are `admin`, `staff`, and `read_only`.
+- Access is denied by default through server-side capability checks.
+- Soft delete is used for donors.
+- Audit log hooks are present for login, donor creation, gift creation, deletes, and exports.
+- Rate limiting is included for login and CSV export flows.
+- Secure headers and a strict CSP are configured in [`/Users/chelseasantoro/Downloads/anything-nonprofit-crm-db/next.config.ts`](/Users/chelseasantoro/Downloads/anything-nonprofit-crm-db/next.config.ts).
 
-This is a minimal secure starter, not a complete compliance program. For real nonprofit operations, you should also use least-privilege database credentials, Vercel environment-variable encryption, audit logging, backups, and role-based access in front of this API.
+This is still a starter, not a finished compliance program. It improves least privilege and defense in depth, but it should not be described as unhackable.
 
-## Recommended stack
+## Required environment variables
 
-- Database: Neon Postgres or Supabase Postgres
-- Hosting: Vercel
-- Secrets: Vercel project environment variables
+- `DATABASE_URL`
+- `SESSION_SECRET`
+- `APP_URL`
+- `RATE_LIMIT_WINDOW_SECONDS`
+- `RATE_LIMIT_MAX_AUTH_ATTEMPTS`
+- `RATE_LIMIT_MAX_EXPORTS`
 
-## Local setup
+Use Vercel project settings for all secrets. Do not commit real values.
 
-1. Install dependencies:
+## Neon and Vercel order
 
-   ```bash
-   npm install
-   ```
+1. Create the Neon project and separate databases or roles for development, preview, and production.
+2. Apply [`/Users/chelseasantoro/Downloads/anything-nonprofit-crm-db/sql/schema.sql`](/Users/chelseasantoro/Downloads/anything-nonprofit-crm-db/sql/schema.sql).
+3. Optionally apply [`/Users/chelseasantoro/Downloads/anything-nonprofit-crm-db/sql/seed.sql`](/Users/chelseasantoro/Downloads/anything-nonprofit-crm-db/sql/seed.sql) after replacing the placeholder password hash.
+4. Import the repo into Vercel.
+5. Configure environment variables separately for development, preview, and production.
+6. Never reuse production credentials in preview.
 
-2. Copy `.env.example` to `.env` and set:
+## Remaining follow-up work
 
-   - `DATABASE_URL`
-   - `API_TOKEN`
+- Replace the built-in `scrypt` password helper with Argon2id before real use.
+- Add user management flows for invite/reset/disable.
+- Add richer donor detail pages, saved filters, yearly reports, LYBUNT/SYBUNT calculations, and imports.
+- Add database-generated TypeScript types if you adopt a migration workflow or codegen tool.
+- Add more test coverage for reporting calculations and authorization edges.
 
-3. Apply `sql/schema.sql` to your Postgres database.
+## Local development
 
-4. Run locally:
+1. Install dependencies with `npm install`.
+2. Copy `.env.example` to `.env.local`.
+3. Set local-only environment variables.
+4. Run `npm run dev`.
 
-   ```bash
-   npm run dev
-   ```
-
-5. Open `http://localhost:3000`, paste your `API_TOKEN`, and use the admin interface.
-
-## Vercel setup
-
-1. In Vercel, import this GitHub repository.
-2. Add these environment variables:
-
-   - `DATABASE_URL`
-   - `API_TOKEN`
-
-3. Deploy the project.
-4. Apply `sql/schema.sql` to the production database.
-5. Open the deployed site root and use the admin interface there.
-
-## Example requests
-
-Create a donor:
-
-```bash
-curl -X POST https://your-project.vercel.app/api/donors \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer $API_TOKEN" \
-  -d '{
-    "donorType": "INDIVIDUAL",
-    "firstName": "Alex",
-    "lastName": "Rivera",
-    "email": "alex@example.org",
-    "city": "Boston",
-    "stateProvince": "MA"
-  }'
-```
-
-Create a gift:
-
-```bash
-curl -X POST https://your-project.vercel.app/api/gifts \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer $API_TOKEN" \
-  -d '{
-    "donorId": 1,
-    "amount": 125.00,
-    "giftDate": "2026-03-18",
-    "giftType": "ONE_TIME",
-    "paymentMethod": "ACH",
-    "campaign": "Spring Appeal"
-  }'
-```
-
-## Important note about existing files
-
-`development.sql` and `production.sql` are preserved as existing exports. The active starter schema for the Vercel API is `sql/schema.sql`.
+I could not run the app in this shell because `node` is not installed here.

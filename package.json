@@ -1,16 +1,27 @@
 {
   "name": "anything-nonprofit-crm-db",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "private": true,
-  "type": "module",
-  "engines": {
-    "node": ">=20"
-  },
   "scripts": {
-    "dev": "vercel dev"
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "test": "vitest run"
   },
   "dependencies": {
+    "jose": "^5.9.6",
+    "next": "15.3.0",
     "pg": "^8.13.1",
+    "react": "19.0.0",
+    "react-dom": "19.0.0",
     "zod": "^3.24.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.2",
+    "@types/react": "^19.0.2",
+    "@types/react-dom": "^19.0.2",
+    "typescript": "^5.7.2",
+    "vitest": "^2.1.8"
   }
 }

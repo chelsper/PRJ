@@ -1,58 +1,5 @@
 create extension if not exists citext;
 
-create table if not exists donors (
-  id bigint generated always as identity primary key,
-  donor_type text not null check (donor_type in ('INDIVIDUAL', 'ORGANIZATION')),
-  first_name varchar(100),
-  last_name varchar(100),
-  organization_name varchar(200),
-  email citext,
-  phone varchar(30),
-  street1 varchar(200),
-  street2 varchar(200),
-  city varchar(100),
-  state_province varchar(100),
-  postal_code varchar(20),
-  country varchar(100) not null default 'United States',
-  notes text,
-  created_at timestamptz not null default now(),
-  updated_at timestamptz not null default now(),
-  constraint donors_name_required check (
-    (donor_type = 'INDIVIDUAL' and first_name is not null and last_name is not null)
-    or
-    (donor_type = 'ORGANIZATION' and organization_name is not null)
-  )
-);
-
-create unique index if not exists donors_email_unique
-  on donors (email)
-  where email is not null;
-
-create index if not exists donors_last_name_idx on donors (last_name);
-create index if not exists donors_org_name_idx on donors (organization_name);
-
-create table if not exists gifts (
-  id bigint generated always as identity primary key,
-  donor_id bigint not null references donors(id) on delete restrict,
-  amount_cents integer not null check (amount_cents > 0),
-  currency_code char(3) not null default 'USD',
-  gift_date date not null,
-  gift_type text not null check (gift_type in ('ONE_TIME', 'PLEDGE', 'RECURRING', 'IN_KIND')),
-  payment_method text not null check (payment_method in ('CASH', 'CHECK', 'CARD', 'ACH', 'WIRE', 'OTHER')),
-  campaign varchar(150),
-  fund varchar(150),
-  appeal varchar(150),
-  receipt_number varchar(100),
-  is_anonymous boolean not null default false,
-  notes text,
-  created_at timestamptz not null default now(),
-  updated_at timestamptz not null default now()
-);
-
-create index if not exists gifts_donor_id_idx on gifts (donor_id);
-create index if not exists gifts_gift_date_idx on gifts (gift_date desc);
-create index if not exists gifts_campaign_idx on gifts (campaign);
-
 create or replace function set_updated_at()
 returns trigger
 language plpgsql
@@ -63,14 +10,263 @@ begin
 end;
 $$;
 
-drop trigger if exists donors_set_updated_at on donors;
-create trigger donors_set_updated_at
-before update on donors
-for each row
-execute function set_updated_at();
+create table if not exists users (
+  id bigint generated always as identity primary key,
+  email citext not null unique,
+  password_hash text not null,
+  role text not null check (role in ('admin', 'staff', 'read_only')),
+  status text not null default 'active' check (status in ('active', 'disabled')),
+  last_login_at timestamptz,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
 
+create table if not exists funds (
+  id bigint generated always as identity primary key,
+  name varchar(150) not null unique,
+  code varchar(50),
+  archived_at timestamptz,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create table if not exists campaigns (
+  id bigint generated always as identity primary key,
+  name varchar(150) not null unique,
+  code varchar(50),
+  starts_on date,
+  ends_on date,
+  archived_at timestamptz,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create table if not exists donors (
+  id bigint generated always as identity primary key,
+  donor_type text not null check (donor_type in ('INDIVIDUAL', 'ORGANIZATION')),
+  first_name varchar(100),
+  last_name varchar(100),
+  organization_name varchar(200),
+  primary_email citext,
+  primary_phone varchar(30),
+  notes text,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  created_by bigint references users(id),
+  updated_by bigint references users(id),
+  deleted_at timestamptz,
+  constraint donors_name_required check (
+    (donor_type = 'INDIVIDUAL' and first_name is not null and last_name is not null)
+    or
+    (donor_type = 'ORGANIZATION' and organization_name is not null)
+  )
+);
+
+create table if not exists donor_addresses (
+  id bigint generated always as identity primary key,
+  donor_id bigint not null references donors(id) on delete restrict,
+  address_type varchar(50) not null default 'primary',
+  street1 varchar(200) not null,
+  street2 varchar(200),
+  city varchar(100) not null,
+  state_region varchar(100),
+  postal_code varchar(20),
+  country varchar(100) not null default 'United States',
+  is_primary boolean not null default false,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  created_by bigint references users(id),
+  updated_by bigint references users(id)
+);
+
+create table if not exists donor_contacts (
+  id bigint generated always as identity primary key,
+  donor_id bigint not null references donors(id) on delete restrict,
+  contact_type varchar(50) not null check (contact_type in ('email', 'phone')),
+  contact_value varchar(255) not null,
+  is_primary boolean not null default false,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  created_by bigint references users(id),
+  updated_by bigint references users(id)
+);
+
+create table if not exists gifts (
+  id bigint generated always as identity primary key,
+  donor_id bigint not null references donors(id) on delete restrict,
+  fund_id bigint not null references funds(id) on delete restrict,
+  campaign_id bigint references campaigns(id) on delete restrict,
+  amount_cents integer not null check (amount_cents > 0),
+  gift_date date not null,
+  payment_method text not null check (payment_method in ('ACH', 'CARD', 'CHECK', 'CASH', 'WIRE', 'OTHER')),
+  reference_number varchar(100),
+  notes text,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  created_by bigint references users(id),
+  updated_by bigint references users(id),
+  deleted_at timestamptz
+);
+
+create table if not exists gift_allocations (
+  id bigint generated always as identity primary key,
+  gift_id bigint not null references gifts(id) on delete restrict,
+  fund_id bigint not null references funds(id) on delete restrict,
+  amount_cents integer not null check (amount_cents > 0),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  created_by bigint references users(id),
+  updated_by bigint references users(id)
+);
+
+create table if not exists pledges (
+  id bigint generated always as identity primary key,
+  donor_id bigint not null references donors(id) on delete restrict,
+  fund_id bigint not null references funds(id) on delete restrict,
+  campaign_id bigint references campaigns(id) on delete restrict,
+  pledge_amount_cents integer not null check (pledge_amount_cents > 0),
+  pledged_on date not null,
+  due_on date,
+  status text not null default 'open' check (status in ('open', 'fulfilled', 'written_off')),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  created_by bigint references users(id),
+  updated_by bigint references users(id)
+);
+
+create table if not exists soft_credits (
+  id bigint generated always as identity primary key,
+  gift_id bigint not null references gifts(id) on delete restrict,
+  donor_id bigint not null references donors(id) on delete restrict,
+  amount_cents integer not null check (amount_cents > 0),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  created_by bigint references users(id),
+  updated_by bigint references users(id)
+);
+
+create table if not exists notes (
+  id bigint generated always as identity primary key,
+  donor_id bigint references donors(id) on delete restrict,
+  gift_id bigint references gifts(id) on delete restrict,
+  note_body text not null,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  created_by bigint references users(id),
+  updated_by bigint references users(id)
+);
+
+create table if not exists audit_log (
+  id bigint generated always as identity primary key,
+  actor_user_id bigint references users(id),
+  action varchar(100) not null,
+  entity_type varchar(100) not null,
+  entity_id varchar(100),
+  status varchar(20) not null check (status in ('success', 'denied', 'failed')),
+  ip_address inet,
+  metadata jsonb not null default '{}'::jsonb,
+  occurred_at timestamptz not null default now()
+);
+
+create table if not exists rate_limit_events (
+  id bigint generated always as identity primary key,
+  limiter_key varchar(255) not null,
+  action varchar(100) not null,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists donors_last_name_idx on donors (last_name) where deleted_at is null;
+create unique index if not exists donors_primary_email_idx on donors (primary_email) where primary_email is not null and deleted_at is null;
+create index if not exists gifts_gift_date_idx on gifts (gift_date desc) where deleted_at is null;
+create index if not exists gifts_donor_date_idx on gifts (donor_id, gift_date desc) where deleted_at is null;
+create index if not exists gifts_campaign_idx on gifts (campaign_id) where deleted_at is null;
+create index if not exists gifts_fund_idx on gifts (fund_id) where deleted_at is null;
+create index if not exists audit_log_occurred_at_idx on audit_log (occurred_at desc);
+create index if not exists audit_log_action_idx on audit_log (action, occurred_at desc);
+create index if not exists rate_limit_events_lookup_idx on rate_limit_events (limiter_key, action, created_at desc);
+
+drop trigger if exists users_set_updated_at on users;
+create trigger users_set_updated_at before update on users for each row execute function set_updated_at();
+drop trigger if exists funds_set_updated_at on funds;
+create trigger funds_set_updated_at before update on funds for each row execute function set_updated_at();
+drop trigger if exists campaigns_set_updated_at on campaigns;
+create trigger campaigns_set_updated_at before update on campaigns for each row execute function set_updated_at();
+drop trigger if exists donors_set_updated_at on donors;
+create trigger donors_set_updated_at before update on donors for each row execute function set_updated_at();
+drop trigger if exists donor_addresses_set_updated_at on donor_addresses;
+create trigger donor_addresses_set_updated_at before update on donor_addresses for each row execute function set_updated_at();
+drop trigger if exists donor_contacts_set_updated_at on donor_contacts;
+create trigger donor_contacts_set_updated_at before update on donor_contacts for each row execute function set_updated_at();
 drop trigger if exists gifts_set_updated_at on gifts;
-create trigger gifts_set_updated_at
-before update on gifts
-for each row
-execute function set_updated_at();
+create trigger gifts_set_updated_at before update on gifts for each row execute function set_updated_at();
+drop trigger if exists gift_allocations_set_updated_at on gift_allocations;
+create trigger gift_allocations_set_updated_at before update on gift_allocations for each row execute function set_updated_at();
+drop trigger if exists pledges_set_updated_at on pledges;
+create trigger pledges_set_updated_at before update on pledges for each row execute function set_updated_at();
+drop trigger if exists soft_credits_set_updated_at on soft_credits;
+create trigger soft_credits_set_updated_at before update on soft_credits for each row execute function set_updated_at();
+drop trigger if exists notes_set_updated_at on notes;
+create trigger notes_set_updated_at before update on notes for each row execute function set_updated_at();
+
+create or replace view lifetime_giving_by_donor as
+select
+  d.id as donor_id,
+  coalesce(d.organization_name, concat_ws(' ', d.first_name, d.last_name)) as donor_name,
+  d.primary_email,
+  coalesce(sum(g.amount_cents), 0) as lifetime_giving_cents
+from donors d
+left join gifts g on g.donor_id = d.id and g.deleted_at is null
+where d.deleted_at is null
+group by d.id;
+
+create or replace view giving_by_calendar_year as
+select
+  donor_id,
+  extract(year from gift_date)::int as calendar_year,
+  sum(amount_cents) as total_giving_cents
+from gifts
+where deleted_at is null
+group by donor_id, extract(year from gift_date);
+
+create or replace view giving_by_fiscal_year as
+select
+  donor_id,
+  case
+    when extract(month from gift_date) >= 7 then extract(year from gift_date)::int + 1
+    else extract(year from gift_date)::int
+  end as fiscal_year,
+  sum(amount_cents) as total_giving_cents
+from gifts
+where deleted_at is null
+group by donor_id, case
+  when extract(month from gift_date) >= 7 then extract(year from gift_date)::int + 1
+  else extract(year from gift_date)::int
+end;
+
+create or replace view largest_gifts as
+select
+  g.id as gift_id,
+  g.gift_date,
+  g.amount_cents,
+  coalesce(d.organization_name, concat_ws(' ', d.first_name, d.last_name)) as donor_name,
+  f.name as fund_name
+from gifts g
+inner join donors d on d.id = g.donor_id
+inner join funds f on f.id = g.fund_id
+where g.deleted_at is null
+order by g.amount_cents desc, g.gift_date desc;
+
+create or replace view recent_gifts as
+select
+  g.id as gift_id,
+  g.gift_date,
+  g.amount_cents,
+  coalesce(d.organization_name, concat_ws(' ', d.first_name, d.last_name)) as donor_name,
+  f.name as fund_name,
+  c.name as campaign_name
+from gifts g
+inner join donors d on d.id = g.donor_id
+inner join funds f on f.id = g.fund_id
+left join campaigns c on c.id = g.campaign_id
+where g.deleted_at is null
+order by g.gift_date desc, g.created_at desc;
