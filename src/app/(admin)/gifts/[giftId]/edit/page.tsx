@@ -26,7 +26,7 @@ export default async function EditGiftPage({
     <div className="grid">
       <section className="hero">
         <p className="eyebrow">Edit Gift</p>
-        <h1>Gift record {gift.id}</h1>
+        <h1>Gift {gift.gift_number ?? gift.id}</h1>
       </section>
 
       <section className="card">
@@ -59,6 +59,17 @@ export default async function EditGiftPage({
               {campaigns.map((campaign: LookupRow) => (
                 <option key={campaign.id} value={campaign.id}>
                   {campaign.name}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label>
+            Manual soft credit
+            <select name="softCreditDonorId" defaultValue={gift.soft_credit_donor_id ?? ""}>
+              <option value="">None</option>
+              {donors.map((donor: DonorListRow) => (
+                <option key={donor.id} value={donor.id}>
+                  {donor.full_name}
                 </option>
               ))}
             </select>

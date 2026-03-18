@@ -119,6 +119,7 @@ create table if not exists donor_contacts (
 
 create table if not exists gifts (
   id bigint generated always as identity primary key,
+  gift_number varchar(8) unique,
   donor_id bigint not null references donors(id) on delete restrict,
   fund_id bigint not null references funds(id) on delete restrict,
   campaign_id bigint references campaigns(id) on delete restrict,
@@ -133,6 +134,21 @@ create table if not exists gifts (
   updated_by bigint references users(id),
   deleted_at timestamptz
 );
+
+create sequence if not exists gift_number_seq start 40000000;
+
+create or replace function set_gift_number()
+returns trigger
+language plpgsql
+as $$
+begin
+  if new.gift_number is null then
+    new.gift_number := nextval('gift_number_seq')::text;
+  end if;
+
+  return new;
+end;
+$$;
 
 create table if not exists gift_allocations (
   id bigint generated always as identity primary key,
@@ -164,6 +180,7 @@ create table if not exists soft_credits (
   id bigint generated always as identity primary key,
   gift_id bigint not null references gifts(id) on delete restrict,
   donor_id bigint not null references donors(id) on delete restrict,
+  credit_type varchar(20) not null default 'MANUAL' check (credit_type in ('MANUAL', 'AUTO_SPOUSE')),
   amount_cents integer not null check (amount_cents > 0),
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
@@ -205,6 +222,7 @@ create index if not exists donors_last_name_idx on donors (last_name) where dele
 create unique index if not exists donors_donor_number_idx on donors (donor_number) where deleted_at is null;
 create unique index if not exists donors_primary_email_idx on donors (primary_email) where primary_email is not null and deleted_at is null;
 create index if not exists gifts_gift_date_idx on gifts (gift_date desc) where deleted_at is null;
+create unique index if not exists gifts_gift_number_idx on gifts (gift_number) where deleted_at is null;
 create index if not exists gifts_donor_date_idx on gifts (donor_id, gift_date desc) where deleted_at is null;
 create index if not exists gifts_campaign_idx on gifts (campaign_id) where deleted_at is null;
 create index if not exists gifts_fund_idx on gifts (fund_id) where deleted_at is null;
@@ -228,6 +246,8 @@ drop trigger if exists donor_contacts_set_updated_at on donor_contacts;
 create trigger donor_contacts_set_updated_at before update on donor_contacts for each row execute function set_updated_at();
 drop trigger if exists gifts_set_updated_at on gifts;
 create trigger gifts_set_updated_at before update on gifts for each row execute function set_updated_at();
+drop trigger if exists gifts_set_gift_number on gifts;
+create trigger gifts_set_gift_number before insert on gifts for each row execute function set_gift_number();
 drop trigger if exists gift_allocations_set_updated_at on gift_allocations;
 create trigger gift_allocations_set_updated_at before update on gift_allocations for each row execute function set_updated_at();
 drop trigger if exists pledges_set_updated_at on pledges;

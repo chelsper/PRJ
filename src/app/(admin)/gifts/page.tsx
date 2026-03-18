@@ -55,6 +55,17 @@ export default async function GiftsPage() {
             </select>
           </label>
           <label>
+            Manual soft credit
+            <select name="softCreditDonorId">
+              <option value="">None</option>
+              {donors.map((donor: DonorListRow) => (
+                <option key={donor.id} value={donor.id}>
+                  {donor.full_name}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label>
             Amount
             <input name="amount" type="number" min="0.01" step="0.01" required />
           </label>

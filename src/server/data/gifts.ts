@@ -1,3 +1,5 @@
+import type { PoolClient } from "pg";
+
 import { transaction, query } from "@/server/db";
 import { giftInputSchema } from "@/server/validation/gifts";
 
@@ -5,6 +7,7 @@ type Actor = { userId: string; ipAddress?: string | null };
 
 export type RecentGiftRow = {
   id: string;
+  gift_number?: string | null;
   donor_id?: string;
   donor_name: string;
   amount_cents: number;
@@ -15,9 +18,11 @@ export type RecentGiftRow = {
 
 export type GiftDetailRow = {
   id: string;
+  gift_number: string | null;
   donor_id: string;
   fund_id: string;
   campaign_id: string | null;
+  soft_credit_donor_id: string | null;
   amount_cents: number;
   gift_date: string;
   payment_method: "ACH" | "CARD" | "CHECK" | "CASH" | "WIRE" | "OTHER";
@@ -25,10 +30,57 @@ export type GiftDetailRow = {
   notes: string | null;
 };
 
+async function syncSoftCredits(
+  client: PoolClient,
+  input: {
+    giftId: string;
+    donorId: number;
+    amountCents: number;
+    manualSoftCreditDonorId?: number | null;
+    actorUserId: string;
+  }
+) {
+  const spouseResult = await client.query<{ spouse_donor_id: string | null }>(
+    `select spouse_donor_id::text
+     from public.donors
+     where id = $1`,
+    [input.donorId]
+  );
+
+  const spouseDonorId = spouseResult.rows[0]?.spouse_donor_id ? Number(spouseResult.rows[0].spouse_donor_id) : null;
+
+  await client.query(`delete from public.soft_credits where gift_id = $1`, [Number(input.giftId)]);
+
+  const creditTargets = new Map<number, "AUTO_SPOUSE" | "MANUAL">();
+
+  if (spouseDonorId && spouseDonorId !== input.donorId) {
+    creditTargets.set(spouseDonorId, "AUTO_SPOUSE");
+  }
+
+  if (input.manualSoftCreditDonorId && input.manualSoftCreditDonorId !== input.donorId) {
+    creditTargets.set(input.manualSoftCreditDonorId, "MANUAL");
+  }
+
+  for (const [donorId, creditType] of creditTargets.entries()) {
+    await client.query(
+      `insert into public.soft_credits (
+        gift_id,
+        donor_id,
+        credit_type,
+        amount_cents,
+        created_by,
+        updated_by
+      ) values ($1, $2, $3, $4, $5, $5)`,
+      [Number(input.giftId), donorId, creditType, input.amountCents, input.actorUserId]
+    );
+  }
+}
+
 export async function listRecentGifts(): Promise<RecentGiftRow[]> {
   const result = await query<RecentGiftRow>(
     `select
       g.id::text,
+      g.gift_number,
       coalesce(d.organization_name, concat_ws(' ', d.first_name, d.last_name)) as donor_name,
       g.amount_cents,
       g.gift_date::text,
@@ -50,15 +102,18 @@ export async function getGiftById(giftId: string): Promise<GiftDetailRow | null>
   const result = await query<GiftDetailRow>(
     `select
       g.id::text,
+      g.gift_number,
       g.donor_id::text,
       g.fund_id::text,
       g.campaign_id::text,
+      sc.donor_id::text as soft_credit_donor_id,
       g.amount_cents,
       g.gift_date::text,
       g.payment_method,
       g.reference_number,
       g.notes
     from public.gifts g
+    left join public.soft_credits sc on sc.gift_id = g.id and sc.credit_type = 'MANUAL'
     where g.id = $1
       and g.deleted_at is null`,
     [Number(giftId)]
@@ -104,6 +159,14 @@ export async function createGift(input: unknown, actor: Actor) {
       [actor.userId, inserted.rows[0].id, actor.ipAddress ?? null]
     );
 
+    await syncSoftCredits(client, {
+      giftId: inserted.rows[0].id,
+      donorId: values.donorId,
+      amountCents: Math.round(values.amount * 100),
+      manualSoftCreditDonorId: values.softCreditDonorId ?? null,
+      actorUserId: actor.userId
+    });
+
     return inserted.rows[0].id;
   });
 }
@@ -137,6 +200,14 @@ export async function updateGift(giftId: string, input: unknown, actor: Actor) {
         actor.userId
       ]
     );
+
+    await syncSoftCredits(client, {
+      giftId,
+      donorId: values.donorId,
+      amountCents: Math.round(values.amount * 100),
+      manualSoftCreditDonorId: values.softCreditDonorId ?? null,
+      actorUserId: actor.userId
+    });
 
     await client.query(
       `insert into public.audit_log (actor_user_id, action, entity_type, entity_id, status, ip_address)
