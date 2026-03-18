@@ -74,24 +74,28 @@ export default async function DashboardPage() {
         </article>
 
         <article className="card">
-          <p className="eyebrow">Reporting Focus</p>
+          <p className="eyebrow">Quick Actions</p>
           <div className="grid">
-            <div className="stat">
-              <span className="muted">Recognition reporting</span>
-              <strong>Use donor totals and giving levels for stewardship and sponsor visibility.</strong>
-            </div>
-            <div className="stat">
-              <span className="muted">Organization totals</span>
-              <strong>Keep received and pledged reporting separate from donor recognition totals.</strong>
-            </div>
-            <div className="button-row">
-              <Link href="/reports" className="button-link secondary-link">
-                Review reports
-              </Link>
-              <Link href="/imports" className="inline-link">
-                Prepare imports
-              </Link>
-            </div>
+            <Link href="/donors" className="stat">
+              <span className="muted">🔍 Find Donor</span>
+              <strong>Search and open donor records.</strong>
+            </Link>
+            <Link href="/gifts" className="stat">
+              <span className="muted">➕ Add Gift</span>
+              <strong>Record a new contribution or pledge.</strong>
+            </Link>
+            <Link href="/donors" className="stat">
+              <span className="muted">🧾 Send Receipt</span>
+              <strong>Open a donor record and send an e-receipt from Giving.</strong>
+            </Link>
+            <Link href="/imports" className="stat">
+              <span className="muted">📥 Import Gifts</span>
+              <strong>Prepare batch gift imports.</strong>
+            </Link>
+            <Link href="/reports" className="stat">
+              <span className="muted">📊 Run Report</span>
+              <strong>Open reporting and exports.</strong>
+            </Link>
           </div>
         </article>
       </section>
