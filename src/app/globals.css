@@ -1,14 +1,25 @@
 :root {
-  --bg: #fff6fa;
-  --paper: #fffdfd;
+  --bg: #fdf1f6;
+  --paper: #fffefe;
+  --paper-strong: #ffffff;
+  --panel: #fff8fb;
   --ink: #2a1b22;
-  --muted: #6f5864;
-  --line: #efcddd;
+  --muted: #6a5360;
+  --line: #e8bfd1;
+  --line-strong: #dca2bd;
   --accent: #d94b87;
-  --accent-soft: #fde2ec;
+  --accent-soft: #fbe0eb;
+  --accent-wash: #fff0f6;
   --danger: #b4234f;
   --accent-strong: #9f2258;
-  --surface-tint: #fff1f7;
+  --surface-tint: #fff2f8;
+  --surface-tint-strong: #f7d9e6;
+  --metric-surface: #fde5ee;
+  --action-surface: #f8ebf3;
+  --entry-surface: #fff7fa;
+  --shadow-soft: 0 16px 40px rgba(138, 38, 84, 0.08);
+  --shadow-card: 0 20px 50px rgba(138, 38, 84, 0.12);
+  --focus-ring: 0 0 0 4px rgba(217, 75, 135, 0.16);
 }
 
 * {
@@ -23,9 +34,9 @@ body {
 
 body {
   background:
-    radial-gradient(circle at top left, rgba(217, 75, 135, 0.16), transparent 26%),
-    radial-gradient(circle at bottom right, rgba(255, 196, 219, 0.35), transparent 30%),
-    linear-gradient(180deg, #fff8fb 0%, var(--bg) 100%);
+    radial-gradient(circle at top left, rgba(217, 75, 135, 0.18), transparent 24%),
+    radial-gradient(circle at bottom right, rgba(255, 196, 219, 0.38), transparent 28%),
+    linear-gradient(180deg, #fff9fc 0%, var(--bg) 100%);
   color: var(--ink);
   font-family: Georgia, "Times New Roman", serif;
 }
@@ -45,8 +56,8 @@ a {
 .card,
 .table-shell,
 .hero {
-  background: rgba(255, 253, 253, 0.94);
-  border: 1px solid var(--line);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(255, 250, 252, 0.96));
+  border: 1px solid var(--line-strong);
   border-radius: 20px;
 }
 
@@ -54,7 +65,7 @@ a {
 .hero,
 .card,
 .table-shell {
-  box-shadow: 0 20px 50px rgba(138, 38, 84, 0.1);
+  box-shadow: var(--shadow-card);
 }
 
 .topbar {
@@ -64,6 +75,7 @@ a {
   align-items: center;
   padding: 16px 18px;
   margin-bottom: 20px;
+  backdrop-filter: blur(8px);
 }
 
 .navlinks {
@@ -87,6 +99,9 @@ a {
 
 .hero {
   margin-bottom: 20px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(255, 244, 249, 0.94)),
+    var(--paper);
 }
 
 .grid {
@@ -107,16 +122,19 @@ a {
 .stat {
   padding: 16px;
   border-radius: 16px;
-  background: var(--accent-soft);
+  background: var(--metric-surface);
+  border: 1px solid rgba(217, 75, 135, 0.16);
   min-width: 0;
   display: grid;
   gap: 8px;
   align-content: start;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8);
 }
 
 .stat strong {
   display: block;
   font-size: 1.6rem;
+  font-weight: 800;
   margin-top: 6px;
 }
 
@@ -152,8 +170,10 @@ a {
 
 label {
   display: grid;
-  gap: 6px;
+  gap: 7px;
   font-size: 0.94rem;
+  font-weight: 700;
+  color: #533745;
 }
 
 input,
@@ -167,18 +187,47 @@ input,
 select,
 textarea {
   width: 100%;
-  border: 1px solid var(--line);
+  border: 1px solid var(--line-strong);
   border-radius: 14px;
   padding: 12px 14px;
-  background: var(--paper);
+  background: var(--paper-strong);
   color: var(--ink);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.9),
+    0 1px 2px rgba(138, 38, 84, 0.04);
+  transition:
+    border-color 140ms ease,
+    box-shadow 140ms ease,
+    background-color 140ms ease,
+    transform 140ms ease;
 }
 
 input:focus,
 select:focus,
 textarea:focus {
-  outline: 2px solid rgba(217, 75, 135, 0.2);
+  outline: 0;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.95),
+    var(--focus-ring);
   border-color: var(--accent);
+  background: #fff;
+}
+
+input:hover,
+select:hover,
+textarea:hover {
+  border-color: var(--accent);
+  background: #fff;
+}
+
+input[disabled],
+select[disabled],
+textarea[disabled],
+input[readonly],
+textarea[readonly] {
+  background: #fbf2f6;
+  color: #705965;
+  border-color: #e7ced9;
 }
 
 button {
@@ -188,10 +237,27 @@ button {
   background: var(--accent);
   color: white;
   cursor: pointer;
+  font-weight: 700;
+  box-shadow: 0 10px 20px rgba(159, 34, 88, 0.18);
+  transition:
+    transform 140ms ease,
+    box-shadow 140ms ease,
+    background-color 140ms ease,
+    color 140ms ease;
 }
 
 button:hover {
   background: var(--accent-strong);
+  transform: translateY(-1px);
+  box-shadow: 0 14px 24px rgba(159, 34, 88, 0.22);
+}
+
+button:focus-visible,
+.button-link:focus-visible,
+.inline-link:focus-visible,
+.tab-link:focus-visible {
+  outline: 0;
+  box-shadow: var(--focus-ring);
 }
 
 .button-link {
@@ -202,24 +268,35 @@ button:hover {
   padding: 12px 16px;
   background: var(--accent);
   color: white;
+  font-weight: 700;
+  box-shadow: 0 10px 20px rgba(159, 34, 88, 0.18);
+  transition:
+    transform 140ms ease,
+    box-shadow 140ms ease,
+    background-color 140ms ease,
+    color 140ms ease;
 }
 
 .button-link:hover {
   background: var(--accent-strong);
+  transform: translateY(-1px);
+  box-shadow: 0 14px 24px rgba(159, 34, 88, 0.22);
 }
 
 .secondary-link {
-  background: var(--surface-tint);
+  background: var(--action-surface);
   color: var(--ink);
+  box-shadow: 0 10px 20px rgba(117, 64, 90, 0.08);
 }
 
 .secondary-link:hover {
-  background: #f9dfe9;
+  background: var(--surface-tint-strong);
 }
 
 .secondary {
-  background: var(--surface-tint);
+  background: var(--action-surface);
   color: var(--ink);
+  box-shadow: 0 10px 20px rgba(117, 64, 90, 0.08);
 }
 
 .danger-button {
@@ -256,18 +333,35 @@ button:hover {
 .tab-link {
   padding: 10px 14px;
   border-radius: 999px;
-  border: 1px solid var(--line);
-  background: var(--paper);
+  border: 1px solid var(--line-strong);
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: var(--shadow-soft);
+  transition:
+    background-color 140ms ease,
+    border-color 140ms ease,
+    color 140ms ease,
+    transform 140ms ease;
+}
+
+.tab-link:hover {
+  background: var(--accent-wash);
+  border-color: var(--accent);
+  transform: translateY(-1px);
 }
 
 .tab-link.active {
   background: var(--accent-soft);
-  border-color: rgba(217, 75, 135, 0.3);
+  border-color: rgba(217, 75, 135, 0.42);
   color: var(--accent-strong);
 }
 
 .inline-link {
   color: var(--accent-strong);
+  font-weight: 700;
+}
+
+.inline-link:hover {
+  color: var(--accent);
 }
 
 .sort-link {
@@ -318,9 +412,10 @@ button:hover {
   display: grid;
   gap: 12px;
   padding: 16px;
-  border: 1px solid #f3d7e3;
+  border: 1px solid var(--line-strong);
   border-radius: 16px;
-  background: var(--surface-tint);
+  background: linear-gradient(180deg, var(--entry-surface), #fff4f8);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8);
 }
 
 .top-gap {
@@ -345,10 +440,10 @@ button:hover {
   left: 0;
   right: 0;
   z-index: 20;
-  background: rgba(255, 253, 253, 0.98);
-  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.99);
+  border: 1px solid var(--line-strong);
   border-radius: 16px;
-  box-shadow: 0 20px 40px rgba(138, 38, 84, 0.14);
+  box-shadow: 0 24px 44px rgba(138, 38, 84, 0.16);
   overflow: hidden;
 }
 
@@ -370,6 +465,12 @@ button:hover {
 
 .lookup-result:hover {
   background: var(--accent-soft);
+}
+
+.lookup-result:focus-visible {
+  outline: 0;
+  background: var(--accent-wash);
+  box-shadow: inset 0 0 0 2px rgba(217, 75, 135, 0.28);
 }
 
 table {
@@ -398,6 +499,12 @@ h2 {
   line-height: 1.02;
 }
 
+h1,
+h2,
+th {
+  color: #2e1721;
+}
+
 h1 {
   font-size: clamp(2.2rem, 5vw, 4.4rem);
   max-width: 12ch;
@@ -415,6 +522,7 @@ h2 {
   font-size: 0.72rem;
   color: var(--accent);
   margin-bottom: 10px;
+  font-weight: 700;
 }
 
 .muted {
@@ -471,10 +579,10 @@ h2 {
 .view-mode-toggle {
   display: inline-flex;
   padding: 4px;
-  border: 1px solid var(--line);
+  border: 1px solid var(--line-strong);
   border-radius: 999px;
   background: rgba(255, 253, 253, 0.94);
-  box-shadow: 0 12px 30px rgba(138, 38, 84, 0.08);
+  box-shadow: 0 12px 30px rgba(138, 38, 84, 0.1);
 }
 
 .view-mode-button {
@@ -494,6 +602,18 @@ h2 {
 
 .donor-summary-stats {
   align-items: stretch;
+}
+
+.card > .eyebrow + h2,
+.table-shell > .eyebrow + h2,
+.hero > .eyebrow + h2 {
+  margin-top: -2px;
+}
+
+.table-shell {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.99), rgba(255, 247, 250, 0.96)),
+    var(--paper);
 }
 
 body.app-view-mobile .hero h1 {
