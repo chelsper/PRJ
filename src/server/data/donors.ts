@@ -46,7 +46,9 @@ export type DonorProfileRow = {
   alternate_email: string | null;
   alternate_email_type: string | null;
   primary_phone: string | null;
-  giving_level: string | null;
+  giving_level_internal: string | null;
+  giving_level_display: string | null;
+  current_year_recognition_cents: string;
   notes: string | null;
   address_id: string | null;
   address_type: string | null;
@@ -307,7 +309,9 @@ export async function getDonorProfile(donorId: string): Promise<DonorProfileRow 
       d.alternate_email,
       d.alternate_email_type,
       d.primary_phone,
-      d.giving_level,
+      gl.giving_level_internal,
+      gl.giving_level_display,
+      coalesce(gl.current_year_recognition_cents, 0)::text as current_year_recognition_cents,
       d.notes,
       a.id::text as address_id,
       a.address_type,
@@ -324,9 +328,10 @@ export async function getDonorProfile(donorId: string): Promise<DonorProfileRow 
     left join public.donors sp on sp.id = d.spouse_donor_id
     left join public.donor_addresses a on a.donor_id = d.id and a.is_primary = true
     left join public.donor_giving_totals t on t.donor_id = d.id
+    left join public.donor_current_year_giving_levels gl on gl.donor_id = d.id
     where d.id = $1
       and d.deleted_at is null
-    group by d.id, sp.id, a.id, t.donor_recognition_cents, t.donor_hard_credit_cents, t.donor_soft_credit_cents`,
+    group by d.id, sp.id, a.id, t.donor_recognition_cents, t.donor_hard_credit_cents, t.donor_soft_credit_cents, gl.giving_level_internal, gl.giving_level_display, gl.current_year_recognition_cents`,
     [Number(donorId)]
   );
 
@@ -440,11 +445,10 @@ export async function createDonor(input: unknown, actor: Actor) {
         alternate_email_type,
         primary_phone,
         spouse_donor_id,
-        giving_level,
         notes,
         created_by,
         updated_by
-      ) values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $18)
+      ) values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $17)
       returning id::text`,
       [
         values.donorType,
@@ -462,7 +466,6 @@ export async function createDonor(input: unknown, actor: Actor) {
         values.alternateEmailType ?? null,
         values.primaryPhone ?? null,
         values.spouseDonorId ?? null,
-        values.givingLevel ?? null,
         values.notes ?? null,
         actor.userId
       ]
@@ -543,9 +546,8 @@ export async function updateDonorProfile(donorId: string, input: unknown, actor:
            alternate_email_type = $14,
            primary_phone = $15,
            spouse_donor_id = $16,
-           giving_level = $17,
-           notes = $18,
-           updated_by = $19
+           notes = $17,
+           updated_by = $18
        where id = $1`,
       [
         Number(donorId),
@@ -564,7 +566,6 @@ export async function updateDonorProfile(donorId: string, input: unknown, actor:
         values.alternateEmailType ?? null,
         values.primaryPhone ?? null,
         values.spouseDonorId ?? null,
-        values.givingLevel ?? null,
         values.notes ?? null,
         actor.userId
       ]

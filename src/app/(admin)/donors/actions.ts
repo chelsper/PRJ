@@ -56,7 +56,6 @@ export async function updateDonorProfileAction(formData: FormData) {
       alternateEmailType: formData.get("alternateEmailType"),
       primaryPhone: formData.get("primaryPhone"),
       spouseDonorId: formData.get("spouseDonorId"),
-      givingLevel: formData.get("givingLevel"),
       addressType: formData.get("addressType"),
       street1: formData.get("street1"),
       street2: formData.get("street2"),

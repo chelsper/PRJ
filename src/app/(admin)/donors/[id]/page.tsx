@@ -72,8 +72,12 @@ export default async function DonorProfilePage({
             <strong>${(Number(donor.donor_soft_credit_cents) / 100).toLocaleString()}</strong>
           </article>
           <article className="stat">
-            <span className="muted">Giving level</span>
-            <strong>{donor.giving_level ?? "Unassigned"}</strong>
+            <span className="muted">Current-year giving level</span>
+            <strong>{donor.giving_level_display ?? "Below giving level threshold"}</strong>
+          </article>
+          <article className="stat">
+            <span className="muted">Current-year recognition</span>
+            <strong>${(Number(donor.current_year_recognition_cents) / 100).toLocaleString()}</strong>
           </article>
           <article className="stat">
             <span className="muted">Primary email</span>
@@ -341,10 +345,6 @@ export default async function DonorProfilePage({
                   </option>
                 ))}
               </select>
-            </label>
-            <label>
-              Giving level
-              <input name="givingLevel" defaultValue={donor.giving_level ?? ""} />
             </label>
             <label>
               Preferred email

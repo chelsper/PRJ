@@ -40,14 +40,32 @@ export async function GET() {
     donor_recognition_cents: number;
     donor_hard_credit_cents: number;
     donor_soft_credit_cents: number;
+    giving_level_internal: string | null;
+    giving_level_display: string | null;
   }>(
-    `select donor_name, primary_email, donor_recognition_cents, donor_hard_credit_cents, donor_soft_credit_cents
-     from public.donor_giving_totals
+    `select
+       t.donor_name,
+       t.primary_email,
+       t.donor_recognition_cents,
+       t.donor_hard_credit_cents,
+       t.donor_soft_credit_cents,
+       gl.giving_level_internal,
+       gl.giving_level_display
+     from public.donor_giving_totals t
+     left join public.donor_current_year_giving_levels gl on gl.donor_id = t.donor_id
      order by donor_name asc`
   );
 
   const csv = [
-    ["donor_name", "primary_email", "donor_recognition_total", "donor_hard_credit_total", "donor_soft_credit_total"].join(","),
+    [
+      "donor_name",
+      "primary_email",
+      "donor_recognition_total",
+      "donor_hard_credit_total",
+      "donor_soft_credit_total",
+      "giving_level_display",
+      "giving_level_internal"
+    ].join(","),
     ...result.rows.map(
       (row: {
         donor_name: string;
@@ -55,13 +73,17 @@ export async function GET() {
         donor_recognition_cents: number;
         donor_hard_credit_cents: number;
         donor_soft_credit_cents: number;
+        giving_level_internal: string | null;
+        giving_level_display: string | null;
       }) =>
         [
           row.donor_name,
           row.primary_email ?? "",
           (row.donor_recognition_cents / 100).toFixed(2),
           (row.donor_hard_credit_cents / 100).toFixed(2),
-          (row.donor_soft_credit_cents / 100).toFixed(2)
+          (row.donor_soft_credit_cents / 100).toFixed(2),
+          row.giving_level_display ?? "",
+          row.giving_level_internal ?? ""
         ]
         .map((value: string) => `"${String(value).replaceAll('"', '""')}"`)
         .join(",")

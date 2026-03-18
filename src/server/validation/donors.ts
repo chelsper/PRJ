@@ -31,7 +31,6 @@ export const donorInputSchema = z
     alternateEmailType: blankToUndefined(z.string().trim().max(50)),
     primaryPhone: blankToUndefined(z.string().trim().max(30)),
     spouseDonorId: blankToUndefined(z.coerce.number().int().positive()),
-    givingLevel: blankToUndefined(z.string().trim().max(100)),
     addressType: blankToUndefined(z.string().trim().max(50)),
     street1: blankToUndefined(z.string().trim().max(200)),
     street2: blankToUndefined(z.string().trim().max(200)),
