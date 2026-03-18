@@ -56,6 +56,7 @@ export const giftInputSchema = z.object({
   installmentFrequency: blankToUndefined(z.enum(["MONTHLY", "QUARTERLY", "ANNUAL", "CUSTOM"])),
   installmentSchedule: installmentScheduleSchema,
   paymentMethod: blankToUndefined(z.enum(["ACH", "CARD", "CHECK", "CASH", "WIRE", "OTHER"])),
+  checkDate: blankToUndefined(z.string().date()),
   referenceNumber: blankToUndefined(z.string().trim().max(100)),
   notes: blankToUndefined(z.string().trim().max(5000))
 }).superRefine((value, ctx) => {

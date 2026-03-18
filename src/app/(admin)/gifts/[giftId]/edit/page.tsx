@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 
 import { DonorLookup } from "@/components/donors/donor-lookup";
+import { PaymentMethodFields } from "@/components/gifts/payment-method-fields";
 import { ParentPledgeField } from "@/components/gifts/parent-pledge-field";
 import { PledgeScheduleFields } from "@/components/gifts/pledge-schedule-fields";
 import { requireCapability } from "@/server/auth/permissions";
@@ -147,7 +148,7 @@ export default async function EditGiftPage({
           />
           <label>
             Payment method
-            <select name="paymentMethod" defaultValue={gift.payment_method ?? ""}>
+            <select id="gift-payment-method" name="paymentMethod" defaultValue={gift.payment_method ?? ""}>
               <option value="">Not applicable</option>
               <option value="ACH">ACH</option>
               <option value="CARD">Card</option>
@@ -157,10 +158,12 @@ export default async function EditGiftPage({
               <option value="OTHER">Other</option>
             </select>
           </label>
-          <label>
-            Reference number
-            <input name="referenceNumber" defaultValue={gift.reference_number ?? ""} />
-          </label>
+          <PaymentMethodFields
+            paymentMethodFieldId="gift-payment-method"
+            initialPaymentMethod={gift.payment_method ?? ""}
+            initialCheckDate={gift.check_date ?? ""}
+            initialReferenceNumber={gift.reference_number ?? ""}
+          />
           <label className="full">
             Notes
             <textarea name="notes" rows={4} defaultValue={gift.notes ?? ""} />

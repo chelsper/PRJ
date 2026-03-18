@@ -29,6 +29,7 @@ export async function createGiftAction(formData: FormData) {
       installmentCount: formData.get("installmentCount"),
       installmentFrequency: formData.get("installmentFrequency"),
       paymentMethod: formData.get("paymentMethod"),
+      checkDate: formData.get("checkDate"),
       referenceNumber: formData.get("referenceNumber"),
       notes: formData.get("notes")
     },
@@ -63,6 +64,7 @@ export async function updateGiftAction(formData: FormData) {
       installmentCount: formData.get("installmentCount"),
       installmentFrequency: formData.get("installmentFrequency"),
       paymentMethod: formData.get("paymentMethod"),
+      checkDate: formData.get("checkDate"),
       referenceNumber: formData.get("referenceNumber"),
       notes: formData.get("notes")
     },

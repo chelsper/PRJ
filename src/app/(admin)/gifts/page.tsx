@@ -1,6 +1,7 @@
 import type { DonorLookupOption } from "@/components/donors/donor-lookup";
 import { requireCapability } from "@/server/auth/permissions";
 import { DonorLookup } from "@/components/donors/donor-lookup";
+import { PaymentMethodFields } from "@/components/gifts/payment-method-fields";
 import { ParentPledgeField } from "@/components/gifts/parent-pledge-field";
 import { PledgeScheduleFields } from "@/components/gifts/pledge-schedule-fields";
 import { getDonorLookupRowsByIds } from "@/server/data/donors";
@@ -114,7 +115,7 @@ export default async function GiftsPage({
           />
           <label>
             Payment method
-            <select name="paymentMethod" defaultValue="">
+            <select id="gift-payment-method" name="paymentMethod" defaultValue="">
               <option value="">Not applicable</option>
               <option value="ACH">ACH</option>
               <option value="CARD">Card</option>
@@ -124,10 +125,7 @@ export default async function GiftsPage({
               <option value="OTHER">Other</option>
             </select>
           </label>
-          <label>
-            Reference number
-            <input name="referenceNumber" />
-          </label>
+          <PaymentMethodFields paymentMethodFieldId="gift-payment-method" />
           <label className="full">
             Notes
             <textarea name="notes" rows={4} />
