@@ -5,7 +5,7 @@ import { roles, type Role } from "@/server/auth/roles";
 import { listInvitations, listUsers, type UserInvitationRow, type UserRow } from "@/server/data/users";
 import { env } from "@/server/env";
 
-import { createInvitationAction, updateUserAction } from "../../users/actions";
+import { createInvitationAction, regenerateInvitationAction, updateUserAction } from "../../users/actions";
 
 export default async function AdminUsersPage({
   searchParams
@@ -132,6 +132,7 @@ export default async function AdminUsersPage({
                 <th>Invited by</th>
                 <th>Expires</th>
                 <th>Status</th>
+                <th></th>
               </tr>
             </thead>
             <tbody>
@@ -146,6 +147,16 @@ export default async function AdminUsersPage({
                     <td>{invitation.invited_by_email ?? "System"}</td>
                     <td>{invitation.expires_at.slice(0, 19).replace("T", " ")}</td>
                     <td>{status}</td>
+                    <td>
+                      {invitation.used_at ? null : (
+                        <form action={regenerateInvitationAction}>
+                          <input type="hidden" name="invitationId" value={invitation.id} />
+                          <button type="submit" className="secondary">
+                            Regenerate link
+                          </button>
+                        </form>
+                      )}
+                    </td>
                   </tr>
                 );
               })}

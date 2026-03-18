@@ -125,6 +125,79 @@ export async function createInvitation(
   };
 }
 
+export async function regenerateInvitation(
+  invitationId: string,
+  actor: Actor
+): Promise<{ invitationId: string; email: string; role: Role; token: string; expiresAt: string }> {
+  const existingInvitation = await query<{
+    id: string;
+    email: string;
+    role: Role;
+    used_at: string | null;
+  }>(
+    `select id::text, email, role, used_at::text
+     from public.user_invitations
+     where id = $1`,
+    [Number(invitationId)]
+  );
+
+  const invitation = existingInvitation.rows[0];
+
+  if (!invitation) {
+    throw new Error("Invitation not found.");
+  }
+
+  if (invitation.used_at) {
+    throw new Error("Accepted invitations cannot be regenerated.");
+  }
+
+  const existingUser = await query<{ id: string }>(
+    `select id::text
+     from public.users
+     where email = $1`,
+    [invitation.email]
+  );
+
+  if (existingUser.rows[0]) {
+    throw new Error("A user with that email already exists.");
+  }
+
+  const token = randomBytes(32).toString("hex");
+  const tokenHash = hashInviteToken(token);
+
+  const updated = await query<{ expires_at: string }>(
+    `update public.user_invitations
+     set token_hash = $2,
+         expires_at = now() + interval '72 hours',
+         invited_by = $3
+     where id = $1
+     returning expires_at::text`,
+    [Number(invitationId), tokenHash, actor.userId]
+  );
+
+  await writeAuditLog({
+    actorUserId: actor.userId,
+    action: "user.invite.regenerate",
+    entityType: "user_invitation",
+    entityId: invitationId,
+    status: "success",
+    ipAddress: actor.ipAddress,
+    metadata: {
+      email: invitation.email,
+      role: invitation.role,
+      expiresAt: updated.rows[0]?.expires_at ?? null
+    }
+  });
+
+  return {
+    invitationId,
+    email: invitation.email,
+    role: invitation.role,
+    token,
+    expiresAt: updated.rows[0].expires_at
+  };
+}
+
 export async function getInvitationByToken(token: string): Promise<{
   id: string;
   email: string;
