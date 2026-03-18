@@ -3,11 +3,17 @@ import { redirect } from "next/navigation";
 
 import { loginAction } from "./actions";
 
-export default async function LoginPage() {
+export default async function LoginPage({
+  searchParams
+}: {
+  searchParams: Promise<{ error?: string }>;
+}) {
   const session = await getCurrentSession();
   if (session) {
     redirect("/dashboard");
   }
+
+  const params = await searchParams;
 
   return (
     <main className="shell">
@@ -21,6 +27,7 @@ export default async function LoginPage() {
       </section>
 
       <section className="card" style={{ maxWidth: 520 }}>
+        {params.error === "invalid" ? <p className="danger">Invalid email or password.</p> : null}
         <form action={loginAction} className="form-grid">
           <label className="full">
             Email

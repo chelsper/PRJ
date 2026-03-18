@@ -52,7 +52,7 @@ export async function loginAction(formData: FormData) {
       ipAddress,
       metadata: { email }
     });
-    return { error: "Invalid credentials." };
+    redirect("/login?error=invalid");
   }
 
   const token = await createSessionToken({
