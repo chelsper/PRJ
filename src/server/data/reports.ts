@@ -27,10 +27,14 @@ export type DashboardTotals = {
 };
 
 export type AuditEventRow = {
+  id: string;
   occurred_at: string;
+  actor_email: string | null;
   action: string;
   entity_type: string;
+  entity_id: string | null;
   status: string;
+  metadata_text: string;
 };
 
 export async function donorRecognitionLeaderboard(): Promise<DonorRecognitionRow[]> {
@@ -101,9 +105,18 @@ export async function dashboardTotals(): Promise<DashboardTotals> {
 
 export async function recentAuditEvents(): Promise<AuditEventRow[]> {
   const result = await query<AuditEventRow>(
-    `select occurred_at::text, action, entity_type, status
-     from public.audit_log
-     order by occurred_at desc
+    `select
+      l.id::text,
+      l.occurred_at::text,
+      u.email as actor_email,
+      l.action,
+      l.entity_type,
+     l.entity_id,
+      l.status,
+      l.metadata::text as metadata_text
+     from public.audit_log l
+     left join public.users u on u.id = l.actor_user_id
+     order by l.occurred_at desc
      limit 50`
   );
 

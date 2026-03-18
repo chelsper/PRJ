@@ -1,6 +1,7 @@
 import { query, transaction } from "@/server/db";
 import { writeAuditLog } from "@/server/audit";
 import { donorInputSchema } from "@/server/validation/donors";
+import type { PoolClient } from "pg";
 
 type Actor = { userId: string; ipAddress?: string | null };
 
@@ -144,6 +145,54 @@ const linkedDonorNameSql = (alias: string) => `
     )
   end
 `;
+
+async function donorAuditSnapshot(client: PoolClient, donorId: number) {
+  const result = await client.query<{ snapshot: Record<string, unknown> | null }>(
+    `select jsonb_build_object(
+      'id', d.id,
+      'donor_number', d.donor_number,
+      'donor_type', d.donor_type,
+      'title', d.title,
+      'first_name', d.first_name,
+      'middle_name', d.middle_name,
+      'last_name', d.last_name,
+      'preferred_name', d.preferred_name,
+      'organization_name', d.organization_name,
+      'organization_contact_donor_id', d.organization_contact_donor_id,
+      'organization_contact_name', d.organization_contact_name,
+      'primary_email', d.primary_email,
+      'primary_email_type', d.primary_email_type,
+      'alternate_email', d.alternate_email,
+      'alternate_email_type', d.alternate_email_type,
+      'primary_phone', d.primary_phone,
+      'spouse_donor_id', d.spouse_donor_id,
+      'giving_level', d.giving_level,
+      'notes', d.notes,
+      'deleted_at', d.deleted_at,
+      'primary_address',
+        case
+          when a.id is null then null
+          else jsonb_build_object(
+            'id', a.id,
+            'address_type', a.address_type,
+            'street1', a.street1,
+            'street2', a.street2,
+            'city', a.city,
+            'state_region', a.state_region,
+            'postal_code', a.postal_code,
+            'country', a.country,
+            'is_primary', a.is_primary
+          )
+        end
+    ) as snapshot
+    from public.donors d
+    left join public.donor_addresses a on a.donor_id = d.id and a.is_primary = true
+    where d.id = $1`,
+    [donorId]
+  );
+
+  return result.rows[0]?.snapshot ?? null;
+}
 
 export async function listDonors(search?: string): Promise<DonorListRow[]> {
   const result = await query<DonorListRow>(
@@ -404,10 +453,21 @@ export async function createDonor(input: unknown, actor: Actor) {
       );
     }
 
+    const after = await donorAuditSnapshot(client, Number(donorId));
+
     await client.query(
       `insert into public.audit_log (actor_user_id, action, entity_type, entity_id, status, ip_address, metadata)
        values ($1, 'donor.create', 'donor', $2, 'success', $3, $4::jsonb)`,
-      [actor.userId, donorId, actor.ipAddress ?? null, JSON.stringify({ donorType: values.donorType })]
+      [
+        actor.userId,
+        donorId,
+        actor.ipAddress ?? null,
+        JSON.stringify({
+          donorType: values.donorType,
+          before: null,
+          after
+        })
+      ]
     );
 
     return donorId;
@@ -418,6 +478,8 @@ export async function updateDonorProfile(donorId: string, input: unknown, actor:
   const values = donorInputSchema.parse(input);
 
   await transaction(async (client) => {
+    const before = await donorAuditSnapshot(client, Number(donorId));
+
     await client.query(
       `update public.donors
        set donor_type = $2,
@@ -526,10 +588,21 @@ export async function updateDonorProfile(donorId: string, input: unknown, actor:
       }
     }
 
+    const after = await donorAuditSnapshot(client, Number(donorId));
+
     await client.query(
       `insert into public.audit_log (actor_user_id, action, entity_type, entity_id, status, ip_address, metadata)
        values ($1, 'donor.update', 'donor', $2, 'success', $3, $4::jsonb)`,
-      [actor.userId, donorId, actor.ipAddress ?? null, JSON.stringify({ donorType: values.donorType })]
+      [
+        actor.userId,
+        donorId,
+        actor.ipAddress ?? null,
+        JSON.stringify({
+          donorType: values.donorType,
+          before,
+          after
+        })
+      ]
     );
   });
 }
@@ -549,6 +622,8 @@ export async function addDonorAddress(
   actor: Actor
 ) {
   await transaction(async (client) => {
+    const before = await donorAuditSnapshot(client, Number(donorId));
+
     if (input.isPrimary) {
       await client.query(
         `update public.donor_addresses
@@ -588,14 +663,34 @@ export async function addDonorAddress(
     );
 
     await client.query(
-      `insert into public.audit_log (actor_user_id, action, entity_type, entity_id, status, ip_address)
-       values ($1, 'donor.address.create', 'donor', $2, 'success', $3)`,
-      [actor.userId, donorId, actor.ipAddress ?? null]
+      `insert into public.audit_log (actor_user_id, action, entity_type, entity_id, status, ip_address, metadata)
+       values ($1, 'donor.address.create', 'donor', $2, 'success', $3, $4::jsonb)`,
+      [
+        actor.userId,
+        donorId,
+        actor.ipAddress ?? null,
+        JSON.stringify({
+          before,
+          after: await donorAuditSnapshot(client, Number(donorId))
+        })
+      ]
     );
   });
 }
 
 export async function softDeleteDonor(donorId: string, actor: Actor) {
+  const before = await query<{ snapshot: Record<string, unknown> | null }>(
+    `select jsonb_build_object(
+      'id', d.id,
+      'donor_number', d.donor_number,
+      'full_name', ${donorFullNameSql},
+      'deleted_at', d.deleted_at
+    ) as snapshot
+    from public.donors d
+    where d.id = $1`,
+    [Number(donorId)]
+  );
+
   await query(
     `update public.donors
      set deleted_at = now(),
@@ -611,6 +706,12 @@ export async function softDeleteDonor(donorId: string, actor: Actor) {
     entityType: "donor",
     entityId: donorId,
     status: "success",
-    ipAddress: actor.ipAddress ?? null
+    ipAddress: actor.ipAddress ?? null,
+    metadata: {
+      before: before.rows[0]?.snapshot ?? null,
+      after: {
+        deleted_at: "soft_deleted"
+      }
+    }
   });
 }

@@ -74,7 +74,11 @@ export async function GET() {
     entityType: "report",
     entityId: null,
     status: "success",
-    ipAddress
+    ipAddress,
+    metadata: {
+      report: "donor_recognition_totals",
+      rowCount: result.rows.length
+    }
   });
 
   return new NextResponse(csv, {

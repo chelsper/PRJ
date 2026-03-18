@@ -46,6 +46,43 @@ export type GiftDetailRow = {
   notes: string | null;
 };
 
+async function giftAuditSnapshot(client: PoolClient, giftId: number) {
+  const result = await client.query<{ snapshot: Record<string, unknown> | null }>(
+    `select jsonb_build_object(
+      'id', g.id,
+      'gift_number', g.gift_number,
+      'donor_id', g.donor_id,
+      'fund_id', g.fund_id,
+      'campaign_id', g.campaign_id,
+      'gift_type', g.gift_type,
+      'amount_cents', g.amount_cents,
+      'gift_date', g.gift_date,
+      'payment_method', g.payment_method,
+      'reference_number', g.reference_number,
+      'notes', g.notes,
+      'deleted_at', g.deleted_at,
+      'soft_credits',
+        coalesce((
+          select jsonb_agg(
+            jsonb_build_object(
+              'donor_id', sc.donor_id,
+              'credit_type', sc.credit_type,
+              'amount_cents', sc.amount_cents
+            )
+            order by sc.id
+          )
+          from public.soft_credits sc
+          where sc.gift_id = g.id
+        ), '[]'::jsonb)
+    ) as snapshot
+    from public.gifts g
+    where g.id = $1`,
+    [giftId]
+  );
+
+  return result.rows[0]?.snapshot ?? null;
+}
+
 async function syncSoftCredits(
   client: PoolClient,
   input: {
@@ -173,12 +210,6 @@ export async function createGift(input: unknown, actor: Actor) {
       ]
     );
 
-    await client.query(
-      `insert into public.audit_log (actor_user_id, action, entity_type, entity_id, status, ip_address)
-       values ($1, 'gift.create', 'gift', $2, 'success', $3)`,
-      [actor.userId, inserted.rows[0].id, actor.ipAddress ?? null]
-    );
-
     await syncSoftCredits(client, {
       giftId: inserted.rows[0].id,
       donorId: values.donorId,
@@ -186,6 +217,22 @@ export async function createGift(input: unknown, actor: Actor) {
       manualSoftCreditDonorId: values.softCreditDonorId ?? null,
       actorUserId: actor.userId
     });
+
+    const after = await giftAuditSnapshot(client, Number(inserted.rows[0].id));
+
+    await client.query(
+      `insert into public.audit_log (actor_user_id, action, entity_type, entity_id, status, ip_address, metadata)
+       values ($1, 'gift.create', 'gift', $2, 'success', $3, $4::jsonb)`,
+      [
+        actor.userId,
+        inserted.rows[0].id,
+        actor.ipAddress ?? null,
+        JSON.stringify({
+          before: null,
+          after
+        })
+      ]
+    );
 
     return inserted.rows[0].id;
   });
@@ -195,6 +242,8 @@ export async function updateGift(giftId: string, input: unknown, actor: Actor) {
   const values = giftInputSchema.parse(input);
 
   await transaction(async (client) => {
+    const before = await giftAuditSnapshot(client, Number(giftId));
+
     await client.query(
       `update public.gifts
        set donor_id = $2,
@@ -231,10 +280,20 @@ export async function updateGift(giftId: string, input: unknown, actor: Actor) {
       actorUserId: actor.userId
     });
 
+    const after = await giftAuditSnapshot(client, Number(giftId));
+
     await client.query(
-      `insert into public.audit_log (actor_user_id, action, entity_type, entity_id, status, ip_address)
-       values ($1, 'gift.update', 'gift', $2, 'success', $3)`,
-      [actor.userId, giftId, actor.ipAddress ?? null]
+      `insert into public.audit_log (actor_user_id, action, entity_type, entity_id, status, ip_address, metadata)
+       values ($1, 'gift.update', 'gift', $2, 'success', $3, $4::jsonb)`,
+      [
+        actor.userId,
+        giftId,
+        actor.ipAddress ?? null,
+        JSON.stringify({
+          before,
+          after
+        })
+      ]
     );
   });
 }
