@@ -5,7 +5,7 @@ export type LookupRow = { id: string; name: string };
 export async function listFunds(): Promise<LookupRow[]> {
   const result = await query<LookupRow>(
     `select id::text, name
-     from funds
+     from public.funds
      where archived_at is null
      order by name asc`
   );
@@ -16,7 +16,7 @@ export async function listFunds(): Promise<LookupRow[]> {
 export async function listCampaigns(): Promise<LookupRow[]> {
   const result = await query<LookupRow>(
     `select id::text, name
-     from campaigns
+     from public.campaigns
      where archived_at is null
      order by name asc`
   );

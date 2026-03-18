@@ -5,7 +5,7 @@ export default async function UsersPage() {
   await requireCapability("users:manage");
   const result = await query<{ id: string; email: string; role: string; status: string }>(
     `select id::text, email, role, status
-     from users
+     from public.users
      order by email asc`
   );
 

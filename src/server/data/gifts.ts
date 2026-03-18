@@ -21,10 +21,10 @@ export async function listRecentGifts(): Promise<RecentGiftRow[]> {
       g.gift_date::text,
       f.name as fund_name,
       c.name as campaign_name
-    from gifts g
-    inner join donors d on d.id = g.donor_id
-    inner join funds f on f.id = g.fund_id
-    left join campaigns c on c.id = g.campaign_id
+    from public.gifts g
+    inner join public.donors d on d.id = g.donor_id
+    inner join public.funds f on f.id = g.fund_id
+    left join public.campaigns c on c.id = g.campaign_id
     where g.deleted_at is null
     order by g.gift_date desc, g.created_at desc
     limit 100`
@@ -38,7 +38,7 @@ export async function createGift(input: unknown, actor: Actor) {
 
   return transaction(async (client) => {
     const inserted = await client.query<{ id: string }>(
-      `insert into gifts (
+      `insert into public.gifts (
         donor_id,
         fund_id,
         campaign_id,
@@ -65,7 +65,7 @@ export async function createGift(input: unknown, actor: Actor) {
     );
 
     await client.query(
-      `insert into audit_log (actor_user_id, action, entity_type, entity_id, status, ip_address)
+      `insert into public.audit_log (actor_user_id, action, entity_type, entity_id, status, ip_address)
        values ($1, 'gift.create', 'gift', $2, 'success', $3)`,
       [actor.userId, inserted.rows[0].id, actor.ipAddress ?? null]
     );

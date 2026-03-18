@@ -16,7 +16,7 @@ export type AuditEventRow = {
 export async function lifetimeGivingLeaderboard(): Promise<LifetimeGivingRow[]> {
   const result = await query<LifetimeGivingRow>(
     `select donor_id::text, donor_name, lifetime_giving_cents
-     from lifetime_giving_by_donor
+     from public.lifetime_giving_by_donor
      order by lifetime_giving_cents desc
      limit 25`
   );
@@ -27,7 +27,7 @@ export async function lifetimeGivingLeaderboard(): Promise<LifetimeGivingRow[]> 
 export async function recentAuditEvents(): Promise<AuditEventRow[]> {
   const result = await query<AuditEventRow>(
     `select occurred_at::text, action, entity_type, status
-     from audit_log
+     from public.audit_log
      order by occurred_at desc
      limit 50`
   );

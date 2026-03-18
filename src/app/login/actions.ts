@@ -51,7 +51,7 @@ export async function loginAction(formData: FormData) {
     status: string;
   }>(
     `select id::text, email, password_hash, role, status
-     from users
+     from public.users
      where email = $1`,
     [email]
   );
@@ -110,7 +110,7 @@ export async function signUpAction(formData: FormData) {
 
   const existingUserResult = await query<{ id: string }>(
     `select id::text
-     from users
+     from public.users
      where email = $1`,
     [values.email]
   );
@@ -128,11 +128,11 @@ export async function signUpAction(formData: FormData) {
     redirect("/signup?error=exists");
   }
 
-  const countResult = await query<{ count: string }>("select count(*)::text as count from users");
+  const countResult = await query<{ count: string }>("select count(*)::text as count from public.users");
   const role: Role = countResult.rows[0]?.count === "0" ? "admin" : "read_only";
 
   const inserted = await query<{ id: string }>(
-    `insert into users (email, password_hash, role, status)
+    `insert into public.users (email, password_hash, role, status)
      values ($1, $2, $3, 'active')
      returning id::text`,
     [values.email, hashPassword(values.password), role]

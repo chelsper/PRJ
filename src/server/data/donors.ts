@@ -24,8 +24,8 @@ export async function listDonors(search?: string): Promise<DonorListRow[]> {
       d.organization_name,
       d.primary_email,
       coalesce(sum(g.amount_cents), 0)::text as lifetime_giving_cents
-    from donors d
-    left join gifts g on g.donor_id = d.id and g.deleted_at is null
+    from public.donors d
+    left join public.gifts g on g.donor_id = d.id and g.deleted_at is null
     where d.deleted_at is null
       and (
         $1::text is null
@@ -45,7 +45,7 @@ export async function createDonor(input: unknown, actor: Actor) {
 
   return transaction(async (client) => {
     const inserted = await client.query<{ id: string }>(
-      `insert into donors (
+      `insert into public.donors (
         donor_type,
         first_name,
         last_name,
@@ -72,7 +72,7 @@ export async function createDonor(input: unknown, actor: Actor) {
     const donorId = inserted.rows[0].id;
 
     await client.query(
-      `insert into audit_log (actor_user_id, action, entity_type, entity_id, status, ip_address, metadata)
+      `insert into public.audit_log (actor_user_id, action, entity_type, entity_id, status, ip_address, metadata)
        values ($1, 'donor.create', 'donor', $2, 'success', $3, $4::jsonb)`,
       [actor.userId, donorId, actor.ipAddress ?? null, JSON.stringify({ donorType: values.donorType })]
     );
@@ -83,7 +83,7 @@ export async function createDonor(input: unknown, actor: Actor) {
 
 export async function softDeleteDonor(donorId: string, actor: Actor) {
   await query(
-    `update donors
+    `update public.donors
      set deleted_at = now(),
          updated_at = now(),
          updated_by = $2

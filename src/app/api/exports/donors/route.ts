@@ -40,7 +40,7 @@ export async function GET() {
     lifetime_giving_cents: number;
   }>(
     `select donor_name, primary_email, lifetime_giving_cents
-     from lifetime_giving_by_donor
+     from public.lifetime_giving_by_donor
      order by donor_name asc`
   );
 

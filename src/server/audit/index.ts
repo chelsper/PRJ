@@ -10,7 +10,7 @@ export async function writeAuditLog(input: {
   metadata?: Record<string, unknown>;
 }) {
   await query(
-    `insert into audit_log (
+    `insert into public.audit_log (
       actor_user_id,
       action,
       entity_type,
