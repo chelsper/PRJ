@@ -17,6 +17,7 @@ import {
   createCampaignAction,
   createFieldOptionAction,
   createFundAction,
+  reorderFieldOptionAction,
   updateCampaignAction,
   updateFieldOptionAction,
   updateFundAction
@@ -441,12 +442,7 @@ export default async function AdminConfigurationsPage({
                     />
                   </th>
                   <th>
-                    <SortLink
-                      label="Sort order"
-                      active={optionSort === "sort_order"}
-                      direction={optionDir}
-                      href={buildSortHref({ optionSort: "sort_order", optionDir: nextDirection(optionSort === "sort_order", optionDir) })}
-                    />
+                    Sort order
                   </th>
                   <th>
                     <SortLink
@@ -470,7 +466,25 @@ export default async function AdminConfigurationsPage({
                         <input name="label" form={formId} defaultValue={option.label} />
                       </td>
                       <td>
-                        <input name="sortOrder" form={formId} type="number" defaultValue={option.sort_order} />
+                        <div className="config-order-cell">
+                          <input name="sortOrder" form={formId} type="number" defaultValue={option.sort_order} />
+                          <div className="button-row">
+                            <form action={reorderFieldOptionAction}>
+                              <input type="hidden" name="id" value={option.id} />
+                              <input type="hidden" name="direction" value="up" />
+                              <button type="submit" className="secondary config-arrow-button" aria-label={`Move ${option.label} up`}>
+                                ↑
+                              </button>
+                            </form>
+                            <form action={reorderFieldOptionAction}>
+                              <input type="hidden" name="id" value={option.id} />
+                              <input type="hidden" name="direction" value="down" />
+                              <button type="submit" className="secondary config-arrow-button" aria-label={`Move ${option.label} down`}>
+                                ↓
+                              </button>
+                            </form>
+                          </div>
+                        </div>
                       </td>
                       <td>
                         <label className="checkbox-line">

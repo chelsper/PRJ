@@ -9,6 +9,7 @@ import { assertSameOrigin } from "@/server/security/csrf";
 import { query } from "@/server/db";
 import { writeAuditLog } from "@/server/audit";
 import { managedOptionSets, type ManagedOptionSetKey } from "@/server/data/configurations";
+import { transaction } from "@/server/db";
 
 function adminRedirect(path = "/admin/configurations") {
   revalidatePath("/admin/configurations");
@@ -219,6 +220,100 @@ export async function updateFieldOptionAction(formData: FormData) {
     status: "success",
     ipAddress,
     metadata: { label, sortOrder, isActive }
+  });
+
+  adminRedirect();
+}
+
+export async function reorderFieldOptionAction(formData: FormData) {
+  await assertSameOrigin();
+  const session = await requireCapability("users:manage");
+  const requestHeaders = await headers();
+  const ipAddress = requestHeaders.get("x-forwarded-for")?.split(",")[0]?.trim() ?? null;
+
+  const id = String(formData.get("id") ?? "");
+  const direction = String(formData.get("direction") ?? "");
+
+  if (!id || (direction !== "up" && direction !== "down")) {
+    adminRedirect("/admin/configurations?error=field_option_reorder");
+  }
+
+  await transaction(async (client) => {
+    const currentResult = await client.query<{
+      id: string;
+      set_key: string;
+      sort_order: string;
+      label: string;
+      value: string;
+    }>(
+      `select id::text, set_key, sort_order::text, label, value
+       from public.field_options
+       where id = $1`,
+      [Number(id)]
+    );
+
+    const current = currentResult.rows[0];
+
+    if (!current || !isManagedSetKey(current.set_key)) {
+      throw new Error("Field option not found.");
+    }
+
+    const neighborResult = await client.query<{
+      id: string;
+      sort_order: string;
+      label: string;
+    }>(
+      direction === "up"
+        ? `select id::text, sort_order::text, label
+           from public.field_options
+           where set_key = $1
+             and id <> $2
+             and is_active = true
+             and (sort_order < $3 or (sort_order = $3 and label < $4))
+           order by sort_order desc, label desc
+           limit 1`
+        : `select id::text, sort_order::text, label
+           from public.field_options
+           where set_key = $1
+             and id <> $2
+             and is_active = true
+             and (sort_order > $3 or (sort_order = $3 and label > $4))
+           order by sort_order asc, label asc
+           limit 1`,
+      [current.set_key, Number(id), Number(current.sort_order), current.label]
+    );
+
+    const neighbor = neighborResult.rows[0];
+
+    if (!neighbor) {
+      return;
+    }
+
+    await client.query(
+      `update public.field_options
+       set sort_order = case
+         when id = $1 then $3
+         when id = $2 then $4
+         else sort_order
+       end
+       where id in ($1, $2)`,
+      [Number(current.id), Number(neighbor.id), Number(neighbor.sort_order), Number(current.sort_order)]
+    );
+
+    await writeAuditLog({
+      actorUserId: session.userId,
+      action: "config.field_option.reorder",
+      entityType: "field_option",
+      entityId: current.id,
+      status: "success",
+      ipAddress,
+      metadata: {
+        setKey: current.set_key,
+        direction,
+        value: current.value,
+        swappedWithId: neighbor.id
+      }
+    });
   });
 
   adminRedirect();
