@@ -80,7 +80,11 @@ export default async function ReportsPage({
           <tbody>
             {donorTotals.map((row: DonorRecognitionRow) => (
               <tr key={row.donor_id}>
-                <td>{row.donor_name}</td>
+                <td>
+                  <Link href={`/donors/${row.donor_id}`} className="table-link">
+                    {row.donor_name}
+                  </Link>
+                </td>
                 <td>${(row.donor_recognition_cents / 100).toLocaleString()}</td>
                 <td>${(row.donor_hard_credit_cents / 100).toLocaleString()}</td>
                 <td>${(row.donor_soft_credit_cents / 100).toLocaleString()}</td>

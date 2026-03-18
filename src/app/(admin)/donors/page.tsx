@@ -88,7 +88,9 @@ export default async function DonorsPage({
                       {possibleMatches.map((match: DonorListRow) => (
                         <tr key={match.id}>
                           <td>
-                            <Link href={`/donors/${match.id}`}>{match.full_name || "Unnamed donor"}</Link>
+                            <Link href={`/donors/${match.id}`} className="table-link">
+                              {match.full_name || "Unnamed donor"}
+                            </Link>
                             <div className="muted">{match.donor_number ?? "Pending donor number"}</div>
                           </td>
                           <td>{match.primary_email ?? "—"}</td>
@@ -125,7 +127,9 @@ export default async function DonorsPage({
                 return (
                   <tr key={donor.id}>
                     <td>
-                      <Link href={`/donors/${donor.id}`}>{donor.full_name || "Unnamed donor"}</Link>
+                      <Link href={`/donors/${donor.id}`} className="table-link">
+                        {donor.full_name || "Unnamed donor"}
+                      </Link>
                       <div className="muted">{donor.donor_number ?? "Pending donor number"}</div>
                     </td>
                     <td>{donor.primary_email ?? "—"}</td>
