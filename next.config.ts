@@ -1,5 +1,7 @@
 import type { NextConfig } from "next";
 
+const isDev = process.env.NODE_ENV !== "production";
+
 const csp = [
   "default-src 'self'",
   "base-uri 'self'",
@@ -7,7 +9,7 @@ const csp = [
   "img-src 'self' data:",
   "font-src 'self'",
   "object-src 'none'",
-  "script-src 'self'",
+  `script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ""}`,
   "style-src 'self' 'unsafe-inline'",
   "connect-src 'self'",
   "form-action 'self'"
