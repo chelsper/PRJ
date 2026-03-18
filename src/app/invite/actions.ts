@@ -2,6 +2,7 @@
 
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
+import { ZodError } from "zod";
 
 import { acceptInvitation } from "@/server/data/users";
 import { assertSameOrigin } from "@/server/security/csrf";
@@ -51,6 +52,31 @@ export async function acceptInvitationAction(formData: FormData) {
       { ipAddress }
     );
   } catch (error) {
+    const params = new URLSearchParams({ token });
+
+    if (error instanceof ZodError) {
+      const confirmPasswordIssue = error.issues.find((issue) => issue.path.includes("confirmPassword"));
+      const passwordIssue = error.issues.find((issue) => issue.path.includes("password"));
+
+      if (confirmPasswordIssue) {
+        params.set("error", "password_mismatch");
+      } else if (passwordIssue) {
+        params.set("error", "password_too_short");
+      } else {
+        params.set("error", "validation");
+      }
+    } else if (error instanceof Error) {
+      if (error.message.includes("already registered")) {
+        params.set("error", "already_registered");
+      } else if (error.message.includes("invalid or expired")) {
+        params.set("error", "invalid");
+      } else {
+        params.set("error", "setup_failed");
+      }
+    } else {
+      params.set("error", "setup_failed");
+    }
+
     await writeAuditLog({
       actorUserId: null,
       action: "user.invite.accept",
@@ -58,9 +84,12 @@ export async function acceptInvitationAction(formData: FormData) {
       entityId: null,
       status: "failed",
       ipAddress,
-      metadata: { error: error instanceof Error ? error.message : "Unknown error" }
+      metadata: {
+        error: error instanceof Error ? error.message : "Unknown error",
+        tokenPresent: Boolean(token)
+      }
     });
-    redirect(`/invite?token=${encodeURIComponent(token)}&error=invalid`);
+    redirect(`/invite?${params.toString()}`);
   }
 
   await establishSession(user);

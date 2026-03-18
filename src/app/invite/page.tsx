@@ -14,6 +14,18 @@ export default async function InvitePage({
   const invitation = token ? await getInvitationByToken(token) : null;
   const isExpired =
     !invitation || invitation.used_at !== null || new Date(invitation.expires_at).getTime() < Date.now();
+  const setupErrorMessage =
+    params.error === "password_mismatch"
+      ? "Passwords must match."
+      : params.error === "password_too_short"
+        ? "Passwords must be at least 12 characters."
+        : params.error === "already_registered"
+          ? "That email address is already registered."
+          : params.error === "validation"
+            ? "Please review the password fields and try again."
+            : params.error === "setup_failed"
+              ? "Account setup could not be completed. Please try again or ask an admin for a fresh link."
+              : null;
 
   return (
     <main className="shell auth-shell">
@@ -40,6 +52,7 @@ export default async function InvitePage({
               <p className="muted">
                 {invitation.email} will be created as <strong>{invitation.role}</strong>.
               </p>
+              {setupErrorMessage ? <p className="danger">{setupErrorMessage}</p> : null}
               <form action={acceptInvitationAction} className="form-grid">
                 <input type="hidden" name="token" value={token} />
                 <label className="full">
