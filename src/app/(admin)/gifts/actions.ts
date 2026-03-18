@@ -2,9 +2,10 @@
 
 import { headers } from "next/headers";
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 
 import { requireCapability } from "@/server/auth/permissions";
-import { createGift } from "@/server/data/gifts";
+import { createGift, updateGift } from "@/server/data/gifts";
 import { assertSameOrigin } from "@/server/security/csrf";
 
 export async function createGiftAction(formData: FormData) {
@@ -29,4 +30,33 @@ export async function createGiftAction(formData: FormData) {
 
   revalidatePath("/gifts");
   revalidatePath("/dashboard");
+}
+
+export async function updateGiftAction(formData: FormData) {
+  await assertSameOrigin();
+  const session = await requireCapability("gifts:write");
+  const giftId = String(formData.get("giftId"));
+  const donorId = String(formData.get("donorId"));
+  const requestHeaders = await headers();
+  const ipAddress = requestHeaders.get("x-forwarded-for")?.split(",")[0]?.trim() ?? null;
+
+  await updateGift(
+    giftId,
+    {
+      donorId: formData.get("donorId"),
+      fundId: formData.get("fundId"),
+      campaignId: formData.get("campaignId"),
+      amount: formData.get("amount"),
+      giftDate: formData.get("giftDate"),
+      paymentMethod: formData.get("paymentMethod"),
+      referenceNumber: formData.get("referenceNumber"),
+      notes: formData.get("notes")
+    },
+    { userId: session.userId, ipAddress }
+  );
+
+  revalidatePath("/gifts");
+  revalidatePath(`/donors/${donorId}`);
+  revalidatePath(`/donors/${donorId}?tab=giving`);
+  redirect(`/donors/${donorId}?tab=giving`);
 }

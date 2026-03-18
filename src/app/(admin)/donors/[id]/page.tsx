@@ -78,6 +78,7 @@ export default async function DonorProfilePage({
                 <th>Campaign</th>
                 <th>Payment</th>
                 <th>Amount</th>
+                <th></th>
               </tr>
             </thead>
             <tbody>
@@ -88,6 +89,11 @@ export default async function DonorProfilePage({
                   <td>{gift.campaign_name ?? "—"}</td>
                   <td>{gift.payment_method}</td>
                   <td>${(gift.amount_cents / 100).toLocaleString()}</td>
+                  <td>
+                    <Link href={`/gifts/${gift.id}/edit`} className="inline-link">
+                      Edit gift
+                    </Link>
+                  </td>
                 </tr>
               ))}
             </tbody>

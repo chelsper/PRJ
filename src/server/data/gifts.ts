@@ -5,11 +5,24 @@ type Actor = { userId: string; ipAddress?: string | null };
 
 export type RecentGiftRow = {
   id: string;
+  donor_id?: string;
   donor_name: string;
   amount_cents: number;
   gift_date: string;
   fund_name: string;
   campaign_name: string | null;
+};
+
+export type GiftDetailRow = {
+  id: string;
+  donor_id: string;
+  fund_id: string;
+  campaign_id: string | null;
+  amount_cents: number;
+  gift_date: string;
+  payment_method: "ACH" | "CARD" | "CHECK" | "CASH" | "WIRE" | "OTHER";
+  reference_number: string | null;
+  notes: string | null;
 };
 
 export async function listRecentGifts(): Promise<RecentGiftRow[]> {
@@ -31,6 +44,27 @@ export async function listRecentGifts(): Promise<RecentGiftRow[]> {
   );
 
   return result.rows;
+}
+
+export async function getGiftById(giftId: string): Promise<GiftDetailRow | null> {
+  const result = await query<GiftDetailRow>(
+    `select
+      g.id::text,
+      g.donor_id::text,
+      g.fund_id::text,
+      g.campaign_id::text,
+      g.amount_cents,
+      g.gift_date::text,
+      g.payment_method,
+      g.reference_number,
+      g.notes
+    from public.gifts g
+    where g.id = $1
+      and g.deleted_at is null`,
+    [Number(giftId)]
+  );
+
+  return result.rows[0] ?? null;
 }
 
 export async function createGift(input: unknown, actor: Actor) {
@@ -71,5 +105,43 @@ export async function createGift(input: unknown, actor: Actor) {
     );
 
     return inserted.rows[0].id;
+  });
+}
+
+export async function updateGift(giftId: string, input: unknown, actor: Actor) {
+  const values = giftInputSchema.parse(input);
+
+  await transaction(async (client) => {
+    await client.query(
+      `update public.gifts
+       set donor_id = $2,
+           fund_id = $3,
+           campaign_id = $4,
+           amount_cents = $5,
+           gift_date = $6,
+           payment_method = $7,
+           reference_number = $8,
+           notes = $9,
+           updated_by = $10
+       where id = $1`,
+      [
+        Number(giftId),
+        values.donorId,
+        values.fundId,
+        values.campaignId ?? null,
+        Math.round(values.amount * 100),
+        values.giftDate,
+        values.paymentMethod,
+        values.referenceNumber ?? null,
+        values.notes ?? null,
+        actor.userId
+      ]
+    );
+
+    await client.query(
+      `insert into public.audit_log (actor_user_id, action, entity_type, entity_id, status, ip_address)
+       values ($1, 'gift.update', 'gift', $2, 'success', $3)`,
+      [actor.userId, giftId, actor.ipAddress ?? null]
+    );
   });
 }
