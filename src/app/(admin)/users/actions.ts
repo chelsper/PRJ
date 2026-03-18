@@ -29,14 +29,12 @@ export async function createInvitationAction(formData: FormData) {
   });
   await recordRateLimitEvent({ key, action: "user_invite" });
 
+  let invitation: Awaited<ReturnType<typeof createInvitation>>;
+
   try {
-    const invitation = await createInvitation(
+    invitation = await createInvitation(
       { email, role },
       { userId: session.userId, ipAddress }
-    );
-
-    redirect(
-      `/admin/users?invite_token=${encodeURIComponent(invitation.token)}&invite_email=${encodeURIComponent(invitation.email)}&invite_role=${encodeURIComponent(invitation.role)}`
     );
   } catch (error) {
     await writeAuditLog({
@@ -50,6 +48,10 @@ export async function createInvitationAction(formData: FormData) {
     });
     redirect("/admin/users?error=invite_failed");
   }
+
+  redirect(
+    `/admin/users?invite_token=${encodeURIComponent(invitation.token)}&invite_email=${encodeURIComponent(invitation.email)}&invite_role=${encodeURIComponent(invitation.role)}`
+  );
 }
 
 export async function updateUserAction(formData: FormData) {
