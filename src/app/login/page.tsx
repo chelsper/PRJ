@@ -1,5 +1,4 @@
 import { getCurrentSession } from "@/server/auth/session-store";
-import { redirect } from "next/navigation";
 
 import { loginAction } from "./actions";
 
@@ -9,10 +8,6 @@ export default async function LoginPage({
   searchParams: Promise<{ error?: string }>;
 }) {
   const session = await getCurrentSession();
-  if (session) {
-    redirect("/dashboard");
-  }
-
   const params = await searchParams;
 
   return (
@@ -30,6 +25,7 @@ export default async function LoginPage({
         <section className="card auth-card">
           <p className="eyebrow">Admin Access</p>
           <h2>Log in</h2>
+          {session ? <p className="muted">An active session is already present. Signing in again will refresh it.</p> : null}
           {params.error === "invalid" ? <p className="danger">Invalid email or password.</p> : null}
           <form action={loginAction} className="form-grid">
             <label className="full">
