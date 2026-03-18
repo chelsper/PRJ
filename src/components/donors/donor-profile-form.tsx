@@ -75,10 +75,14 @@ export function DonorProfileForm({
             Preferred name
             <input name="preferredName" defaultValue={donor.preferred_name ?? ""} />
           </label>
-          <label className="full">
-            Organization name
-            <input name="organizationName" defaultValue={donor.organization_name ?? ""} />
-          </label>
+          {donorType === "ORGANIZATION" ? (
+            <label className="full">
+              Organization name
+              <input name="organizationName" defaultValue={donor.organization_name ?? ""} />
+            </label>
+          ) : (
+            <input type="hidden" name="organizationName" value={donor.organization_name ?? ""} />
+          )}
           {donorType === "ORGANIZATION" ? (
             <>
               <label>
