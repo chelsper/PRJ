@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { DonorProfileForm } from "@/components/donors/donor-profile-form";
+import { OrganizationTab } from "@/components/donors/organization-tab";
 import { SendReceiptButton } from "@/components/gifts/send-receipt-button";
 import { getSessionWithCapability, requireCapability } from "@/server/auth/permissions";
 import {
@@ -10,6 +11,7 @@ import {
   listDonorConnections,
   listDonorGiving,
   listDonorNotes,
+  listOrganizationContacts,
   listDonorOrganizationRelationships,
   listDonorSoftCredits,
   type DonorConnectionRow,
@@ -20,9 +22,12 @@ import type { DonorNoteRow, DonorSoftCreditRow } from "@/server/data/donors";
 import {
   addDonorNoteAction,
   addDonorOrganizationRelationshipAction,
+  addOrganizationContactAction,
   deleteDonorOrganizationRelationshipAction,
+  deleteOrganizationContactAction,
   promoteOrganizationRelationshipToDonorAction,
   promoteSpouseToDonorAction,
+  updateOrganizationDetailsAction,
   updateDonorProfileAction
 } from "../actions";
 
@@ -42,7 +47,7 @@ export default async function DonorProfilePage({
     notFound();
   }
 
-  const [connections, giving, softCredits, giftWriteSession, latestGift, relationships, notes, donorWriteSession] = await Promise.all([
+  const [connections, giving, softCredits, giftWriteSession, latestGift, relationships, notes, donorWriteSession, organizationContacts] = await Promise.all([
     listDonorConnections(id),
     listDonorGiving(id),
     listDonorSoftCredits(id),
@@ -50,10 +55,11 @@ export default async function DonorProfilePage({
     getDonorLatestGift(id),
     listDonorOrganizationRelationships(id),
     listDonorNotes(id),
-    getSessionWithCapability("donors:write")
+    getSessionWithCapability("donors:write"),
+    listOrganizationContacts(id)
   ]);
   const activeTab =
-    tab === "giving" || tab === "communications" || tab === "notes" ? tab : "profile";
+    tab === "giving" || tab === "communications" || tab === "notes" || tab === "organization" ? tab : "profile";
 
   return (
     <div className="grid">
@@ -119,6 +125,11 @@ export default async function DonorProfilePage({
         <Link href={`/donors/${id}?tab=communications`} className={activeTab === "communications" ? "tab-link active" : "tab-link"}>
           Communications
         </Link>
+        {donor.donor_type === "ORGANIZATION" ? (
+          <Link href={`/donors/${id}?tab=organization`} className={activeTab === "organization" ? "tab-link active" : "tab-link"}>
+            Organization
+          </Link>
+        ) : null}
         <Link href={`/donors/${id}?tab=notes`} className={activeTab === "notes" ? "tab-link active" : "tab-link"}>
           Notes
         </Link>
@@ -304,6 +315,15 @@ export default async function DonorProfilePage({
             </table>
           </section>
         </div>
+      ) : activeTab === "organization" && donor.donor_type === "ORGANIZATION" ? (
+        <OrganizationTab
+          donor={donor}
+          donorId={id}
+          contacts={organizationContacts}
+          updateAction={updateOrganizationDetailsAction}
+          addContactAction={addOrganizationContactAction}
+          deleteContactAction={deleteOrganizationContactAction}
+        />
       ) : activeTab === "notes" ? (
         <div className="grid grid-2">
           {donorWriteSession ? (

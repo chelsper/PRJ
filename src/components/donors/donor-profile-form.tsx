@@ -3,31 +3,10 @@
 import Link from "next/link";
 import { useState } from "react";
 
-import { DonorLookup, type DonorLookupOption } from "@/components/donors/donor-lookup";
-import type {
-  DonorConnectionRow,
-  DonorOrganizationRelationshipRow,
-  DonorProfileRow
-} from "@/server/data/donors";
+import { DonorLookup } from "@/components/donors/donor-lookup";
+import type { DonorConnectionRow, DonorOrganizationRelationshipRow, DonorProfileRow } from "@/server/data/donors";
 
 type FormAction = (formData: FormData) => void | Promise<void>;
-
-function toLookupOption(connection: {
-  id: string;
-  donor_number: string | null;
-  donor_type: "INDIVIDUAL" | "ORGANIZATION";
-  display_name?: string;
-  full_name?: string;
-  primary_email: string | null;
-}): DonorLookupOption {
-  return {
-    id: connection.id,
-    donorNumber: connection.donor_number,
-    donorType: connection.donor_type,
-    fullName: connection.display_name ?? connection.full_name ?? "Unnamed donor",
-    email: connection.primary_email
-  };
-}
 
 export function DonorProfileForm({
   donor,
@@ -100,73 +79,55 @@ export function DonorProfileForm({
               <option value="ORGANIZATION">Organization</option>
             </select>
           </label>
-          <label>
-            Title
-            <select name="title" defaultValue={donor.title ?? ""}>
-              <option value="">None</option>
-              <option value="Mr.">Mr.</option>
-              <option value="Mrs.">Mrs.</option>
-              <option value="Ms.">Ms.</option>
-              <option value="Dr.">Dr.</option>
-            </select>
-          </label>
-          <label>
-            First name
-            <input name="firstName" defaultValue={donor.first_name ?? ""} />
-          </label>
-          <label>
-            Middle name
-            <input name="middleName" defaultValue={donor.middle_name ?? ""} />
-          </label>
-          <label>
-            Last name
-            <input name="lastName" defaultValue={donor.last_name ?? ""} />
-          </label>
-          <label>
-            Preferred name
-            <input name="preferredName" defaultValue={donor.preferred_name ?? ""} />
-          </label>
-          {donorType === "ORGANIZATION" ? (
-            <label className="full">
-              Organization name
-              <input name="organizationName" defaultValue={donor.organization_name ?? ""} />
-            </label>
-          ) : (
-            <input type="hidden" name="organizationName" value={donor.organization_name ?? ""} />
-          )}
-          {donorType === "ORGANIZATION" ? (
+          {donorType === "INDIVIDUAL" ? (
             <>
-              <DonorLookup
-                label="Organization contact donor"
-                name="organizationContactDonorId"
-                allowedTypes={["INDIVIDUAL"]}
-                initialSelection={
-                  donor.organization_contact_donor_id
-                    ? toLookupOption(
-                        connections.find((connection: DonorConnectionRow) => connection.id === donor.organization_contact_donor_id) ?? {
-                          id: donor.organization_contact_donor_id,
-                          donor_number: null,
-                          donor_type: "INDIVIDUAL",
-                          display_name: donor.organization_contact_name ?? "Selected donor",
-                          primary_email: null
-                        }
-                      )
-                    : null
-                }
-                hiddenInputId="organization-contact-id"
-                placeholder="Search individual donor"
-              />
               <label>
-                Organization contact name
-                <input name="organizationContactName" defaultValue={donor.organization_contact_name ?? ""} />
+                Title
+                <select name="title" defaultValue={donor.title ?? ""}>
+                  <option value="">None</option>
+                  <option value="Mr.">Mr.</option>
+                  <option value="Mrs.">Mrs.</option>
+                  <option value="Ms.">Ms.</option>
+                  <option value="Dr.">Dr.</option>
+                </select>
+              </label>
+              <label>
+                First name
+                <input name="firstName" defaultValue={donor.first_name ?? ""} />
+              </label>
+              <label>
+                Middle name
+                <input name="middleName" defaultValue={donor.middle_name ?? ""} />
+              </label>
+              <label>
+                Last name
+                <input name="lastName" defaultValue={donor.last_name ?? ""} />
+              </label>
+              <label>
+                Preferred name
+                <input name="preferredName" defaultValue={donor.preferred_name ?? ""} />
               </label>
             </>
           ) : (
             <>
-              <input type="hidden" name="organizationContactDonorId" value={donor.organization_contact_donor_id ?? ""} />
-              <input type="hidden" name="organizationContactName" value={donor.organization_contact_name ?? ""} />
+              <input type="hidden" name="title" value={donor.title ?? ""} />
+              <input type="hidden" name="firstName" value={donor.first_name ?? ""} />
+              <input type="hidden" name="middleName" value={donor.middle_name ?? ""} />
+              <input type="hidden" name="lastName" value={donor.last_name ?? ""} />
+              <input type="hidden" name="preferredName" value={donor.preferred_name ?? ""} />
             </>
           )}
+          <input type="hidden" name="organizationName" value={donor.organization_name ?? ""} />
+          <input type="hidden" name="organizationWebsite" value={donor.organization_website ?? ""} />
+          <input type="hidden" name="organizationEmail" value={donor.organization_email ?? ""} />
+          <input type="hidden" name="organizationContactDonorId" value={donor.organization_contact_donor_id ?? ""} />
+          <input type="hidden" name="organizationContactTitle" value={donor.organization_contact_title ?? ""} />
+          <input type="hidden" name="organizationContactFirstName" value={donor.organization_contact_first_name ?? ""} />
+          <input type="hidden" name="organizationContactMiddleName" value={donor.organization_contact_middle_name ?? ""} />
+          <input type="hidden" name="organizationContactLastName" value={donor.organization_contact_last_name ?? ""} />
+          <input type="hidden" name="organizationContactName" value={donor.organization_contact_name ?? ""} />
+          <input type="hidden" name="organizationContactEmail" value={donor.organization_contact_email ?? ""} />
+          <input type="hidden" name="organizationContactPhone" value={donor.organization_contact_phone ?? ""} />
           <label>
             Preferred email
             <input name="primaryEmail" type="email" defaultValue={donor.primary_email ?? ""} />

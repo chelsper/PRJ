@@ -25,7 +25,12 @@ export async function GET(request: Request) {
       donorNumber: donor.donor_number,
       donorType: donor.donor_type,
       fullName: donor.display_name,
-      email: donor.primary_email
+      email: donor.primary_email,
+      title: donor.title,
+      firstName: donor.first_name,
+      middleName: donor.middle_name,
+      lastName: donor.last_name,
+      primaryPhone: donor.primary_phone
     }))
   });
 }

@@ -24,7 +24,12 @@ export type DonorConnectionRow = {
   donor_number: string | null;
   donor_type: "INDIVIDUAL" | "ORGANIZATION";
   display_name: string;
+  title: string | null;
+  first_name: string | null;
+  middle_name: string | null;
+  last_name: string | null;
   primary_email: string | null;
+  primary_phone: string | null;
 };
 
 export type DonorProfileRow = {
@@ -38,8 +43,16 @@ export type DonorProfileRow = {
   preferred_name: string | null;
   full_name: string;
   organization_name: string | null;
+  organization_website: string | null;
+  organization_email: string | null;
   organization_contact_donor_id: string | null;
+  organization_contact_title: string | null;
+  organization_contact_first_name: string | null;
+  organization_contact_middle_name: string | null;
+  organization_contact_last_name: string | null;
   organization_contact_name: string | null;
+  organization_contact_email: string | null;
+  organization_contact_phone: string | null;
   spouse_donor_id: string | null;
   spouse_name: string | null;
   spouse_donor_number: string | null;
@@ -87,6 +100,20 @@ export type DonorOrganizationRelationshipRow = {
   primary_phone: string | null;
   same_address: boolean;
   notes: string | null;
+};
+
+export type OrganizationContactRow = {
+  id: string;
+  contact_type: "MAIN_CONTACT" | "ADDITIONAL_CONTACT" | "STEWARDSHIP_CONTACT" | "ACKNOWLEDGMENT_CONTACT";
+  contact_donor_id: string | null;
+  linked_display_name: string | null;
+  linked_donor_number: string | null;
+  title: string | null;
+  first_name: string | null;
+  middle_name: string | null;
+  last_name: string | null;
+  email: string | null;
+  primary_phone: string | null;
 };
 
 export type DonorNoteRow = {
@@ -204,8 +231,16 @@ async function donorAuditSnapshot(client: PoolClient, donorId: number) {
       'last_name', d.last_name,
       'preferred_name', d.preferred_name,
       'organization_name', d.organization_name,
+      'organization_website', d.organization_website,
+      'organization_email', d.organization_email,
       'organization_contact_donor_id', d.organization_contact_donor_id,
+      'organization_contact_title', d.organization_contact_title,
+      'organization_contact_first_name', d.organization_contact_first_name,
+      'organization_contact_middle_name', d.organization_contact_middle_name,
+      'organization_contact_last_name', d.organization_contact_last_name,
       'organization_contact_name', d.organization_contact_name,
+      'organization_contact_email', d.organization_contact_email,
+      'organization_contact_phone', d.organization_contact_phone,
       'primary_email', d.primary_email,
       'primary_email_type', d.primary_email_type,
       'alternate_email', d.alternate_email,
@@ -322,7 +357,13 @@ export async function searchDonorLookupRows(search: string): Promise<DonorConnec
       d.donor_number,
       d.donor_type,
       ${donorFullNameSql} as display_name,
+      d.title,
+      d.first_name,
+      d.middle_name,
+      d.last_name,
       d.primary_email::text
+      ,
+      d.primary_phone
     from public.donors d
     where d.deleted_at is null
       and (
@@ -390,7 +431,13 @@ export async function listDonorConnections(currentDonorId?: string): Promise<Don
       d.donor_number,
       d.donor_type,
       ${donorFullNameSql} as display_name,
+      d.title,
+      d.first_name,
+      d.middle_name,
+      d.last_name,
       d.primary_email::text
+      ,
+      d.primary_phone
     from public.donors d
     where d.deleted_at is null
       and ($1::bigint is null or d.id <> $1)
@@ -415,8 +462,16 @@ export async function getDonorProfile(donorId: string): Promise<DonorProfileRow 
       d.preferred_name,
       ${donorFullNameSql} as full_name,
       d.organization_name,
+      d.organization_website,
+      d.organization_email::text,
       d.organization_contact_donor_id::text,
+      d.organization_contact_title,
+      d.organization_contact_first_name,
+      d.organization_contact_middle_name,
+      d.organization_contact_last_name,
       d.organization_contact_name,
+      d.organization_contact_email::text,
+      d.organization_contact_phone,
       d.spouse_donor_id::text,
       ${linkedDonorNameSql("sp")} as spouse_name,
       sp.donor_number as spouse_donor_number,
@@ -576,6 +631,30 @@ export async function listDonorOrganizationRelationships(
   return result.rows;
 }
 
+export async function listOrganizationContacts(donorId: string): Promise<OrganizationContactRow[]> {
+  const result = await query<OrganizationContactRow>(
+    `select
+      c.id::text,
+      c.contact_type,
+      c.contact_donor_id::text,
+      ${linkedDonorNameSql("linked")} as linked_display_name,
+      linked.donor_number as linked_donor_number,
+      c.title,
+      c.first_name,
+      c.middle_name,
+      c.last_name,
+      c.email::text,
+      c.primary_phone
+    from public.donor_organization_contacts c
+    left join public.donors linked on linked.id = c.contact_donor_id
+    where c.donor_id = $1
+    order by c.contact_type asc, c.created_at asc, c.id asc`,
+    [Number(donorId)]
+  );
+
+  return result.rows;
+}
+
 export async function listDonorNotes(donorId: string): Promise<DonorNoteRow[]> {
   const result = await query<DonorNoteRow>(
     `select
@@ -626,8 +705,16 @@ export async function createDonor(input: unknown, actor: Actor) {
         last_name,
         preferred_name,
         organization_name,
+        organization_website,
+        organization_email,
         organization_contact_donor_id,
+        organization_contact_title,
+        organization_contact_first_name,
+        organization_contact_middle_name,
+        organization_contact_last_name,
         organization_contact_name,
+        organization_contact_email,
+        organization_contact_phone,
         primary_email,
         primary_email_type,
         alternate_email,
@@ -645,7 +732,7 @@ export async function createDonor(input: unknown, actor: Actor) {
         notes,
         created_by,
         updated_by
-      ) values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $24)
+      ) values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $29)
       returning id::text`,
       [
         values.donorType,
@@ -655,8 +742,16 @@ export async function createDonor(input: unknown, actor: Actor) {
         values.lastName ?? null,
         values.preferredName ?? null,
         values.organizationName ?? null,
+        values.organizationWebsite ?? null,
+        values.organizationEmail ?? null,
         values.organizationContactDonorId ?? null,
+        values.organizationContactTitle ?? null,
+        values.organizationContactFirstName ?? null,
+        values.organizationContactMiddleName ?? null,
+        values.organizationContactLastName ?? null,
         values.organizationContactName ?? null,
+        values.organizationContactEmail ?? null,
+        values.organizationContactPhone ?? null,
         values.primaryEmail ?? null,
         values.primaryEmailType ?? null,
         values.alternateEmail ?? null,
@@ -743,24 +838,32 @@ export async function updateDonorProfile(donorId: string, input: unknown, actor:
            last_name = $6,
            preferred_name = $7,
            organization_name = $8,
-           organization_contact_donor_id = $9,
-           organization_contact_name = $10,
-           primary_email = $11,
-           primary_email_type = $12,
-           alternate_email = $13,
-           alternate_email_type = $14,
-           primary_phone = $15,
-           spouse_donor_id = $16,
-           spouse_title = $17,
-           spouse_first_name = $18,
-           spouse_middle_name = $19,
-           spouse_last_name = $20,
-           spouse_preferred_email = $21,
-           spouse_alternate_email = $22,
-           spouse_primary_phone = $23,
-           spouse_same_address = $24,
-           notes = $25,
-           updated_by = $26
+           organization_website = $9,
+           organization_email = $10,
+           organization_contact_donor_id = $11,
+           organization_contact_title = $12,
+           organization_contact_first_name = $13,
+           organization_contact_middle_name = $14,
+           organization_contact_last_name = $15,
+           organization_contact_name = $16,
+           organization_contact_email = $17,
+           organization_contact_phone = $18,
+           primary_email = $19,
+           primary_email_type = $20,
+           alternate_email = $21,
+           alternate_email_type = $22,
+           primary_phone = $23,
+           spouse_donor_id = $24,
+           spouse_title = $25,
+           spouse_first_name = $26,
+           spouse_middle_name = $27,
+           spouse_last_name = $28,
+           spouse_preferred_email = $29,
+           spouse_alternate_email = $30,
+           spouse_primary_phone = $31,
+           spouse_same_address = $32,
+           notes = $33,
+           updated_by = $34
        where id = $1`,
       [
         Number(donorId),
@@ -771,8 +874,16 @@ export async function updateDonorProfile(donorId: string, input: unknown, actor:
         values.lastName ?? null,
         values.preferredName ?? null,
         values.organizationName ?? null,
+        values.organizationWebsite ?? null,
+        values.organizationEmail ?? null,
         values.organizationContactDonorId ?? null,
+        values.organizationContactTitle ?? null,
+        values.organizationContactFirstName ?? null,
+        values.organizationContactMiddleName ?? null,
+        values.organizationContactLastName ?? null,
         values.organizationContactName ?? null,
+        values.organizationContactEmail ?? null,
+        values.organizationContactPhone ?? null,
         values.primaryEmail ?? null,
         values.primaryEmailType ?? null,
         values.alternateEmail ?? null,
@@ -870,6 +981,64 @@ export async function updateDonorProfile(donorId: string, input: unknown, actor:
           before,
           after
         })
+      ]
+    );
+  });
+}
+
+export async function updateOrganizationDetails(
+  donorId: string,
+  input: unknown,
+  actor: Actor
+) {
+  const values = donorInputSchema.parse(input);
+
+  await transaction(async (client) => {
+    const before = await donorAuditSnapshot(client, Number(donorId));
+
+    await client.query(
+      `update public.donors
+       set donor_type = 'ORGANIZATION',
+           organization_name = $2,
+           organization_website = $3,
+           organization_email = $4,
+           organization_contact_donor_id = $5,
+           organization_contact_title = $6,
+           organization_contact_first_name = $7,
+           organization_contact_middle_name = $8,
+           organization_contact_last_name = $9,
+           organization_contact_name = $10,
+           organization_contact_email = $11,
+           organization_contact_phone = $12,
+           updated_by = $13
+       where id = $1`,
+      [
+        Number(donorId),
+        values.organizationName ?? null,
+        values.organizationWebsite ?? null,
+        values.organizationEmail ?? null,
+        values.organizationContactDonorId ?? null,
+        values.organizationContactTitle ?? null,
+        values.organizationContactFirstName ?? null,
+        values.organizationContactMiddleName ?? null,
+        values.organizationContactLastName ?? null,
+        values.organizationContactName ?? null,
+        values.organizationContactEmail ?? null,
+        values.organizationContactPhone ?? null,
+        actor.userId
+      ]
+    );
+
+    const after = await donorAuditSnapshot(client, Number(donorId));
+
+    await client.query(
+      `insert into public.audit_log (actor_user_id, action, entity_type, entity_id, status, ip_address, metadata)
+       values ($1, 'donor.organization.update', 'donor', $2, 'success', $3, $4::jsonb)`,
+      [
+        actor.userId,
+        donorId,
+        actor.ipAddress ?? null,
+        JSON.stringify({ before, after })
       ]
     );
   });
@@ -1188,6 +1357,82 @@ export async function addDonorOrganizationRelationship(
         })
       ]
     );
+  });
+}
+
+export async function addOrganizationContact(
+  donorId: string,
+  input: {
+    contactType?: string | null;
+    contactDonorId?: string | null;
+    title?: string | null;
+    firstName?: string | null;
+    middleName?: string | null;
+    lastName?: string | null;
+    email?: string | null;
+    primaryPhone?: string | null;
+  },
+  actor: Actor
+) {
+  if (!input.contactDonorId?.trim() && !input.firstName?.trim() && !input.lastName?.trim()) {
+    throw new Error("An organization contact needs an existing donor or contact name.");
+  }
+
+  await transaction(async (client) => {
+    await client.query(
+      `insert into public.donor_organization_contacts (
+        donor_id,
+        contact_type,
+        contact_donor_id,
+        title,
+        first_name,
+        middle_name,
+        last_name,
+        email,
+        primary_phone,
+        created_by,
+        updated_by
+      ) values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $10)`,
+      [
+        Number(donorId),
+        input.contactType ?? "ADDITIONAL_CONTACT",
+        input.contactDonorId ? Number(input.contactDonorId) : null,
+        input.title?.trim() || null,
+        input.firstName?.trim() || null,
+        input.middleName?.trim() || null,
+        input.lastName?.trim() || null,
+        input.email?.trim() || null,
+        input.primaryPhone?.trim() || null,
+        actor.userId
+      ]
+    );
+
+    await writeAuditLog({
+      actorUserId: actor.userId,
+      action: "donor.organization_contact.create",
+      entityType: "donor",
+      entityId: donorId,
+      status: "success",
+      ipAddress: actor.ipAddress ?? null
+    });
+  });
+}
+
+export async function deleteOrganizationContact(donorId: string, contactId: string, actor: Actor) {
+  await query(
+    `delete from public.donor_organization_contacts
+     where id = $1
+       and donor_id = $2`,
+    [Number(contactId), Number(donorId)]
+  );
+
+  await writeAuditLog({
+    actorUserId: actor.userId,
+    action: "donor.organization_contact.delete",
+    entityType: "donor",
+    entityId: donorId,
+    status: "success",
+    ipAddress: actor.ipAddress ?? null
   });
 }
 

@@ -8,6 +8,11 @@ type DonorLookupOption = {
   donorType: "INDIVIDUAL" | "ORGANIZATION";
   fullName: string;
   email: string | null;
+  title?: string | null;
+  firstName?: string | null;
+  middleName?: string | null;
+  lastName?: string | null;
+  primaryPhone?: string | null;
 };
 
 export type { DonorLookupOption };
@@ -27,7 +32,8 @@ export function DonorLookup({
   initialSelection = null,
   hiddenInputId,
   allowedTypes,
-  placeholder
+  placeholder,
+  onSelectionChange
 }: {
   label: string;
   name: string;
@@ -36,6 +42,7 @@ export function DonorLookup({
   hiddenInputId?: string;
   allowedTypes?: Array<DonorLookupOption["donorType"]>;
   placeholder?: string;
+  onSelectionChange?: (selection: DonorLookupOption | null) => void;
 }) {
   const [query, setQuery] = useState(initialSelection ? donorLabel(initialSelection) : "");
   const [selected, setSelected] = useState<DonorLookupOption | null>(initialSelection);
@@ -51,7 +58,8 @@ export function DonorLookup({
     }
 
     hiddenInputRef.current.dispatchEvent(new Event("change", { bubbles: true }));
-  }, [selected]);
+    onSelectionChange?.(selected);
+  }, [onSelectionChange, selected]);
 
   useEffect(() => {
     const search = deferredQuery.trim();

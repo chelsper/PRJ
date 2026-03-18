@@ -10,11 +10,14 @@ import {
   addDonorAddress,
   addDonorNote,
   addDonorOrganizationRelationship,
+  addOrganizationContact,
   createDonor,
   deleteDonorOrganizationRelationship,
+  deleteOrganizationContact,
   promoteOrganizationRelationshipToDonor,
   promoteSpouseToDonor,
   softDeleteDonor,
+  updateOrganizationDetails,
   updateDonorProfile
 } from "@/server/data/donors";
 
@@ -58,8 +61,16 @@ export async function updateDonorProfileAction(formData: FormData) {
       lastName: formData.get("lastName"),
       preferredName: formData.get("preferredName"),
       organizationName: formData.get("organizationName"),
+      organizationWebsite: formData.get("organizationWebsite"),
+      organizationEmail: formData.get("organizationEmail"),
       organizationContactDonorId: formData.get("organizationContactDonorId"),
+      organizationContactTitle: formData.get("organizationContactTitle"),
+      organizationContactFirstName: formData.get("organizationContactFirstName"),
+      organizationContactMiddleName: formData.get("organizationContactMiddleName"),
+      organizationContactLastName: formData.get("organizationContactLastName"),
       organizationContactName: formData.get("organizationContactName"),
+      organizationContactEmail: formData.get("organizationContactEmail"),
+      organizationContactPhone: formData.get("organizationContactPhone"),
       primaryEmail: formData.get("primaryEmail"),
       primaryEmailType: formData.get("primaryEmailType"),
       alternateEmail: formData.get("alternateEmail"),
@@ -127,6 +138,36 @@ export async function deleteDonorAction(formData: FormData) {
   redirect("/donors");
 }
 
+export async function updateOrganizationDetailsAction(formData: FormData) {
+  await assertSameOrigin();
+  const session = await requireCapability("donors:write");
+  const donorId = String(formData.get("donorId"));
+  const requestHeaders = await headers();
+  const ipAddress = requestHeaders.get("x-forwarded-for")?.split(",")[0]?.trim() ?? null;
+
+  await updateOrganizationDetails(
+    donorId,
+    {
+      donorType: "ORGANIZATION",
+      organizationName: formData.get("organizationName"),
+      organizationWebsite: formData.get("organizationWebsite"),
+      organizationEmail: formData.get("organizationEmail"),
+      organizationContactDonorId: formData.get("organizationContactDonorId"),
+      organizationContactTitle: formData.get("organizationContactTitle"),
+      organizationContactFirstName: formData.get("organizationContactFirstName"),
+      organizationContactMiddleName: formData.get("organizationContactMiddleName"),
+      organizationContactLastName: formData.get("organizationContactLastName"),
+      organizationContactName: formData.get("organizationContactName"),
+      organizationContactEmail: formData.get("organizationContactEmail"),
+      organizationContactPhone: formData.get("organizationContactPhone")
+    },
+    { userId: session.userId, ipAddress }
+  );
+
+  revalidatePath(`/donors/${donorId}`);
+  redirect(`/donors/${donorId}?tab=organization`);
+}
+
 export async function addDonorOrganizationRelationshipAction(formData: FormData) {
   await assertSameOrigin();
   const session = await requireCapability("donors:write");
@@ -171,8 +212,16 @@ export async function promoteSpouseToDonorAction(formData: FormData) {
       lastName: formData.get("lastName"),
       preferredName: formData.get("preferredName"),
       organizationName: formData.get("organizationName"),
+      organizationWebsite: formData.get("organizationWebsite"),
+      organizationEmail: formData.get("organizationEmail"),
       organizationContactDonorId: formData.get("organizationContactDonorId"),
+      organizationContactTitle: formData.get("organizationContactTitle"),
+      organizationContactFirstName: formData.get("organizationContactFirstName"),
+      organizationContactMiddleName: formData.get("organizationContactMiddleName"),
+      organizationContactLastName: formData.get("organizationContactLastName"),
       organizationContactName: formData.get("organizationContactName"),
+      organizationContactEmail: formData.get("organizationContactEmail"),
+      organizationContactPhone: formData.get("organizationContactPhone"),
       primaryEmail: formData.get("primaryEmail"),
       primaryEmailType: formData.get("primaryEmailType"),
       alternateEmail: formData.get("alternateEmail"),
@@ -257,4 +306,47 @@ export async function addDonorNoteAction(formData: FormData) {
 
   revalidatePath(`/donors/${donorId}`);
   redirect(`/donors/${donorId}?tab=notes`);
+}
+
+export async function addOrganizationContactAction(formData: FormData) {
+  await assertSameOrigin();
+  const session = await requireCapability("donors:write");
+  const donorId = String(formData.get("donorId"));
+  const requestHeaders = await headers();
+  const ipAddress = requestHeaders.get("x-forwarded-for")?.split(",")[0]?.trim() ?? null;
+
+  await addOrganizationContact(
+    donorId,
+    {
+      contactType: String(formData.get("contactType") ?? ""),
+      contactDonorId: String(formData.get("contactDonorId") ?? ""),
+      title: String(formData.get("contactTitle") ?? ""),
+      firstName: String(formData.get("contactFirstName") ?? ""),
+      middleName: String(formData.get("contactMiddleName") ?? ""),
+      lastName: String(formData.get("contactLastName") ?? ""),
+      email: String(formData.get("contactEmail") ?? ""),
+      primaryPhone: String(formData.get("contactPrimaryPhone") ?? "")
+    },
+    { userId: session.userId, ipAddress }
+  );
+
+  revalidatePath(`/donors/${donorId}`);
+  redirect(`/donors/${donorId}?tab=organization`);
+}
+
+export async function deleteOrganizationContactAction(formData: FormData) {
+  await assertSameOrigin();
+  const session = await requireCapability("donors:write");
+  const donorId = String(formData.get("donorId"));
+  const contactId = String(formData.get("contactId"));
+  const requestHeaders = await headers();
+  const ipAddress = requestHeaders.get("x-forwarded-for")?.split(",")[0]?.trim() ?? null;
+
+  await deleteOrganizationContact(donorId, contactId, {
+    userId: session.userId,
+    ipAddress
+  });
+
+  revalidatePath(`/donors/${donorId}`);
+  redirect(`/donors/${donorId}?tab=organization`);
 }
