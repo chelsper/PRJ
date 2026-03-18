@@ -1,26 +1,37 @@
 import Link from "next/link";
 
 import { requireCapability } from "@/server/auth/permissions";
-import { recentAuditEvents, dashboardTotals, type AuditEventRow } from "@/server/data/reports";
+import { dashboardTotals } from "@/server/data/reports";
 
 export default async function DashboardPage() {
   await requireCapability("reports:read");
 
-  const [totals, auditEvents] = await Promise.all([dashboardTotals(), recentAuditEvents()]);
+  const totals = await dashboardTotals();
 
   return (
     <div className="grid">
       <section className="hero">
         <p className="eyebrow">Dashboard</p>
-        <h1>Admin workspace for donor operations</h1>
+        <h1>Pink Ribbon Jax donor workspace</h1>
         <p className="muted">
-          Server-rendered pages, centralized data access, and audit-aware workflows for sensitive donor records.
+          Start with the core tasks staff use most: find a donor, enter a gift, review reporting, or manage imports.
         </p>
+        <div className="button-row">
+          <Link href="/donors" className="button-link">
+            Find Donors
+          </Link>
+          <Link href="/gifts" className="button-link secondary-link">
+            Add Gift
+          </Link>
+          <Link href="/reports" className="inline-link">
+            Open reports
+          </Link>
+        </div>
       </section>
 
       <section className="stats">
         <article className="stat">
-          <span className="muted">Visible donors</span>
+          <span className="muted">Active donors</span>
           <strong>{totals.visible_donors}</strong>
         </article>
         <article className="stat">
@@ -38,52 +49,50 @@ export default async function DashboardPage() {
       </section>
 
       <section className="grid grid-2">
-        <article className="table-shell">
-          <p className="eyebrow">Quick Access</p>
-          <table>
-            <tbody>
-              <tr>
-                <td>
-                  <Link href="/donors">Donor lookup</Link>
-                </td>
-                <td className="muted">Search donors and add records</td>
-              </tr>
-              <tr>
-                <td>
-                  <Link href="/gifts">Gift entry</Link>
-                </td>
-                <td className="muted">Record gifts against funds and campaigns</td>
-              </tr>
-              <tr>
-                <td>
-                  <Link href="/reports">Reports</Link>
-                </td>
-                <td className="muted">Recognition totals, received totals, pledged totals</td>
-              </tr>
-            </tbody>
-          </table>
+        <article className="card">
+          <p className="eyebrow">Start Here</p>
+          <div className="grid">
+            <div className="stat">
+              <span className="muted">Donors</span>
+              <strong>Search, review, and update constituent records.</strong>
+              <div className="button-row">
+                <Link href="/donors" className="inline-link">
+                  Open donor lookup
+                </Link>
+              </div>
+            </div>
+            <div className="stat">
+              <span className="muted">Gifts</span>
+              <strong>Enter gifts, manage pledges, and send receipts.</strong>
+              <div className="button-row">
+                <Link href="/gifts" className="inline-link">
+                  Open gifts
+                </Link>
+              </div>
+            </div>
+          </div>
         </article>
 
-        <article className="table-shell">
-          <p className="eyebrow">Recent Audit Events</p>
-          <table>
-            <thead>
-              <tr>
-                <th>When</th>
-                <th>Action</th>
-                <th>Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              {auditEvents.map((event: AuditEventRow) => (
-                <tr key={`${event.occurred_at}-${event.action}`}>
-                  <td>{event.occurred_at.slice(0, 19).replace("T", " ")}</td>
-                  <td>{event.action}</td>
-                  <td>{event.status}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        <article className="card">
+          <p className="eyebrow">Reporting Focus</p>
+          <div className="grid">
+            <div className="stat">
+              <span className="muted">Recognition reporting</span>
+              <strong>Use donor totals and giving levels for stewardship and sponsor visibility.</strong>
+            </div>
+            <div className="stat">
+              <span className="muted">Organization totals</span>
+              <strong>Keep received and pledged reporting separate from donor recognition totals.</strong>
+            </div>
+            <div className="button-row">
+              <Link href="/reports" className="button-link secondary-link">
+                Review reports
+              </Link>
+              <Link href="/imports" className="inline-link">
+                Prepare imports
+              </Link>
+            </div>
+          </div>
         </article>
       </section>
     </div>
