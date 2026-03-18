@@ -6,7 +6,7 @@ function buildReceiptBody(input: {
   donorName: string;
   giftNumber: string;
   giftDate: string;
-  amountCents: number;
+  receiptAmountCents: number;
   fundName: string;
   campaignName?: string | null;
 }) {
@@ -18,7 +18,7 @@ This email serves as your receipt for the following contribution:
 
 Gift ID: ${input.giftNumber}
 Gift Date: ${input.giftDate}
-Amount: $${(input.amountCents / 100).toLocaleString()}
+Amount: $${(input.receiptAmountCents / 100).toLocaleString()}
 Fund: ${input.fundName}
 Campaign: ${input.campaignName ?? "N/A"}
 
@@ -34,7 +34,7 @@ export function SendReceiptButton({
   donorName,
   donorEmail,
   giftDate,
-  amountCents,
+  receiptAmountCents,
   fundName,
   campaignName,
   initiallySent
@@ -44,7 +44,7 @@ export function SendReceiptButton({
   donorName: string;
   donorEmail: string | null;
   giftDate: string;
-  amountCents: number;
+  receiptAmountCents: number;
   fundName: string;
   campaignName?: string | null;
   initiallySent: boolean;
@@ -81,7 +81,7 @@ export function SendReceiptButton({
           donorName,
           giftNumber,
           giftDate,
-          amountCents,
+          receiptAmountCents,
           fundName,
           campaignName
         });

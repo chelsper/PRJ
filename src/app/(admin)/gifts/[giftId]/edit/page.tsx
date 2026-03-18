@@ -4,6 +4,7 @@ import { DonorLookup } from "@/components/donors/donor-lookup";
 import { PaymentMethodFields } from "@/components/gifts/payment-method-fields";
 import { ParentPledgeField } from "@/components/gifts/parent-pledge-field";
 import { PledgeScheduleFields } from "@/components/gifts/pledge-schedule-fields";
+import { ReceiptAmountField } from "@/components/gifts/receipt-amount-field";
 import { requireCapability } from "@/server/auth/permissions";
 import { getDonorLookupRowsByIds } from "@/server/data/donors";
 import { getGiftById, listPledgeInstallments, listPledgeOptions, type InstallmentRow, type PledgeOptionRow } from "@/server/data/gifts";
@@ -128,6 +129,11 @@ export default async function EditGiftPage({
             Amount
             <input id="gift-amount" name="amount" type="number" min="0.01" step="0.01" defaultValue={(gift.amount_cents / 100).toFixed(2)} required />
           </label>
+          <ReceiptAmountField
+            amountFieldId="gift-amount"
+            initialAmount={(gift.amount_cents / 100).toFixed(2)}
+            initialReceiptAmount={((gift.receipt_amount_cents ?? gift.amount_cents) / 100).toFixed(2)}
+          />
           <label>
             Gift date
             <input name="giftDate" type="date" defaultValue={gift.gift_date} required />

@@ -4,6 +4,7 @@ import { DonorLookup } from "@/components/donors/donor-lookup";
 import { PaymentMethodFields } from "@/components/gifts/payment-method-fields";
 import { ParentPledgeField } from "@/components/gifts/parent-pledge-field";
 import { PledgeScheduleFields } from "@/components/gifts/pledge-schedule-fields";
+import { ReceiptAmountField } from "@/components/gifts/receipt-amount-field";
 import { getDonorLookupRowsByIds } from "@/server/data/donors";
 import { listPledgeOptions, listRecentGifts, type PledgeOptionRow, type RecentGiftRow } from "@/server/data/gifts";
 import { listCampaigns, listFunds, type LookupRow } from "@/server/data/lookups";
@@ -104,6 +105,7 @@ export default async function GiftsPage({
             Amount
             <input id="gift-amount" name="amount" type="number" min="0.01" step="0.01" required />
           </label>
+          <ReceiptAmountField amountFieldId="gift-amount" />
           <label>
             Gift date
             <input name="giftDate" type="date" required />

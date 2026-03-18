@@ -50,6 +50,7 @@ export type GiftDetailRow = {
   pledge_status: "ACTIVE" | "PARTIALLY_PAID" | "FULFILLED" | "WRITTEN_OFF" | "CANCELLED" | null;
   balance_remaining_cents: number | null;
   payment_method: "ACH" | "CARD" | "CHECK" | "CASH" | "WIRE" | "OTHER" | null;
+  receipt_amount_cents: number | null;
   check_date: string | null;
   reference_number: string | null;
   notes: string | null;
@@ -92,6 +93,7 @@ async function giftAuditSnapshot(client: PoolClient, giftId: number) {
       'installment_frequency', g.installment_frequency,
       'pledge_status', g.pledge_status,
       'payment_method', g.payment_method,
+      'receipt_amount_cents', g.receipt_amount_cents,
       'check_date', g.check_date,
       'reference_number', g.reference_number,
       'notes', g.notes,
@@ -483,6 +485,7 @@ export async function getGiftById(giftId: string): Promise<GiftDetailRow | null>
         else null
       end::int as balance_remaining_cents,
       g.payment_method,
+      g.receipt_amount_cents,
       g.check_date::text,
       g.reference_number,
       g.notes
@@ -522,12 +525,13 @@ export async function createGift(input: unknown, actor: Actor) {
         installment_frequency,
         pledge_status,
         payment_method,
+        receipt_amount_cents,
         check_date,
         reference_number,
         notes,
         created_by,
         updated_by
-      ) values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $17)
+      ) values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $18)
       returning id::text`,
       [
         values.donorId,
@@ -543,6 +547,7 @@ export async function createGift(input: unknown, actor: Actor) {
         isPledgeType(values.giftType) ? values.installmentFrequency ?? null : null,
         isPledgeType(values.giftType) ? "ACTIVE" : null,
         values.paymentMethod ?? null,
+        Math.round((values.receiptAmount ?? values.amount) * 100),
         values.paymentMethod === "CHECK" ? values.checkDate ?? values.giftDate : null,
         values.referenceNumber ?? null,
         values.notes ?? null,
@@ -624,10 +629,11 @@ export async function updateGift(giftId: string, input: unknown, actor: Actor) {
              else null
            end,
            payment_method = $13,
-           check_date = $14,
-           reference_number = $15,
-           notes = $16,
-           updated_by = $17
+           receipt_amount_cents = $14,
+           check_date = $15,
+           reference_number = $16,
+           notes = $17,
+           updated_by = $18
        where id = $1`,
       [
         Number(giftId),
@@ -643,6 +649,7 @@ export async function updateGift(giftId: string, input: unknown, actor: Actor) {
         isPledgeType(values.giftType) ? values.installmentSchedule?.length ?? values.installmentCount ?? null : null,
         isPledgeType(values.giftType) ? values.installmentFrequency ?? null : null,
         values.paymentMethod ?? null,
+        Math.round((values.receiptAmount ?? values.amount) * 100),
         values.paymentMethod === "CHECK" ? values.checkDate ?? values.giftDate : null,
         values.referenceNumber ?? null,
         values.notes ?? null,

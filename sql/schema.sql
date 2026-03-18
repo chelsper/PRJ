@@ -170,6 +170,7 @@ create table if not exists gifts (
   pledge_status varchar(20) check (pledge_status in ('ACTIVE', 'PARTIALLY_PAID', 'FULFILLED', 'WRITTEN_OFF', 'CANCELLED')),
   payment_method text check (payment_method in ('ACH', 'CARD', 'CHECK', 'CASH', 'WIRE', 'OTHER')),
   reference_number varchar(100),
+  receipt_amount_cents integer,
   receipt_sent boolean not null default false,
   receipt_sent_at timestamptz,
   receipt_sent_by_user_id bigint references users(id),

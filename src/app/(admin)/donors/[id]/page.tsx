@@ -207,7 +207,7 @@ export default async function DonorProfilePage({
                         donorName={donor.full_name}
                         donorEmail={donor.primary_email}
                         giftDate={gift.gift_date}
-                        amountCents={gift.amount_cents}
+                        receiptAmountCents={gift.receipt_amount_cents ?? gift.amount_cents}
                         fundName={gift.fund_name}
                         campaignName={gift.campaign_name}
                         initiallySent={gift.receipt_sent}

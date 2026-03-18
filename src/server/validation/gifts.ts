@@ -49,6 +49,7 @@ export const giftInputSchema = z.object({
     "MATCHING_GIFT_PAYMENT"
   ]),
   amount: z.coerce.number().positive(),
+  receiptAmount: blankToUndefined(z.coerce.number().positive()),
   giftDate: z.string().date(),
   pledgeStartDate: blankToUndefined(z.string().date()),
   expectedFulfillmentDate: blankToUndefined(z.string().date()),

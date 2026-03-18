@@ -160,6 +160,7 @@ export type DonorGiftRow = {
     | "MATCHING_GIFT_PAYMENT";
   gift_date: string;
   amount_cents: number;
+  receipt_amount_cents: number | null;
   fund_name: string;
   campaign_name: string | null;
   payment_method: string | null;
@@ -673,6 +674,7 @@ export async function listDonorGiving(donorId: string): Promise<DonorGiftRow[]> 
       g.gift_type,
       g.gift_date::text,
       g.amount_cents,
+      g.receipt_amount_cents,
       f.name as fund_name,
       c.name as campaign_name,
       g.payment_method,
