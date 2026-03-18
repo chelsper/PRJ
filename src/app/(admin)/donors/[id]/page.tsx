@@ -6,6 +6,7 @@ import { DonorViewShell } from "@/components/donors/donor-view-shell";
 import { OrganizationTab } from "@/components/donors/organization-tab";
 import { SendReceiptButton } from "@/components/gifts/send-receipt-button";
 import { getSessionWithCapability, requireCapability } from "@/server/auth/permissions";
+import { listConfigOptionsBySet } from "@/server/data/configurations";
 import {
   getDonorProfile,
   getDonorLatestGift,
@@ -48,7 +49,7 @@ export default async function DonorProfilePage({
     notFound();
   }
 
-  const [connections, giving, softCredits, giftWriteSession, latestGift, relationships, notes, donorWriteSession, organizationContacts] = await Promise.all([
+  const [connections, giving, softCredits, giftWriteSession, latestGift, relationships, notes, donorWriteSession, organizationContacts, optionSets] = await Promise.all([
     listDonorConnections(id),
     listDonorGiving(id),
     listDonorSoftCredits(id),
@@ -57,10 +58,12 @@ export default async function DonorProfilePage({
     listDonorOrganizationRelationships(id),
     listDonorNotes(id),
     getSessionWithCapability("donors:write"),
-    listOrganizationContacts(id)
+    listOrganizationContacts(id),
+    listConfigOptionsBySet()
   ]);
   const activeTab =
     tab === "giving" || tab === "communications" || tab === "notes" || tab === "organization" ? tab : "profile";
+  const noteCategoryLabels = Object.fromEntries(optionSets.note_categories.map((option) => [option.value, option.label]));
 
   return (
     <DonorViewShell>
@@ -330,6 +333,8 @@ export default async function DonorProfilePage({
           donor={donor}
           donorId={id}
           contacts={organizationContacts}
+          titleOptions={optionSets.titles}
+          organizationContactTypeOptions={optionSets.organization_contact_types}
           updateAction={updateOrganizationDetailsAction}
           addContactAction={addOrganizationContactAction}
           deleteContactAction={deleteOrganizationContactAction}
@@ -343,11 +348,12 @@ export default async function DonorProfilePage({
                 <input type="hidden" name="donorId" value={donor.id} />
                 <label>
                   Category
-                  <select name="category" defaultValue="GENERAL">
-                    <option value="GENERAL">General</option>
-                    <option value="COMMUNICATION">Communication</option>
-                    <option value="STEWARDSHIP">Stewardship</option>
-                    <option value="FOLLOW_UP">Follow Up</option>
+                  <select name="category" defaultValue={optionSets.note_categories[0]?.value ?? "GENERAL"}>
+                    {optionSets.note_categories.map((option) => (
+                      <option key={option.id} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
                   </select>
                 </label>
                 <label className="full">
@@ -382,7 +388,7 @@ export default async function DonorProfilePage({
                   notes.map((note: DonorNoteRow) => (
                     <tr key={note.id}>
                       <td>{note.created_at.slice(0, 19).replace("T", " ")}</td>
-                      <td>{note.category.replaceAll("_", " ")}</td>
+                      <td>{noteCategoryLabels[note.category] ?? note.category.replaceAll("_", " ")}</td>
                       <td>{note.author_email ?? "Unknown"}</td>
                       <td>{note.note_body}</td>
                     </tr>
@@ -398,6 +404,10 @@ export default async function DonorProfilePage({
           donorId={id}
           connections={connections}
           relationships={relationships}
+          titleOptions={optionSets.titles}
+          emailTypeOptions={optionSets.email_types}
+          addressTypeOptions={optionSets.address_types}
+          relationshipTypeOptions={optionSets.donor_relationship_types}
           updateAction={updateDonorProfileAction}
           addRelationshipAction={addDonorOrganizationRelationshipAction}
           deleteRelationshipAction={deleteDonorOrganizationRelationshipAction}

@@ -3,6 +3,7 @@
 import { useState } from "react";
 
 import { DonorLookup, type DonorLookupOption } from "@/components/donors/donor-lookup";
+import type { ConfigLookupOption } from "@/server/data/configurations";
 import type { DonorProfileRow, OrganizationContactRow } from "@/server/data/donors";
 
 type FormAction = (formData: FormData) => void | Promise<void>;
@@ -19,6 +20,8 @@ export function OrganizationTab({
   donor,
   donorId,
   contacts,
+  titleOptions,
+  organizationContactTypeOptions,
   updateAction,
   addContactAction,
   deleteContactAction
@@ -26,10 +29,15 @@ export function OrganizationTab({
   donor: DonorProfileRow;
   donorId: string;
   contacts: OrganizationContactRow[];
+  titleOptions: ConfigLookupOption[];
+  organizationContactTypeOptions: ConfigLookupOption[];
   updateAction: FormAction;
   addContactAction: FormAction;
   deleteContactAction: FormAction;
 }) {
+  const contactTypeLabels = Object.fromEntries(
+    organizationContactTypeOptions.map((option) => [option.value, option.label])
+  );
   const [mainContactSelection, setMainContactSelection] = useState<DonorLookupOption | null>(
     donor.organization_contact_donor_id
       ? {
@@ -101,10 +109,11 @@ export function OrganizationTab({
             Contact Title
             <select name="organizationContactTitle" value={mainContactTitle} onChange={(event) => setMainContactTitle(event.target.value)}>
               <option value="">None</option>
-              <option value="Mr.">Mr.</option>
-              <option value="Mrs.">Mrs.</option>
-              <option value="Ms.">Ms.</option>
-              <option value="Dr.">Dr.</option>
+              {titleOptions.map((option) => (
+                <option key={option.id} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
             </select>
           </label>
           <label>
@@ -189,7 +198,7 @@ export function OrganizationTab({
             <tbody>
               {contacts.map((contact: OrganizationContactRow) => (
                 <tr key={contact.id}>
-                  <td>{contact.contact_type.replaceAll("_", " ")}</td>
+                  <td>{contactTypeLabels[contact.contact_type] ?? contact.contact_type.replaceAll("_", " ")}</td>
                   <td>{contact.linked_display_name ?? ([contact.first_name, contact.middle_name, contact.last_name].filter(Boolean).join(" ") || "—")}</td>
                   <td>{contact.email ?? "—"}</td>
                   <td>{contact.primary_phone ?? "—"}</td>
@@ -214,11 +223,12 @@ export function OrganizationTab({
           <input type="hidden" name="donorId" value={donorId} />
           <label>
             Contact Type
-            <select name="contactType" defaultValue="ADDITIONAL_CONTACT">
-              <option value="MAIN_CONTACT">Main Contact</option>
-              <option value="ADDITIONAL_CONTACT">Additional Contact</option>
-              <option value="STEWARDSHIP_CONTACT">Stewardship Contact</option>
-              <option value="ACKNOWLEDGMENT_CONTACT">Acknowledgment Contact</option>
+            <select name="contactType" defaultValue={organizationContactTypeOptions[0]?.value ?? "ADDITIONAL_CONTACT"}>
+              {organizationContactTypeOptions.map((option) => (
+                <option key={option.id} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
             </select>
           </label>
             <DonorLookup
@@ -240,12 +250,13 @@ export function OrganizationTab({
               Contact Title
               <select name="contactTitle" value={newContactTitle} onChange={(event) => setNewContactTitle(event.target.value)}>
                 <option value="">None</option>
-                <option value="Mr.">Mr.</option>
-                <option value="Mrs.">Mrs.</option>
-              <option value="Ms.">Ms.</option>
-              <option value="Dr.">Dr.</option>
-            </select>
-          </label>
+                {titleOptions.map((option) => (
+                  <option key={option.id} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </label>
             <label>
               Contact First Name
               <input name="contactFirstName" value={newContactFirstName} onChange={(event) => setNewContactFirstName(event.target.value)} />

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useState } from "react";
 
 import { DonorLookup } from "@/components/donors/donor-lookup";
+import type { ConfigLookupOption } from "@/server/data/configurations";
 import type { DonorConnectionRow, DonorOrganizationRelationshipRow, DonorProfileRow } from "@/server/data/donors";
 
 type FormAction = (formData: FormData) => void | Promise<void>;
@@ -13,6 +14,10 @@ export function DonorProfileForm({
   donorId,
   connections,
   relationships,
+  titleOptions,
+  emailTypeOptions,
+  addressTypeOptions,
+  relationshipTypeOptions,
   updateAction,
   addRelationshipAction,
   deleteRelationshipAction,
@@ -23,12 +28,19 @@ export function DonorProfileForm({
   donorId: string;
   connections: DonorConnectionRow[];
   relationships: DonorOrganizationRelationshipRow[];
+  titleOptions: ConfigLookupOption[];
+  emailTypeOptions: ConfigLookupOption[];
+  addressTypeOptions: ConfigLookupOption[];
+  relationshipTypeOptions: ConfigLookupOption[];
   updateAction: FormAction;
   addRelationshipAction: FormAction;
   deleteRelationshipAction: FormAction;
   promoteSpouseAction: FormAction;
   promoteRelationshipAction: FormAction;
 }) {
+  const relationshipTypeLabels = Object.fromEntries(
+    relationshipTypeOptions.map((option) => [option.value, option.label])
+  );
   const [hasSpouse, setHasSpouse] = useState(
     Boolean(
       donor.spouse_donor_id ||
@@ -78,10 +90,11 @@ export function DonorProfileForm({
                 Title
                 <select name="title" defaultValue={donor.title ?? ""}>
                   <option value="">None</option>
-                  <option value="Mr.">Mr.</option>
-                  <option value="Mrs.">Mrs.</option>
-                  <option value="Ms.">Ms.</option>
-                  <option value="Dr.">Dr.</option>
+                  {titleOptions.map((option) => (
+                    <option key={option.id} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
                 </select>
               </label>
               <label>
@@ -127,7 +140,14 @@ export function DonorProfileForm({
           </label>
           <label>
             Preferred email type
-            <input name="primaryEmailType" defaultValue={donor.primary_email_type ?? ""} />
+            <select name="primaryEmailType" defaultValue={donor.primary_email_type ?? ""}>
+              <option value="">None</option>
+              {emailTypeOptions.map((option) => (
+                <option key={option.id} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
           </label>
           <label>
             Alternative email
@@ -135,7 +155,14 @@ export function DonorProfileForm({
           </label>
           <label>
             Alternative email type
-            <input name="alternateEmailType" defaultValue={donor.alternate_email_type ?? ""} />
+            <select name="alternateEmailType" defaultValue={donor.alternate_email_type ?? ""}>
+              <option value="">None</option>
+              {emailTypeOptions.map((option) => (
+                <option key={option.id} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
           </label>
           <label>
             Primary phone
@@ -147,7 +174,13 @@ export function DonorProfileForm({
           </label>
           <label>
             Address type
-            <input name="addressType" defaultValue={donor.address_type ?? "Primary"} />
+            <select name="addressType" defaultValue={donor.address_type ?? addressTypeOptions[0]?.value ?? "Primary"}>
+              {addressTypeOptions.map((option) => (
+                <option key={option.id} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
           </label>
           <label>
             Street 1
@@ -213,10 +246,11 @@ export function DonorProfileForm({
                         Spouse title
                         <select name="spouseTitle" defaultValue={donor.spouse_title ?? ""}>
                           <option value="">None</option>
-                          <option value="Mr.">Mr.</option>
-                          <option value="Mrs.">Mrs.</option>
-                          <option value="Ms.">Ms.</option>
-                          <option value="Dr.">Dr.</option>
+                          {titleOptions.map((option) => (
+                            <option key={option.id} value={option.value}>
+                              {option.label}
+                            </option>
+                          ))}
                         </select>
                       </label>
                       <label>
@@ -346,7 +380,7 @@ export function DonorProfileForm({
                         <div className="muted">{relationship.organization_donor_number}</div>
                       ) : null}
                     </td>
-                    <td>{relationship.relationship_type.replaceAll("_", " ")}</td>
+                    <td>{relationshipTypeLabels[relationship.relationship_type] ?? relationship.relationship_type.replaceAll("_", " ")}</td>
                     <td>{relationship.contact_name ?? "—"}</td>
                     <td>{relationship.primary_email ?? "—"}</td>
                     <td>
@@ -380,11 +414,12 @@ export function DonorProfileForm({
             <input type="hidden" name="donorId" value={donorId} />
             <label>
               Relationship type
-              <select name="relationshipType" defaultValue="EMPLOYER">
-                <option value="EMPLOYER">Employer</option>
-                <option value="FOUNDATION">Foundation</option>
-                <option value="DONOR_ADVISED_FUND">Donor Advised Fund</option>
-                <option value="OTHER">Other</option>
+              <select name="relationshipType" defaultValue={relationshipTypeOptions[0]?.value ?? "EMPLOYER"}>
+                {relationshipTypeOptions.map((option) => (
+                  <option key={option.id} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
               </select>
             </label>
             <DonorLookup
@@ -425,7 +460,13 @@ export function DonorProfileForm({
                 </label>
                 <label>
                   Address type
-                  <input name="organizationAddressType" defaultValue="Primary" />
+                  <select name="organizationAddressType" defaultValue={addressTypeOptions[0]?.value ?? "Primary"}>
+                    {addressTypeOptions.map((option) => (
+                      <option key={option.id} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
                 </label>
                 <label className="full">
                   Street 1

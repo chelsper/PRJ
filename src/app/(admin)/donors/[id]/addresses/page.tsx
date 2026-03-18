@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { requireCapability } from "@/server/auth/permissions";
+import { listConfigOptions } from "@/server/data/configurations";
 import { getDonorProfile, listDonorAddresses, type DonorAddressRow } from "@/server/data/donors";
 
 import { addDonorAddressAction } from "../../actions";
@@ -19,7 +20,7 @@ export default async function DonorAddressesPage({
     notFound();
   }
 
-  const addresses = await listDonorAddresses(id);
+  const [addresses, addressTypeOptions] = await Promise.all([listDonorAddresses(id), listConfigOptions("address_types")]);
 
   return (
     <div className="grid">
@@ -68,7 +69,13 @@ export default async function DonorAddressesPage({
             <input type="hidden" name="donorId" value={donor.id} />
             <label>
               Address type
-              <input name="addressType" defaultValue="Seasonal" />
+              <select name="addressType" defaultValue={addressTypeOptions[0]?.value ?? "Primary"}>
+                {addressTypeOptions.map((option) => (
+                  <option key={option.id} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
             </label>
             <label>
               Street 1

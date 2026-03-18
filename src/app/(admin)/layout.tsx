@@ -22,8 +22,9 @@ export default async function AdminLayout({ children }: { children: React.ReactN
           <Link href="/gifts">Gifts</Link>
           <Link href="/reports">Reports</Link>
           <Link href="/imports">Imports</Link>
-          {session && roleHasCapability(session.role, "users:manage") ? <Link href="/users">Users</Link> : null}
-          {session && roleHasCapability(session.role, "audit:read") ? <Link href="/audit-log">Audit Log</Link> : null}
+          {session && (roleHasCapability(session.role, "users:manage") || roleHasCapability(session.role, "audit:read")) ? (
+            <Link href="/admin">Admin</Link>
+          ) : null}
         </nav>
         <form action={logoutAction}>
           <button type="submit" className="secondary">

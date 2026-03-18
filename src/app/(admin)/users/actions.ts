@@ -36,7 +36,7 @@ export async function createInvitationAction(formData: FormData) {
     );
 
     redirect(
-      `/users?invite_token=${encodeURIComponent(invitation.token)}&invite_email=${encodeURIComponent(invitation.email)}&invite_role=${encodeURIComponent(invitation.role)}`
+      `/admin/users?invite_token=${encodeURIComponent(invitation.token)}&invite_email=${encodeURIComponent(invitation.email)}&invite_role=${encodeURIComponent(invitation.role)}`
     );
   } catch (error) {
     await writeAuditLog({
@@ -48,7 +48,7 @@ export async function createInvitationAction(formData: FormData) {
       ipAddress,
       metadata: { email, role, error: error instanceof Error ? error.message : "Unknown error" }
     });
-    redirect("/users?error=invite_failed");
+    redirect("/admin/users?error=invite_failed");
   }
 }
 
@@ -63,14 +63,14 @@ export async function updateUserAction(formData: FormData) {
   const status = String(formData.get("status") ?? "") as "active" | "disabled";
 
   if (!roles.includes(role) || (status !== "active" && status !== "disabled")) {
-    redirect("/users?error=user_update_failed");
+    redirect("/admin/users?error=user_update_failed");
   }
 
   try {
     await updateUserAccess(userId, { role, status }, { userId: session.userId, ipAddress });
   } catch {
-    redirect("/users?error=user_update_failed");
+    redirect("/admin/users?error=user_update_failed");
   }
 
-  redirect("/users");
+  redirect("/admin/users");
 }
