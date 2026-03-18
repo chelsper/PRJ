@@ -2,6 +2,10 @@ import { z } from "zod";
 
 const blankToUndefined = <T extends z.ZodTypeAny>(schema: T) =>
   z.preprocess((value) => {
+    if (value === null || value === undefined) {
+      return undefined;
+    }
+
     if (typeof value === "string" && value.trim() === "") {
       return undefined;
     }
