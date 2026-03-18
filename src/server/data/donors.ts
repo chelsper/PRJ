@@ -827,6 +827,23 @@ export async function updateDonorProfile(donorId: string, input: unknown, actor:
   const values = donorInputSchema.parse(input);
 
   await transaction(async (client) => {
+    const currentDonorResult = await client.query<{ donor_type: "INDIVIDUAL" | "ORGANIZATION" }>(
+      `select donor_type
+       from public.donors
+       where id = $1`,
+      [Number(donorId)]
+    );
+
+    const currentDonor = currentDonorResult.rows[0];
+
+    if (!currentDonor) {
+      throw new Error("Donor not found.");
+    }
+
+    if (currentDonor.donor_type !== values.donorType) {
+      throw new Error("Donor type cannot be changed on an existing profile.");
+    }
+
     const before = await donorAuditSnapshot(client, Number(donorId));
 
     await client.query(

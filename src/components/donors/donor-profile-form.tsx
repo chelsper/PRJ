@@ -29,7 +29,6 @@ export function DonorProfileForm({
   promoteSpouseAction: FormAction;
   promoteRelationshipAction: FormAction;
 }) {
-  const [donorType, setDonorType] = useState<DonorProfileRow["donor_type"]>(donor.donor_type);
   const [hasSpouse, setHasSpouse] = useState(
     Boolean(
       donor.spouse_donor_id ||
@@ -68,18 +67,12 @@ export function DonorProfileForm({
         <p className="eyebrow">Profile Details</p>
         <form action={updateAction} className="form-grid">
           <input type="hidden" name="donorId" value={donor.id} />
+          <input type="hidden" name="donorType" value={donor.donor_type} />
           <label>
             Donor type
-            <select
-              name="donorType"
-              value={donorType}
-              onChange={(event) => setDonorType(event.target.value as DonorProfileRow["donor_type"])}
-            >
-              <option value="INDIVIDUAL">Individual</option>
-              <option value="ORGANIZATION">Organization</option>
-            </select>
+            <input value={donor.donor_type === "ORGANIZATION" ? "Organization" : "Individual"} readOnly disabled />
           </label>
-          {donorType === "INDIVIDUAL" ? (
+          {donor.donor_type === "INDIVIDUAL" ? (
             <>
               <label>
                 Title
@@ -180,7 +173,7 @@ export function DonorProfileForm({
             Country
             <input name="country" defaultValue={donor.country ?? "United States"} />
           </label>
-          {donorType === "INDIVIDUAL" ? (
+          {donor.donor_type === "INDIVIDUAL" ? (
             <div className="full conditional-block">
               <label className="toggle-row">
                 <input
