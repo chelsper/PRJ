@@ -1,4 +1,4 @@
-import { Pool, type PoolClient } from "pg";
+import { Pool, type PoolClient, type QueryResultRow } from "pg";
 
 import { env } from "@/server/env";
 
@@ -20,7 +20,7 @@ if (process.env.NODE_ENV !== "production") {
 
 export type QueryParam = string | number | boolean | Date | null;
 
-export async function query<T>(text: string, params: QueryParam[] = []) {
+export async function query<T extends QueryResultRow>(text: string, params: QueryParam[] = []) {
   return pool.query<T>(text, params);
 }
 
