@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { getSessionWithCapability } from "@/server/auth/permissions";
-import { listDonors, type DonorListRow } from "@/server/data/donors";
+import { searchDonorLookupRows, type DonorConnectionRow } from "@/server/data/donors";
 
 export async function GET(request: Request) {
   const session = await getSessionWithCapability("donors:read");
@@ -17,14 +17,14 @@ export async function GET(request: Request) {
     return NextResponse.json({ donors: [] });
   }
 
-  const donors = await listDonors(query);
+  const donors = await searchDonorLookupRows(query);
 
   return NextResponse.json({
-    donors: donors.map((donor: DonorListRow) => ({
+    donors: donors.map((donor: DonorConnectionRow) => ({
       id: donor.id,
       donorNumber: donor.donor_number,
       donorType: donor.donor_type,
-      fullName: donor.full_name,
+      fullName: donor.display_name,
       email: donor.primary_email
     }))
   });

@@ -24,6 +24,7 @@ export type DonorConnectionRow = {
   donor_number: string | null;
   donor_type: "INDIVIDUAL" | "ORGANIZATION";
   display_name: string;
+  primary_email: string | null;
 };
 
 export type DonorProfileRow = {
@@ -284,6 +285,47 @@ export async function listDonors(search?: string): Promise<DonorListRow[]> {
   return result.rows;
 }
 
+export async function searchDonorLookupRows(search: string): Promise<DonorConnectionRow[]> {
+  const trimmed = search.trim();
+
+  if (trimmed.length < 2) {
+    return [];
+  }
+
+  const result = await query<DonorConnectionRow>(
+    `select
+      d.id::text,
+      d.donor_number,
+      d.donor_type,
+      ${donorFullNameSql} as display_name,
+      d.primary_email
+    from public.donors d
+    where d.deleted_at is null
+      and (
+        ${donorFullNameSql} ilike '%' || $1 || '%'
+        or coalesce(d.organization_name, '') ilike '%' || $1 || '%'
+        or coalesce(d.first_name, '') ilike '%' || $1 || '%'
+        or coalesce(d.last_name, '') ilike '%' || $1 || '%'
+        or coalesce(d.preferred_name, '') ilike '%' || $1 || '%'
+        or coalesce(d.primary_email::text, '') ilike '%' || $1 || '%'
+        or coalesce(d.alternate_email::text, '') ilike '%' || $1 || '%'
+        or coalesce(d.donor_number, '') ilike '%' || $1 || '%'
+      )
+    order by
+      case
+        when ${donorFullNameSql} ilike $1 || '%' then 0
+        when coalesce(d.organization_name, '') ilike $1 || '%' then 1
+        when coalesce(d.last_name, '') ilike $1 || '%' then 2
+        else 3
+      end,
+      display_name asc
+    limit 20`,
+    [trimmed]
+  );
+
+  return result.rows;
+}
+
 export async function getDonorLookupRowsByIds(donorIds: string[]): Promise<DonorListRow[]> {
   const numericIds = [...new Set(donorIds.map((donorId: string) => Number(donorId)).filter(Number.isFinite))];
 
@@ -323,7 +365,8 @@ export async function listDonorConnections(currentDonorId?: string): Promise<Don
       d.id::text,
       d.donor_number,
       d.donor_type,
-      ${donorFullNameSql} as display_name
+      ${donorFullNameSql} as display_name,
+      d.primary_email
     from public.donors d
     where d.deleted_at is null
       and ($1::bigint is null or d.id <> $1)
