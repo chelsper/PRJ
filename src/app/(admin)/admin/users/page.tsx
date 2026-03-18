@@ -1,4 +1,5 @@
 import { AdminSectionNav } from "@/components/admin/admin-section-nav";
+import { CopyInviteLinkButton } from "@/components/admin/copy-invite-link-button";
 import { requireCapability } from "@/server/auth/permissions";
 import { roles, type Role } from "@/server/auth/roles";
 import { listInvitations, listUsers, type UserInvitationRow, type UserRow } from "@/server/data/users";
@@ -59,6 +60,9 @@ export default async function AdminUsersPage({
               Invitation link for {params.invite_email} ({params.invite_role})
               <input value={inviteLink} readOnly />
             </label>
+            <div className="button-row">
+              <CopyInviteLinkButton link={inviteLink} />
+            </div>
             <p className="muted">This is a single-use link that expires automatically.</p>
           </div>
         ) : null}

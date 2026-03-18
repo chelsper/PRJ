@@ -39,6 +39,15 @@ update public.gifts
 set gift_number = lpad((40000000 + id)::text, 8, '0')
 where gift_number is null;
 
+select setval(
+  'gift_number_seq',
+  greatest(
+    40000000,
+    coalesce((select max(gift_number::bigint) from public.gifts where gift_number ~ '^[0-9]+$'), 40000000)
+  ),
+  true
+);
+
 create unique index if not exists gifts_gift_number_idx on public.gifts (gift_number) where deleted_at is null;
 
 drop trigger if exists gifts_set_gift_number on public.gifts;

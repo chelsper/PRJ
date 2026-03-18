@@ -208,6 +208,15 @@ create table if not exists gift_allocations (
   updated_by bigint references users(id)
 );
 
+select setval(
+  'gift_number_seq',
+  greatest(
+    40000000,
+    coalesce((select max(gift_number::bigint) from gifts where gift_number ~ '^[0-9]+$'), 40000000)
+  ),
+  true
+);
+
 create table if not exists pledges (
   id bigint generated always as identity primary key,
   donor_id bigint not null references donors(id) on delete restrict,
