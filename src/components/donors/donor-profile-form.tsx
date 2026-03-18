@@ -81,6 +81,10 @@ export function DonorProfileForm({
           <input type="hidden" name="donorId" value={donor.id} />
           <input type="hidden" name="donorType" value={donor.donor_type} />
           <label>
+            Constituent ID
+            <input value={donor.donor_number ?? "Pending"} readOnly disabled />
+          </label>
+          <label>
             Donor type
             <input value={donor.donor_type === "ORGANIZATION" ? "Organization" : "Individual"} readOnly disabled />
           </label>
