@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
+import { SendReceiptButton } from "@/components/gifts/send-receipt-button";
 import { getSessionWithCapability, requireCapability } from "@/server/auth/permissions";
 import {
   getDonorProfile,
@@ -120,6 +121,7 @@ export default async function DonorProfilePage({
                   <th>Campaign</th>
                   <th>Payment</th>
                   <th>Amount</th>
+                  <th>E-Receipt</th>
                   <th></th>
                 </tr>
               </thead>
@@ -133,6 +135,19 @@ export default async function DonorProfilePage({
                     <td>{gift.campaign_name ?? "—"}</td>
                     <td>{gift.payment_method ?? "—"}</td>
                     <td>${(gift.amount_cents / 100).toLocaleString()}</td>
+                    <td>
+                      <SendReceiptButton
+                        giftId={gift.id}
+                        giftNumber={gift.gift_number ?? gift.id}
+                        donorName={donor.full_name}
+                        donorEmail={donor.primary_email}
+                        giftDate={gift.gift_date}
+                        amountCents={gift.amount_cents}
+                        fundName={gift.fund_name}
+                        campaignName={gift.campaign_name}
+                        initiallySent={gift.receipt_sent}
+                      />
+                    </td>
                     <td>
                       <Link href={`/gifts/${gift.id}/edit`} className="inline-link">
                         Edit gift

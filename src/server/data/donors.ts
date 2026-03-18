@@ -90,6 +90,8 @@ export type DonorGiftRow = {
   campaign_name: string | null;
   payment_method: string | null;
   reference_number: string | null;
+  receipt_sent: boolean;
+  receipt_sent_at: string | null;
 };
 
 export type DonorSoftCreditRow = {
@@ -342,7 +344,9 @@ export async function listDonorGiving(donorId: string): Promise<DonorGiftRow[]> 
       f.name as fund_name,
       c.name as campaign_name,
       g.payment_method,
-      g.reference_number
+      g.reference_number,
+      g.receipt_sent,
+      g.receipt_sent_at::text
     from public.gifts g
     inner join public.funds f on f.id = g.fund_id
     left join public.campaigns c on c.id = g.campaign_id
