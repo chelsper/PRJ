@@ -1,8 +1,7 @@
 import Link from "next/link";
 
 import { requireCapability } from "@/server/auth/permissions";
-import { listDonors, type DonorListRow } from "@/server/data/donors";
-import { DeleteDonorForm } from "@/components/donors/delete-donor-form";
+import { listRecentlyAccessedDonors, type DonorListRow } from "@/server/data/donors";
 
 import { createDonorAction } from "./actions";
 
@@ -13,7 +12,7 @@ export default async function DonorsPage({
 }) {
   await requireCapability("donors:read");
   const params = await searchParams;
-  const donors = await listDonors(params.q);
+  const donors = await listRecentlyAccessedDonors(params.q);
 
   return (
     <div className="grid">
@@ -74,14 +73,13 @@ export default async function DonorsPage({
         </article>
 
         <article className="table-shell">
-          <p className="eyebrow">Results</p>
+          <p className="eyebrow">Recently Accessed Donors</p>
           <table>
             <thead>
               <tr>
                 <th>Donor</th>
                 <th>Email</th>
                 <th>Recognition Total</th>
-                <th></th>
               </tr>
             </thead>
             <tbody>
@@ -94,9 +92,6 @@ export default async function DonorsPage({
                     </td>
                     <td>{donor.primary_email ?? "—"}</td>
                     <td>${(Number(donor.donor_recognition_cents) / 100).toLocaleString()}</td>
-                    <td>
-                      <DeleteDonorForm donorId={donor.id} />
-                    </td>
                   </tr>
                 );
               })}

@@ -357,6 +357,55 @@ export async function listDonors(search?: string): Promise<DonorListRow[]> {
   return result.rows;
 }
 
+export async function listRecentlyAccessedDonors(search?: string): Promise<DonorListRow[]> {
+  const result = await query<DonorListRow>(
+    `select
+      d.id::text,
+      d.donor_number,
+      d.donor_type,
+      ${donorFullNameSql} as full_name,
+      d.first_name,
+      d.last_name,
+      d.organization_name,
+      d.primary_email,
+      coalesce(t.donor_recognition_cents, 0)::text as donor_recognition_cents,
+      coalesce(t.donor_hard_credit_cents, 0)::text as donor_hard_credit_cents,
+      coalesce(t.donor_soft_credit_cents, 0)::text as donor_soft_credit_cents
+    from public.donors d
+    inner join (
+      select
+        entity_id,
+        max(occurred_at) as last_accessed_at
+      from public.audit_log
+      where action = 'donor.view'
+        and entity_type = 'donor'
+        and status = 'success'
+        and entity_id is not null
+      group by entity_id
+    ) accessed on accessed.entity_id = d.id::text
+    left join public.donor_giving_totals t on t.donor_id = d.id
+    where d.deleted_at is null
+      and (
+        $1::text is null
+        or concat_ws(
+          ' ',
+          d.first_name,
+          d.last_name,
+          d.preferred_name,
+          d.organization_name,
+          d.donor_number,
+          d.primary_email,
+          d.alternate_email
+        ) ilike '%' || $1 || '%'
+      )
+    order by accessed.last_accessed_at desc, d.last_name nulls last, d.organization_name nulls last
+    limit 100`,
+    [search ?? null]
+  );
+
+  return result.rows;
+}
+
 export async function searchDonorLookupRows(search: string): Promise<DonorConnectionRow[]> {
   const trimmed = search.trim();
 

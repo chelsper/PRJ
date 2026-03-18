@@ -1,9 +1,11 @@
 import Link from "next/link";
+import { headers } from "next/headers";
 import { notFound } from "next/navigation";
 
 import { DonorProfileForm } from "@/components/donors/donor-profile-form";
 import { OrganizationTab } from "@/components/donors/organization-tab";
 import { SendReceiptButton } from "@/components/gifts/send-receipt-button";
+import { writeAuditLog } from "@/server/audit";
 import { getSessionWithCapability, requireCapability } from "@/server/auth/permissions";
 import { listConfigOptionsBySet } from "@/server/data/configurations";
 import {
@@ -39,7 +41,9 @@ export default async function DonorProfilePage({
   params: Promise<{ id: string }>;
   searchParams: Promise<{ tab?: string }>;
 }) {
-  await requireCapability("donors:read");
+  const session = await requireCapability("donors:read");
+  const requestHeaders = await headers();
+  const ipAddress = requestHeaders.get("x-forwarded-for")?.split(",")[0]?.trim() ?? null;
   const { id } = await params;
   const { tab } = await searchParams;
   const donor = await getDonorProfile(id);
@@ -47,6 +51,16 @@ export default async function DonorProfilePage({
   if (!donor) {
     notFound();
   }
+
+  await writeAuditLog({
+    actorUserId: session.userId,
+    action: "donor.view",
+    entityType: "donor",
+    entityId: donor.id,
+    status: "success",
+    ipAddress,
+    metadata: { tab: tab ?? "profile" }
+  });
 
   const [connections, giving, softCredits, giftWriteSession, latestGift, relationships, notes, donorWriteSession, organizationContacts, optionSets] = await Promise.all([
     listDonorConnections(id),
