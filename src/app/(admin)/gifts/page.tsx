@@ -101,13 +101,17 @@ export default async function GiftsPage({
           </label>
           <label>
             Amount
-            <input name="amount" type="number" min="0.01" step="0.01" required />
+            <input id="gift-amount" name="amount" type="number" min="0.01" step="0.01" required />
           </label>
           <label>
             Gift date
             <input name="giftDate" type="date" required />
           </label>
-          <PledgeScheduleFields giftTypeFieldId="gift-type" initialGiftType="CASH" />
+          <PledgeScheduleFields
+            giftTypeFieldId="gift-type"
+            amountFieldId="gift-amount"
+            initialGiftType={initialGiftType}
+          />
           <label>
             Payment method
             <select name="paymentMethod" defaultValue="">

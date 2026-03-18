@@ -162,12 +162,35 @@ async function syncPledgeInstallments(
     pledgeStartDate?: string | null;
     installmentCount?: number | null;
     installmentFrequency?: "MONTHLY" | "QUARTERLY" | "ANNUAL" | "CUSTOM" | null;
+    installmentSchedule?: Array<{ dueDate: string; amount: number }> | null;
     actorUserId: string;
   }
 ) {
   await client.query(`delete from public.pledge_installments where pledge_gift_id = $1`, [Number(input.giftId)]);
 
-  if (!isPledgeType(input.giftType) || !input.installmentCount || input.installmentCount < 1) {
+  if (!isPledgeType(input.giftType)) {
+    return;
+  }
+
+  if (input.installmentSchedule?.length) {
+    for (const [index, row] of input.installmentSchedule.entries()) {
+      await client.query(
+        `insert into public.pledge_installments (
+          pledge_gift_id,
+          installment_number,
+          due_date,
+          amount_cents,
+          created_by,
+          updated_by
+        ) values ($1, $2, $3, $4, $5, $5)`,
+        [Number(input.giftId), index + 1, row.dueDate, Math.round(row.amount * 100), input.actorUserId]
+      );
+    }
+
+    return;
+  }
+
+  if (!input.installmentCount || input.installmentCount < 1) {
     return;
   }
 
@@ -512,7 +535,7 @@ export async function createGift(input: unknown, actor: Actor) {
         values.giftDate,
         isPledgeType(values.giftType) ? values.pledgeStartDate ?? values.giftDate : null,
         isPledgeType(values.giftType) ? values.expectedFulfillmentDate ?? null : null,
-        isPledgeType(values.giftType) ? values.installmentCount ?? null : null,
+        isPledgeType(values.giftType) ? values.installmentSchedule?.length ?? values.installmentCount ?? null : null,
         isPledgeType(values.giftType) ? values.installmentFrequency ?? null : null,
         isPledgeType(values.giftType) ? "ACTIVE" : null,
         values.paymentMethod ?? null,
@@ -529,6 +552,7 @@ export async function createGift(input: unknown, actor: Actor) {
       pledgeStartDate: values.pledgeStartDate ?? values.giftDate,
       installmentCount: values.installmentCount ?? null,
       installmentFrequency: values.installmentFrequency ?? null,
+      installmentSchedule: values.installmentSchedule ?? null,
       actorUserId: actor.userId
     });
 
@@ -610,7 +634,7 @@ export async function updateGift(giftId: string, input: unknown, actor: Actor) {
         values.giftDate,
         isPledgeType(values.giftType) ? values.pledgeStartDate ?? values.giftDate : null,
         isPledgeType(values.giftType) ? values.expectedFulfillmentDate ?? null : null,
-        isPledgeType(values.giftType) ? values.installmentCount ?? null : null,
+        isPledgeType(values.giftType) ? values.installmentSchedule?.length ?? values.installmentCount ?? null : null,
         isPledgeType(values.giftType) ? values.installmentFrequency ?? null : null,
         values.paymentMethod ?? null,
         values.referenceNumber ?? null,
@@ -626,6 +650,7 @@ export async function updateGift(giftId: string, input: unknown, actor: Actor) {
       pledgeStartDate: values.pledgeStartDate ?? values.giftDate,
       installmentCount: values.installmentCount ?? null,
       installmentFrequency: values.installmentFrequency ?? null,
+      installmentSchedule: values.installmentSchedule ?? null,
       actorUserId: actor.userId
     });
 

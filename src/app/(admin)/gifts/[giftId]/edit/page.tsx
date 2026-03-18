@@ -125,7 +125,7 @@ export default async function EditGiftPage({
           </label>
           <label>
             Amount
-            <input name="amount" type="number" min="0.01" step="0.01" defaultValue={(gift.amount_cents / 100).toFixed(2)} required />
+            <input id="gift-amount" name="amount" type="number" min="0.01" step="0.01" defaultValue={(gift.amount_cents / 100).toFixed(2)} required />
           </label>
           <label>
             Gift date
@@ -133,11 +133,17 @@ export default async function EditGiftPage({
           </label>
           <PledgeScheduleFields
             giftTypeFieldId="gift-type"
+            amountFieldId="gift-amount"
             initialGiftType={gift.gift_type}
+            initialAmount={(gift.amount_cents / 100).toFixed(2)}
             initialPledgeStartDate={gift.pledge_start_date ?? ""}
             initialExpectedFulfillmentDate={gift.expected_fulfillment_date ?? ""}
             initialInstallmentCount={gift.installment_count ? String(gift.installment_count) : ""}
             initialInstallmentFrequency={gift.installment_frequency ?? ""}
+            initialSchedule={installments.map((installment: InstallmentRow) => ({
+              dueDate: installment.due_date,
+              amount: (installment.amount_cents / 100).toFixed(2)
+            }))}
           />
           <label>
             Payment method
@@ -166,26 +172,6 @@ export default async function EditGiftPage({
                 Status: {gift.pledge_status.replaceAll("_", " ")} · Balance remaining: $
                 {((gift.balance_remaining_cents ?? 0) / 100).toLocaleString()}
               </p>
-              {installments.length > 0 ? (
-                <table>
-                  <thead>
-                    <tr>
-                      <th>#</th>
-                      <th>Due date</th>
-                      <th>Amount</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {installments.map((installment: InstallmentRow) => (
-                      <tr key={installment.id}>
-                        <td>{installment.installment_number}</td>
-                        <td>{installment.due_date}</td>
-                        <td>${(installment.amount_cents / 100).toLocaleString()}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              ) : null}
             </div>
           ) : null}
           <div className="full">

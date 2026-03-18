@@ -9,6 +9,26 @@ const blankToUndefined = <T extends z.ZodTypeAny>(schema: T) =>
     return value;
   }, schema.optional());
 
+const installmentScheduleSchema = blankToUndefined(
+  z.preprocess((value) => {
+    if (typeof value !== "string") {
+      return value;
+    }
+
+    try {
+      return JSON.parse(value);
+    } catch {
+      return value;
+    }
+  },
+  z.array(
+    z.object({
+      dueDate: z.string().date(),
+      amount: z.coerce.number().positive()
+    })
+  ).max(120))
+);
+
 export const giftInputSchema = z.object({
   donorId: z.coerce.number().int().positive(),
   fundId: z.coerce.number().int().positive(),
@@ -30,6 +50,7 @@ export const giftInputSchema = z.object({
   expectedFulfillmentDate: blankToUndefined(z.string().date()),
   installmentCount: blankToUndefined(z.coerce.number().int().positive().max(120)),
   installmentFrequency: blankToUndefined(z.enum(["MONTHLY", "QUARTERLY", "ANNUAL", "CUSTOM"])),
+  installmentSchedule: installmentScheduleSchema,
   paymentMethod: blankToUndefined(z.enum(["ACH", "CARD", "CHECK", "CASH", "WIRE", "OTHER"])),
   referenceNumber: blankToUndefined(z.string().trim().max(100)),
   notes: blankToUndefined(z.string().trim().max(5000))
@@ -49,10 +70,26 @@ export const giftInputSchema = z.object({
   }
 
   if (isPledgeType && value.installmentCount && !value.installmentFrequency) {
+    if (value.installmentSchedule?.length) {
+      return;
+    }
+
     ctx.addIssue({
       code: z.ZodIssueCode.custom,
       message: "Installment frequency is required when installment count is set.",
       path: ["installmentFrequency"]
     });
+  }
+
+  if (isPledgeType && value.installmentSchedule?.length) {
+    const total = value.installmentSchedule.reduce((sum: number, row: { amount: number }) => sum + row.amount, 0);
+
+    if (Math.abs(total - value.amount) > 0.009) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Installment schedule must add up to the total gift amount.",
+        path: ["installmentSchedule"]
+      });
+    }
   }
 });
