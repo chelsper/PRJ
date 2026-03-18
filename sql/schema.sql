@@ -234,11 +234,28 @@ create table if not exists notes (
   id bigint generated always as identity primary key,
   donor_id bigint references donors(id) on delete restrict,
   gift_id bigint references gifts(id) on delete restrict,
+  category varchar(50) not null default 'GENERAL',
   note_body text not null,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
   created_by bigint references users(id),
   updated_by bigint references users(id)
+);
+
+create table if not exists donor_organization_relationships (
+  id bigint generated always as identity primary key,
+  donor_id bigint not null references donors(id) on delete cascade,
+  organization_donor_id bigint references donors(id) on delete restrict,
+  organization_name varchar(200),
+  relationship_type varchar(50) not null check (relationship_type in ('EMPLOYER', 'FOUNDATION', 'DONOR_ADVISED_FUND', 'OTHER')),
+  notes text,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  created_by bigint references users(id),
+  updated_by bigint references users(id),
+  constraint donor_org_relationship_target_required check (
+    organization_donor_id is not null or organization_name is not null
+  )
 );
 
 create table if not exists audit_log (
@@ -272,6 +289,7 @@ create index if not exists gifts_donor_date_idx on gifts (donor_id, gift_date de
 create index if not exists gifts_campaign_idx on gifts (campaign_id) where deleted_at is null;
 create index if not exists gifts_fund_idx on gifts (fund_id) where deleted_at is null;
 create index if not exists pledge_installments_pledge_idx on pledge_installments (pledge_gift_id, installment_number);
+create index if not exists donor_org_relationships_donor_idx on donor_organization_relationships (donor_id, relationship_type);
 create index if not exists audit_log_occurred_at_idx on audit_log (occurred_at desc);
 create index if not exists audit_log_action_idx on audit_log (action, occurred_at desc);
 create index if not exists rate_limit_events_lookup_idx on rate_limit_events (limiter_key, action, created_at desc);
@@ -304,6 +322,8 @@ drop trigger if exists soft_credits_set_updated_at on soft_credits;
 create trigger soft_credits_set_updated_at before update on soft_credits for each row execute function set_updated_at();
 drop trigger if exists notes_set_updated_at on notes;
 create trigger notes_set_updated_at before update on notes for each row execute function set_updated_at();
+drop trigger if exists donor_organization_relationships_set_updated_at on donor_organization_relationships;
+create trigger donor_organization_relationships_set_updated_at before update on donor_organization_relationships for each row execute function set_updated_at();
 
 create or replace view donor_giving_totals as
 select

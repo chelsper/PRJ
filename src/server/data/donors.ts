@@ -63,6 +63,23 @@ export type DonorProfileRow = {
   donor_soft_credit_cents: string;
 };
 
+export type DonorOrganizationRelationshipRow = {
+  id: string;
+  relationship_type: "EMPLOYER" | "FOUNDATION" | "DONOR_ADVISED_FUND" | "OTHER";
+  organization_donor_id: string | null;
+  organization_name: string | null;
+  organization_display_name: string;
+  notes: string | null;
+};
+
+export type DonorNoteRow = {
+  id: string;
+  category: string;
+  note_body: string;
+  created_at: string;
+  author_email: string | null;
+};
+
 export type DonorAddressRow = {
   id: string;
   address_type: string;
@@ -114,6 +131,14 @@ export type DonorSoftCreditRow = {
   legal_donor_name: string;
   fund_name: string;
   campaign_name: string | null;
+};
+
+export type DonorLatestGiftRow = {
+  id: string;
+  gift_number: string | null;
+  gift_type: DonorGiftRow["gift_type"];
+  gift_date: string;
+  amount_cents: number;
 };
 
 const donorFullNameSql = `
@@ -196,6 +221,29 @@ async function donorAuditSnapshot(client: PoolClient, donorId: number) {
   );
 
   return result.rows[0]?.snapshot ?? null;
+}
+
+async function donorOrganizationRelationshipsSnapshot(client: PoolClient, donorId: number) {
+  const result = await client.query<{ snapshot: Record<string, unknown>[] }>(
+    `select coalesce(
+      jsonb_agg(
+        jsonb_build_object(
+          'id', r.id,
+          'organization_donor_id', r.organization_donor_id,
+          'organization_name', r.organization_name,
+          'relationship_type', r.relationship_type,
+          'notes', r.notes
+        )
+        order by r.id
+      ),
+      '[]'::jsonb
+    ) as snapshot
+    from public.donor_organization_relationships r
+    where r.donor_id = $1`,
+    [donorId]
+  );
+
+  return result.rows[0]?.snapshot ?? [];
 }
 
 export async function listDonors(search?: string): Promise<DonorListRow[]> {
@@ -424,6 +472,64 @@ export async function listDonorAddresses(donorId: string): Promise<DonorAddressR
   return result.rows;
 }
 
+export async function listDonorOrganizationRelationships(
+  donorId: string
+): Promise<DonorOrganizationRelationshipRow[]> {
+  const result = await query<DonorOrganizationRelationshipRow>(
+    `select
+      r.id::text,
+      r.relationship_type,
+      r.organization_donor_id::text,
+      r.organization_name,
+      coalesce(${linkedDonorNameSql("org")}, r.organization_name, 'Unnamed organization') as organization_display_name,
+      r.notes
+    from public.donor_organization_relationships r
+    left join public.donors org on org.id = r.organization_donor_id
+    where r.donor_id = $1
+    order by r.created_at asc, r.id asc`,
+    [Number(donorId)]
+  );
+
+  return result.rows;
+}
+
+export async function listDonorNotes(donorId: string): Promise<DonorNoteRow[]> {
+  const result = await query<DonorNoteRow>(
+    `select
+      n.id::text,
+      n.category,
+      n.note_body,
+      n.created_at::text,
+      u.email as author_email
+    from public.notes n
+    left join public.users u on u.id = n.created_by
+    where n.donor_id = $1
+    order by n.created_at desc, n.id desc`,
+    [Number(donorId)]
+  );
+
+  return result.rows;
+}
+
+export async function getDonorLatestGift(donorId: string): Promise<DonorLatestGiftRow | null> {
+  const result = await query<DonorLatestGiftRow>(
+    `select
+      g.id::text,
+      g.gift_number,
+      g.gift_type,
+      g.gift_date::text,
+      g.amount_cents
+    from public.gifts g
+    where g.donor_id = $1
+      and g.deleted_at is null
+    order by g.gift_date desc, g.created_at desc
+    limit 1`,
+    [Number(donorId)]
+  );
+
+  return result.rows[0] ?? null;
+}
+
 export async function createDonor(input: unknown, actor: Actor) {
   const values = donorInputSchema.parse(input);
 
@@ -648,6 +754,136 @@ export async function updateDonorProfile(donorId: string, input: unknown, actor:
           donorType: values.donorType,
           before,
           after
+        })
+      ]
+    );
+  });
+}
+
+export async function addDonorOrganizationRelationship(
+  donorId: string,
+  input: {
+    relationshipType?: string | null;
+    organizationDonorId?: string | null;
+    organizationName?: string | null;
+    notes?: string | null;
+  },
+  actor: Actor
+) {
+  if (!input.organizationDonorId?.trim() && !input.organizationName?.trim()) {
+    throw new Error("An organization relationship needs an existing organization or a name.");
+  }
+
+  await transaction(async (client) => {
+    const before = await donorOrganizationRelationshipsSnapshot(client, Number(donorId));
+
+    await client.query(
+      `insert into public.donor_organization_relationships (
+        donor_id,
+        organization_donor_id,
+        organization_name,
+        relationship_type,
+        notes,
+        created_by,
+        updated_by
+      ) values ($1, $2, $3, $4, $5, $6, $6)`,
+      [
+        Number(donorId),
+        input.organizationDonorId ? Number(input.organizationDonorId) : null,
+        input.organizationName?.trim() || null,
+        input.relationshipType ?? "OTHER",
+        input.notes?.trim() || null,
+        actor.userId
+      ]
+    );
+
+    await client.query(
+      `insert into public.audit_log (actor_user_id, action, entity_type, entity_id, status, ip_address, metadata)
+       values ($1, 'donor.relationship.create', 'donor', $2, 'success', $3, $4::jsonb)`,
+      [
+        actor.userId,
+        donorId,
+        actor.ipAddress ?? null,
+        JSON.stringify({
+          before,
+          after: await donorOrganizationRelationshipsSnapshot(client, Number(donorId))
+        })
+      ]
+    );
+  });
+}
+
+export async function deleteDonorOrganizationRelationship(
+  donorId: string,
+  relationshipId: string,
+  actor: Actor
+) {
+  await transaction(async (client) => {
+    const before = await donorOrganizationRelationshipsSnapshot(client, Number(donorId));
+
+    await client.query(
+      `delete from public.donor_organization_relationships
+       where id = $1
+         and donor_id = $2`,
+      [Number(relationshipId), Number(donorId)]
+    );
+
+    await client.query(
+      `insert into public.audit_log (actor_user_id, action, entity_type, entity_id, status, ip_address, metadata)
+       values ($1, 'donor.relationship.delete', 'donor', $2, 'success', $3, $4::jsonb)`,
+      [
+        actor.userId,
+        donorId,
+        actor.ipAddress ?? null,
+        JSON.stringify({
+          before,
+          after: await donorOrganizationRelationshipsSnapshot(client, Number(donorId))
+        })
+      ]
+    );
+  });
+}
+
+export async function addDonorNote(
+  donorId: string,
+  input: {
+    category?: string | null;
+    noteBody?: string | null;
+  },
+  actor: Actor
+) {
+  if (!input.noteBody?.trim()) {
+    throw new Error("Note body is required.");
+  }
+
+  await transaction(async (client) => {
+    const inserted = await client.query<{ id: string }>(
+      `insert into public.notes (
+        donor_id,
+        category,
+        note_body,
+        created_by,
+        updated_by
+      ) values ($1, $2, $3, $4, $4)
+      returning id::text`,
+      [
+        Number(donorId),
+        input.category?.trim() || "GENERAL",
+        input.noteBody?.trim() || "",
+        actor.userId
+      ]
+    );
+
+    await client.query(
+      `insert into public.audit_log (actor_user_id, action, entity_type, entity_id, status, ip_address, metadata)
+       values ($1, 'donor.note.create', 'donor', $2, 'success', $3, $4::jsonb)`,
+      [
+        actor.userId,
+        donorId,
+        actor.ipAddress ?? null,
+        JSON.stringify({
+          noteId: inserted.rows[0]?.id ?? null,
+          category: input.category?.trim() || "GENERAL"
         })
       ]
     );

@@ -235,6 +235,30 @@ button:hover {
   gap: 10px;
 }
 
+.toggle-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 600;
+}
+
+.toggle-row input {
+  width: auto;
+}
+
+.conditional-block {
+  display: grid;
+  gap: 12px;
+  padding: 16px;
+  border: 1px solid #f3d7e3;
+  border-radius: 16px;
+  background: var(--surface-tint);
+}
+
+.top-gap {
+  margin-top: 16px;
+}
+
 .checkbox-line input {
   width: auto;
 }

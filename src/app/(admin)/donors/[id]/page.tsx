@@ -1,19 +1,28 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
+import { DonorProfileForm } from "@/components/donors/donor-profile-form";
 import { SendReceiptButton } from "@/components/gifts/send-receipt-button";
 import { getSessionWithCapability, requireCapability } from "@/server/auth/permissions";
 import {
   getDonorProfile,
+  getDonorLatestGift,
   listDonorConnections,
   listDonorGiving,
+  listDonorNotes,
+  listDonorOrganizationRelationships,
   listDonorSoftCredits,
   type DonorConnectionRow,
   type DonorGiftRow
 } from "@/server/data/donors";
-import type { DonorSoftCreditRow } from "@/server/data/donors";
+import type { DonorNoteRow, DonorSoftCreditRow } from "@/server/data/donors";
 
-import { updateDonorProfileAction } from "../actions";
+import {
+  addDonorNoteAction,
+  addDonorOrganizationRelationshipAction,
+  deleteDonorOrganizationRelationshipAction,
+  updateDonorProfileAction
+} from "../actions";
 
 export default async function DonorProfilePage({
   params,
@@ -31,14 +40,18 @@ export default async function DonorProfilePage({
     notFound();
   }
 
-  const [connections, giving, softCredits, giftWriteSession] = await Promise.all([
+  const [connections, giving, softCredits, giftWriteSession, latestGift, relationships, notes, donorWriteSession] = await Promise.all([
     listDonorConnections(id),
     listDonorGiving(id),
     listDonorSoftCredits(id),
-    getSessionWithCapability("gifts:write")
+    getSessionWithCapability("gifts:write"),
+    getDonorLatestGift(id),
+    listDonorOrganizationRelationships(id),
+    listDonorNotes(id),
+    getSessionWithCapability("donors:write")
   ]);
-  const activeTab = tab === "giving" || tab === "communications" ? tab : "profile";
-  const latestGift = giving[0] ?? null;
+  const activeTab =
+    tab === "giving" || tab === "communications" || tab === "notes" ? tab : "profile";
 
   return (
     <div className="grid">
@@ -83,6 +96,14 @@ export default async function DonorProfilePage({
             <span className="muted">Primary email</span>
             <strong>{donor.primary_email ?? "None"}</strong>
           </article>
+          <article className="stat">
+            <span className="muted">Last gift</span>
+            <strong>
+              {latestGift
+                ? `${latestGift.gift_date} · $${(latestGift.amount_cents / 100).toLocaleString()}`
+                : "No gifts yet"}
+            </strong>
+          </article>
         </div>
       </section>
 
@@ -95,6 +116,9 @@ export default async function DonorProfilePage({
         </Link>
         <Link href={`/donors/${id}?tab=communications`} className={activeTab === "communications" ? "tab-link active" : "tab-link"}>
           Communications
+        </Link>
+        <Link href={`/donors/${id}?tab=notes`} className={activeTab === "notes" ? "tab-link active" : "tab-link"}>
+          Notes
         </Link>
         <Link href={`/donors/${id}/addresses`} className="tab-link">
           Addresses
@@ -278,138 +302,74 @@ export default async function DonorProfilePage({
             </table>
           </section>
         </div>
+      ) : activeTab === "notes" ? (
+        <div className="grid grid-2">
+          {donorWriteSession ? (
+            <section className="card">
+              <p className="eyebrow">Add Note</p>
+              <form action={addDonorNoteAction} className="form-grid">
+                <input type="hidden" name="donorId" value={donor.id} />
+                <label>
+                  Category
+                  <select name="category" defaultValue="GENERAL">
+                    <option value="GENERAL">General</option>
+                    <option value="COMMUNICATION">Communication</option>
+                    <option value="STEWARDSHIP">Stewardship</option>
+                    <option value="FOLLOW_UP">Follow Up</option>
+                  </select>
+                </label>
+                <label className="full">
+                  Note
+                  <textarea name="noteBody" rows={6} required />
+                </label>
+                <div className="full">
+                  <button type="submit">Add note</button>
+                </div>
+              </form>
+            </section>
+          ) : null}
+          <section className={donorWriteSession ? "table-shell" : "table-shell full"}>
+            <p className="eyebrow">Notes</p>
+            <table>
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th>Category</th>
+                  <th>Author</th>
+                  <th>Note</th>
+                </tr>
+              </thead>
+              <tbody>
+                {notes.length === 0 ? (
+                  <tr>
+                    <td colSpan={4} className="muted">
+                      No notes recorded yet.
+                    </td>
+                  </tr>
+                ) : (
+                  notes.map((note: DonorNoteRow) => (
+                    <tr key={note.id}>
+                      <td>{note.created_at.slice(0, 19).replace("T", " ")}</td>
+                      <td>{note.category.replaceAll("_", " ")}</td>
+                      <td>{note.author_email ?? "Unknown"}</td>
+                      <td>{note.note_body}</td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </section>
+        </div>
       ) : (
-        <section className="card">
-          <p className="eyebrow">Profile Details</p>
-          <form action={updateDonorProfileAction} className="form-grid">
-            <input type="hidden" name="donorId" value={donor.id} />
-            <label>
-              Donor type
-              <select name="donorType" defaultValue={donor.donor_type}>
-                <option value="INDIVIDUAL">Individual</option>
-                <option value="ORGANIZATION">Organization</option>
-              </select>
-            </label>
-            <label>
-              Title
-              <select name="title" defaultValue={donor.title ?? ""}>
-                <option value="">None</option>
-                <option value="Mr.">Mr.</option>
-                <option value="Mrs.">Mrs.</option>
-                <option value="Ms.">Ms.</option>
-                <option value="Dr.">Dr.</option>
-              </select>
-            </label>
-            <label>
-              First name
-              <input name="firstName" defaultValue={donor.first_name ?? ""} />
-            </label>
-            <label>
-              Middle name
-              <input name="middleName" defaultValue={donor.middle_name ?? ""} />
-            </label>
-            <label>
-              Last name
-              <input name="lastName" defaultValue={donor.last_name ?? ""} />
-            </label>
-            <label>
-              Preferred name
-              <input name="preferredName" defaultValue={donor.preferred_name ?? ""} />
-            </label>
-            <label className="full">
-              Organization name
-              <input name="organizationName" defaultValue={donor.organization_name ?? ""} />
-            </label>
-            <label>
-              Organization contact
-              <select name="organizationContactDonorId" defaultValue={donor.organization_contact_donor_id ?? ""}>
-                <option value="">Select donor</option>
-                {connections.map((connection: DonorConnectionRow) => (
-                  <option key={connection.id} value={connection.id}>
-                    {connection.display_name} {connection.donor_number ? `(${connection.donor_number})` : ""}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label>
-              Organization contact name
-              <input name="organizationContactName" defaultValue={donor.organization_contact_name ?? ""} />
-            </label>
-            <label>
-              Spouse record
-              <select name="spouseDonorId" defaultValue={donor.spouse_donor_id ?? ""}>
-                <option value="">Select donor</option>
-                {connections.map((connection: DonorConnectionRow) => (
-                  <option key={connection.id} value={connection.id}>
-                    {connection.display_name} {connection.donor_number ? `(${connection.donor_number})` : ""}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label>
-              Preferred email
-              <input name="primaryEmail" type="email" defaultValue={donor.primary_email ?? ""} />
-            </label>
-            <label>
-              Preferred email type
-              <input name="primaryEmailType" defaultValue={donor.primary_email_type ?? ""} />
-            </label>
-            <label>
-              Alternative email
-              <input name="alternateEmail" type="email" defaultValue={donor.alternate_email ?? ""} />
-            </label>
-            <label>
-              Alternative email type
-              <input name="alternateEmailType" defaultValue={donor.alternate_email_type ?? ""} />
-            </label>
-            <label>
-              Primary phone
-              <input name="primaryPhone" defaultValue={donor.primary_phone ?? ""} />
-            </label>
-            <label>
-              Built full name
-              <input value={donor.full_name} disabled readOnly />
-            </label>
-            <label>
-              Address type
-              <input name="addressType" defaultValue={donor.address_type ?? "Primary"} />
-            </label>
-            <label>
-              Street 1
-              <input name="street1" defaultValue={donor.street1 ?? ""} />
-            </label>
-            <label>
-              Street 2
-              <input name="street2" defaultValue={donor.street2 ?? ""} />
-            </label>
-            <label>
-              City
-              <input name="city" defaultValue={donor.city ?? ""} />
-            </label>
-            <label>
-              State / Region
-              <input name="stateRegion" defaultValue={donor.state_region ?? ""} />
-            </label>
-            <label>
-              Postal code
-              <input name="postalCode" defaultValue={donor.postal_code ?? ""} />
-            </label>
-            <label>
-              Country
-              <input name="country" defaultValue={donor.country ?? "United States"} />
-            </label>
-            <label className="full">
-              Notes
-              <textarea name="notes" rows={5} defaultValue={donor.notes ?? ""} />
-            </label>
-            <div className="full button-row">
-              <button type="submit">Save profile</button>
-              <Link href={`/donors/${id}/addresses`} className="inline-link">
-                Manage alternate addresses
-              </Link>
-            </div>
-          </form>
-        </section>
+        <DonorProfileForm
+          donor={donor}
+          donorId={id}
+          connections={connections}
+          relationships={relationships}
+          updateAction={updateDonorProfileAction}
+          addRelationshipAction={addDonorOrganizationRelationshipAction}
+          deleteRelationshipAction={deleteDonorOrganizationRelationshipAction}
+        />
       )}
     </div>
   );

@@ -6,7 +6,15 @@ import { redirect } from "next/navigation";
 
 import { requireCapability } from "@/server/auth/permissions";
 import { assertSameOrigin } from "@/server/security/csrf";
-import { addDonorAddress, createDonor, softDeleteDonor, updateDonorProfile } from "@/server/data/donors";
+import {
+  addDonorAddress,
+  addDonorNote,
+  addDonorOrganizationRelationship,
+  createDonor,
+  deleteDonorOrganizationRelationship,
+  softDeleteDonor,
+  updateDonorProfile
+} from "@/server/data/donors";
 
 export async function createDonorAction(formData: FormData) {
   await assertSameOrigin();
@@ -107,4 +115,63 @@ export async function deleteDonorAction(formData: FormData) {
   await softDeleteDonor(String(formData.get("donorId")), { userId: session.userId, ipAddress });
   revalidatePath("/donors");
   redirect("/donors");
+}
+
+export async function addDonorOrganizationRelationshipAction(formData: FormData) {
+  await assertSameOrigin();
+  const session = await requireCapability("donors:write");
+  const donorId = String(formData.get("donorId"));
+  const requestHeaders = await headers();
+  const ipAddress = requestHeaders.get("x-forwarded-for")?.split(",")[0]?.trim() ?? null;
+
+  await addDonorOrganizationRelationship(
+    donorId,
+    {
+      relationshipType: String(formData.get("relationshipType") ?? ""),
+      organizationDonorId: String(formData.get("organizationDonorId") ?? ""),
+      organizationName: String(formData.get("organizationName") ?? ""),
+      notes: String(formData.get("relationshipNotes") ?? "")
+    },
+    { userId: session.userId, ipAddress }
+  );
+
+  revalidatePath(`/donors/${donorId}`);
+  redirect(`/donors/${donorId}`);
+}
+
+export async function deleteDonorOrganizationRelationshipAction(formData: FormData) {
+  await assertSameOrigin();
+  const session = await requireCapability("donors:write");
+  const donorId = String(formData.get("donorId"));
+  const relationshipId = String(formData.get("relationshipId"));
+  const requestHeaders = await headers();
+  const ipAddress = requestHeaders.get("x-forwarded-for")?.split(",")[0]?.trim() ?? null;
+
+  await deleteDonorOrganizationRelationship(donorId, relationshipId, {
+    userId: session.userId,
+    ipAddress
+  });
+
+  revalidatePath(`/donors/${donorId}`);
+  redirect(`/donors/${donorId}`);
+}
+
+export async function addDonorNoteAction(formData: FormData) {
+  await assertSameOrigin();
+  const session = await requireCapability("donors:write");
+  const donorId = String(formData.get("donorId"));
+  const requestHeaders = await headers();
+  const ipAddress = requestHeaders.get("x-forwarded-for")?.split(",")[0]?.trim() ?? null;
+
+  await addDonorNote(
+    donorId,
+    {
+      category: String(formData.get("category") ?? ""),
+      noteBody: String(formData.get("noteBody") ?? "")
+    },
+    { userId: session.userId, ipAddress }
+  );
+
+  revalidatePath(`/donors/${donorId}`);
+  redirect(`/donors/${donorId}?tab=notes`);
 }
