@@ -1,7 +1,7 @@
 import { cookies } from "next/headers";
 
-import { AUTH_COOKIE } from "@/src/server/auth/constants";
-import { verifySessionToken } from "@/src/server/auth/session";
+import { AUTH_COOKIE } from "@/server/auth/constants";
+import { verifySessionToken } from "@/server/auth/session";
 
 export async function getCurrentSession() {
   const store = await cookies();

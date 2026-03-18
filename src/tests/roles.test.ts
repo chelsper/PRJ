@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { roleHasCapability } from "@/src/server/auth/roles";
+import { roleHasCapability } from "@/server/auth/roles";
 
 describe("role capabilities", () => {
   it("allows admins to export", () => {

@@ -1,4 +1,4 @@
-import { query } from "@/src/server/db";
+import { query } from "@/server/db";
 
 export async function assertRateLimit(input: {
   key: string;

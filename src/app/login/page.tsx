@@ -1,4 +1,4 @@
-import { getCurrentSession } from "@/src/server/auth/session-store";
+import { getCurrentSession } from "@/server/auth/session-store";
 import { redirect } from "next/navigation";
 
 import { loginAction } from "./actions";

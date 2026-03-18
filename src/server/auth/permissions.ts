@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 
-import { getCurrentSession } from "@/src/server/auth/session-store";
-import { roleHasCapability, type Capability } from "@/src/server/auth/roles";
+import { getCurrentSession } from "@/server/auth/session-store";
+import { roleHasCapability, type Capability } from "@/server/auth/roles";
 
 export async function requireCapability(capability: Capability) {
   const session = await getCurrentSession();

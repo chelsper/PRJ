@@ -3,14 +3,14 @@
 import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 
-import { AUTH_COOKIE } from "@/src/server/auth/constants";
-import { createSessionToken } from "@/src/server/auth/session";
-import { env } from "@/src/server/env";
-import { query } from "@/src/server/db";
-import { verifyPassword } from "@/src/server/auth/passwords";
-import { assertSameOrigin } from "@/src/server/security/csrf";
-import { assertRateLimit, recordRateLimitEvent } from "@/src/server/security/rate-limit";
-import { writeAuditLog } from "@/src/server/audit";
+import { AUTH_COOKIE } from "@/server/auth/constants";
+import { createSessionToken } from "@/server/auth/session";
+import { env } from "@/server/env";
+import { query } from "@/server/db";
+import { verifyPassword } from "@/server/auth/passwords";
+import { assertSameOrigin } from "@/server/security/csrf";
+import { assertRateLimit, recordRateLimitEvent } from "@/server/security/rate-limit";
+import { writeAuditLog } from "@/server/audit";
 
 export async function loginAction(formData: FormData) {
   await assertSameOrigin();

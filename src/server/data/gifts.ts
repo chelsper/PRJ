@@ -1,5 +1,5 @@
-import { transaction, query } from "@/src/server/db";
-import { giftInputSchema } from "@/src/server/validation/gifts";
+import { transaction, query } from "@/server/db";
+import { giftInputSchema } from "@/server/validation/gifts";
 
 type Actor = { userId: string; ipAddress?: string | null };
 

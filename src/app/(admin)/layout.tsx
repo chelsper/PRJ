@@ -1,7 +1,7 @@
 import Link from "next/link";
 
-import { logoutAction } from "@/src/app/login/actions";
-import { getCurrentSession } from "@/src/server/auth/session-store";
+import { logoutAction } from "@/app/login/actions";
+import { getCurrentSession } from "@/server/auth/session-store";
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const session = await getCurrentSession();

@@ -1,5 +1,5 @@
-import { requireCapability } from "@/src/server/auth/permissions";
-import { recentAuditEvents } from "@/src/server/data/reports";
+import { requireCapability } from "@/server/auth/permissions";
+import { recentAuditEvents } from "@/server/data/reports";
 
 export default async function AuditLogPage() {
   await requireCapability("audit:read");

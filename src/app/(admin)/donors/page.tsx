@@ -1,5 +1,5 @@
-import { requireCapability } from "@/src/server/auth/permissions";
-import { listDonors } from "@/src/server/data/donors";
+import { requireCapability } from "@/server/auth/permissions";
+import { listDonors } from "@/server/data/donors";
 
 import { createDonorAction, deleteDonorAction } from "./actions";
 

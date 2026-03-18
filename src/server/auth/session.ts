@@ -1,7 +1,7 @@
 import { SignJWT, jwtVerify } from "jose";
 
-import { env } from "@/src/server/env";
-import type { Role } from "@/src/server/auth/roles";
+import { env } from "@/server/env";
+import type { Role } from "@/server/auth/roles";
 
 const encoder = new TextEncoder();
 const secret = encoder.encode(env.SESSION_SECRET);

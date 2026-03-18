@@ -1,7 +1,7 @@
-import { requireCapability } from "@/src/server/auth/permissions";
-import { listDonors } from "@/src/server/data/donors";
-import { listRecentGifts } from "@/src/server/data/gifts";
-import { listCampaigns, listFunds } from "@/src/server/data/lookups";
+import { requireCapability } from "@/server/auth/permissions";
+import { listDonors } from "@/server/data/donors";
+import { listRecentGifts } from "@/server/data/gifts";
+import { listCampaigns, listFunds } from "@/server/data/lookups";
 
 import { createGiftAction } from "./actions";
 

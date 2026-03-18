@@ -3,9 +3,9 @@
 import { headers } from "next/headers";
 import { revalidatePath } from "next/cache";
 
-import { requireCapability } from "@/src/server/auth/permissions";
-import { createGift } from "@/src/server/data/gifts";
-import { assertSameOrigin } from "@/src/server/security/csrf";
+import { requireCapability } from "@/server/auth/permissions";
+import { createGift } from "@/server/data/gifts";
+import { assertSameOrigin } from "@/server/security/csrf";
 
 export async function createGiftAction(formData: FormData) {
   await assertSameOrigin();

@@ -1,5 +1,5 @@
-import { requireCapability } from "@/src/server/auth/permissions";
-import { query } from "@/src/server/db";
+import { requireCapability } from "@/server/auth/permissions";
+import { query } from "@/server/db";
 
 export default async function UsersPage() {
   await requireCapability("users:manage");

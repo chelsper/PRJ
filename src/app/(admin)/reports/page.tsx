@@ -1,5 +1,5 @@
-import { requireCapability } from "@/src/server/auth/permissions";
-import { lifetimeGivingLeaderboard } from "@/src/server/data/reports";
+import { requireCapability } from "@/server/auth/permissions";
+import { lifetimeGivingLeaderboard } from "@/server/data/reports";
 
 export default async function ReportsPage() {
   await requireCapability("reports:read");

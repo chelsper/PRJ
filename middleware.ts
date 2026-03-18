@@ -1,8 +1,8 @@
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 
-import { AUTH_COOKIE } from "@/src/server/auth/constants";
-import { verifySessionToken } from "@/src/server/auth/session";
+import { AUTH_COOKIE } from "@/server/auth/constants";
+import { verifySessionToken } from "@/server/auth/session";
 
 const protectedPrefixes = ["/dashboard", "/donors", "/gifts", "/reports", "/imports", "/users", "/audit-log"];
 

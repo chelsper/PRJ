@@ -1,4 +1,4 @@
-import { query } from "@/src/server/db";
+import { query } from "@/server/db";
 
 export async function lifetimeGivingLeaderboard() {
   const result = await query<{

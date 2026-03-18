@@ -1,11 +1,11 @@
 import { headers } from "next/headers";
 import { NextResponse } from "next/server";
 
-import { getSessionWithCapability } from "@/src/server/auth/permissions";
-import { writeAuditLog } from "@/src/server/audit";
-import { query } from "@/src/server/db";
-import { env } from "@/src/server/env";
-import { assertRateLimit, recordRateLimitEvent } from "@/src/server/security/rate-limit";
+import { getSessionWithCapability } from "@/server/auth/permissions";
+import { writeAuditLog } from "@/server/audit";
+import { query } from "@/server/db";
+import { env } from "@/server/env";
+import { assertRateLimit, recordRateLimitEvent } from "@/server/security/rate-limit";
 
 export async function GET() {
   const requestHeaders = await headers();

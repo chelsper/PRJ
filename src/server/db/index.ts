@@ -1,6 +1,6 @@
 import { Pool, type PoolClient } from "pg";
 
-import { env } from "@/src/server/env";
+import { env } from "@/server/env";
 
 declare global {
   // eslint-disable-next-line no-var

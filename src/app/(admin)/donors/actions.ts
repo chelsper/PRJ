@@ -3,9 +3,9 @@
 import { headers } from "next/headers";
 import { revalidatePath } from "next/cache";
 
-import { requireCapability } from "@/src/server/auth/permissions";
-import { assertSameOrigin } from "@/src/server/security/csrf";
-import { createDonor, softDeleteDonor } from "@/src/server/data/donors";
+import { requireCapability } from "@/server/auth/permissions";
+import { assertSameOrigin } from "@/server/security/csrf";
+import { createDonor, softDeleteDonor } from "@/server/data/donors";
 
 export async function createDonorAction(formData: FormData) {
   await assertSameOrigin();

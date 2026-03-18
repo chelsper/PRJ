@@ -1,6 +1,6 @@
 import { headers } from "next/headers";
 
-import { env } from "@/src/server/env";
+import { env } from "@/server/env";
 
 export async function assertSameOrigin() {
   const requestHeaders = await headers();

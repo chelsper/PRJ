@@ -1,4 +1,4 @@
-import { requireCapability } from "@/src/server/auth/permissions";
+import { requireCapability } from "@/server/auth/permissions";
 
 export default async function ImportsPage() {
   await requireCapability("donors:write");
