@@ -62,19 +62,25 @@ export function OrganizationTab({
   const [mainContactName, setMainContactName] = useState(donor.organization_contact_name ?? "");
   const [mainContactEmail, setMainContactEmail] = useState(donor.organization_contact_email ?? "");
   const [mainContactPhone, setMainContactPhone] = useState(donor.organization_contact_phone ?? "");
+  const [createMainContactAsDonor, setCreateMainContactAsDonor] = useState(false);
   const [newContactTitle, setNewContactTitle] = useState("");
   const [newContactFirstName, setNewContactFirstName] = useState("");
   const [newContactMiddleName, setNewContactMiddleName] = useState("");
   const [newContactLastName, setNewContactLastName] = useState("");
   const [newContactEmail, setNewContactEmail] = useState("");
   const [newContactPhone, setNewContactPhone] = useState("");
+  const [createContactAsDonor, setCreateContactAsDonor] = useState(false);
 
   return (
     <div className="grid">
       <section className="card">
-        <p className="eyebrow">Organization</p>
+        <p className="eyebrow">Organization Overview</p>
         <form action={updateAction} className="form-grid">
           <input type="hidden" name="donorId" value={donorId} />
+          <div className="full form-section-heading">
+            <p className="eyebrow">Organization</p>
+            <p className="muted">Keep the main organization record details current here.</p>
+          </div>
           <label className="full">
             Organization name
             <input name="organizationName" defaultValue={donor.organization_name ?? ""} required />
@@ -87,6 +93,10 @@ export function OrganizationTab({
             Organization email
             <input name="organizationEmail" type="email" defaultValue={donor.organization_email ?? ""} />
           </label>
+          <div className="full form-section-heading">
+            <p className="eyebrow">Main Contact</p>
+            <p className="muted">Link an existing constituent or enter a new contact for this organization.</p>
+          </div>
           <DonorLookup
             label="Main Contact"
             name="organizationContactDonorId"
@@ -96,6 +106,9 @@ export function OrganizationTab({
             placeholder="Search contact by name or donor ID"
             onSelectionChange={(selection) => {
               setMainContactSelection(selection);
+              if (selection) {
+                setCreateMainContactAsDonor(false);
+              }
               setMainContactTitle(selection?.title ?? "");
               setMainContactFirstName(selection?.firstName ?? "");
               setMainContactMiddleName(selection?.middleName ?? "");
@@ -105,6 +118,16 @@ export function OrganizationTab({
               setMainContactPhone(selection?.primaryPhone ?? "");
             }}
           />
+          <label className="toggle-row full">
+            <input
+              type="checkbox"
+              name="createOrganizationContactAsDonor"
+              checked={createMainContactAsDonor}
+              disabled={Boolean(mainContactSelection)}
+              onChange={(event) => setCreateMainContactAsDonor(event.target.checked)}
+            />
+            <span>Create main contact as constituent record</span>
+          </label>
           <label>
             Contact Title
             <select name="organizationContactTitle" value={mainContactTitle} onChange={(event) => setMainContactTitle(event.target.value)}>
@@ -122,6 +145,7 @@ export function OrganizationTab({
               name="organizationContactFirstName"
               value={mainContactFirstName}
               readOnly={Boolean(mainContactSelection)}
+              required={createMainContactAsDonor && !mainContactSelection}
               onChange={(event) => setMainContactFirstName(event.target.value)}
             />
           </label>
@@ -140,6 +164,7 @@ export function OrganizationTab({
               name="organizationContactLastName"
               value={mainContactLastName}
               readOnly={Boolean(mainContactSelection)}
+              required={createMainContactAsDonor && !mainContactSelection}
               onChange={(event) => setMainContactLastName(event.target.value)}
             />
           </label>
@@ -180,8 +205,8 @@ export function OrganizationTab({
       <section className="table-shell">
         <div className="section-header">
           <div>
-            <p className="eyebrow">Organization Contacts</p>
-            <p className="muted">Add linked or manual contacts for stewardship and acknowledgments.</p>
+            <p className="eyebrow">Contacts</p>
+            <p className="muted">Manage main, stewardship, acknowledgment, and additional contacts for this organization.</p>
           </div>
         </div>
         {contacts.length > 0 ? (
@@ -238,6 +263,9 @@ export function OrganizationTab({
               placeholder="Search contact by name or donor ID"
               onSelectionChange={(selection) => {
                 setNewContactSelection(selection);
+                if (selection) {
+                  setCreateContactAsDonor(false);
+                }
                 setNewContactTitle(selection?.title ?? "");
                 setNewContactFirstName(selection?.firstName ?? "");
                 setNewContactMiddleName(selection?.middleName ?? "");
@@ -246,6 +274,16 @@ export function OrganizationTab({
                 setNewContactPhone(selection?.primaryPhone ?? "");
               }}
             />
+            <label className="toggle-row full">
+              <input
+                type="checkbox"
+                name="createContactAsDonor"
+                checked={createContactAsDonor}
+                disabled={Boolean(newContactSelection)}
+                onChange={(event) => setCreateContactAsDonor(event.target.checked)}
+              />
+              <span>Create this contact as a constituent record</span>
+            </label>
             <label>
               Contact Title
               <select name="contactTitle" value={newContactTitle} onChange={(event) => setNewContactTitle(event.target.value)}>
@@ -259,7 +297,12 @@ export function OrganizationTab({
             </label>
             <label>
               Contact First Name
-              <input name="contactFirstName" value={newContactFirstName} onChange={(event) => setNewContactFirstName(event.target.value)} />
+              <input
+                name="contactFirstName"
+                value={newContactFirstName}
+                required={createContactAsDonor && !newContactSelection}
+                onChange={(event) => setNewContactFirstName(event.target.value)}
+              />
             </label>
             <label>
               Contact Middle Name
@@ -267,7 +310,12 @@ export function OrganizationTab({
             </label>
             <label>
               Contact Last Name
-              <input name="contactLastName" value={newContactLastName} onChange={(event) => setNewContactLastName(event.target.value)} />
+              <input
+                name="contactLastName"
+                value={newContactLastName}
+                required={createContactAsDonor && !newContactSelection}
+                onChange={(event) => setNewContactLastName(event.target.value)}
+              />
             </label>
             <label>
               Contact Email

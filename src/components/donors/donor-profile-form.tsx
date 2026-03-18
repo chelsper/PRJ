@@ -43,6 +43,7 @@ export function DonorProfileForm({
   const relationshipTypeLabels = Object.fromEntries(
     relationshipTypeOptions.map((option) => [option.value, option.label])
   );
+  const isOrganization = donor.donor_type === "ORGANIZATION";
   const [hasSpouse, setHasSpouse] = useState(
     Boolean(
       donor.spouse_donor_id ||
@@ -84,9 +85,13 @@ export function DonorProfileForm({
           <input type="hidden" name="donorType" value={donor.donor_type} />
           <div className="full form-section-heading">
             <p className="eyebrow">Identity</p>
-            <p className="muted">Core constituent details and how this donor record is identified.</p>
+            <p className="muted">
+              {isOrganization
+                ? "Organization identity is managed from the Organization tab."
+                : "Core constituent details and how this donor record is identified."}
+            </p>
           </div>
-          {donor.donor_type === "INDIVIDUAL" ? (
+          {!isOrganization ? (
             <>
               <label>
                 Title
@@ -138,7 +143,11 @@ export function DonorProfileForm({
               <input type="hidden" name="organizationContactPhone" value={donor.organization_contact_phone ?? ""} />
           <div className="full form-section-heading">
             <p className="eyebrow">Contact</p>
-            <p className="muted">Primary communication details and preferred contact channels.</p>
+            <p className="muted">
+              {isOrganization
+                ? "Organization-wide contact channels for this record."
+                : "Primary communication details and preferred contact channels."}
+            </p>
           </div>
           <label>
             Preferred email
@@ -175,7 +184,7 @@ export function DonorProfileForm({
             <input name="primaryPhone" defaultValue={donor.primary_phone ?? ""} />
           </label>
           <label>
-            Built full name
+            {isOrganization ? "Record display name" : "Built full name"}
             <input value={donor.full_name} disabled readOnly />
           </label>
           <div className="full form-section-heading">
@@ -223,6 +232,8 @@ export function DonorProfileForm({
             Country
             <input name="country" defaultValue={donor.country ?? "United States"} />
           </label>
+          {!isOrganization ? (
+            <>
           <div className="full form-section-heading">
             <p className="eyebrow">Relationships</p>
             <p className="muted">Manage spouse and organization relationship context for this donor.</p>
@@ -348,6 +359,20 @@ export function DonorProfileForm({
               <input type="hidden" name="spouseSameAddress" value={donor.spouse_same_address ? "on" : ""} />
             </>
           )}
+            </>
+          ) : (
+            <>
+              <input type="hidden" name="spouseDonorId" value={donor.spouse_donor_id ?? ""} />
+              <input type="hidden" name="spouseTitle" value={donor.spouse_title ?? ""} />
+              <input type="hidden" name="spouseFirstName" value={donor.spouse_first_name ?? ""} />
+              <input type="hidden" name="spouseMiddleName" value={donor.spouse_middle_name ?? ""} />
+              <input type="hidden" name="spouseLastName" value={donor.spouse_last_name ?? ""} />
+              <input type="hidden" name="spousePreferredEmail" value={donor.spouse_preferred_email ?? ""} />
+              <input type="hidden" name="spouseAlternateEmail" value={donor.spouse_alternate_email ?? ""} />
+              <input type="hidden" name="spousePrimaryPhone" value={donor.spouse_primary_phone ?? ""} />
+              <input type="hidden" name="spouseSameAddress" value={donor.spouse_same_address ? "on" : ""} />
+            </>
+          )}
           <div className="full conditional-block">
             <label className="toggle-row">
               <input
@@ -373,7 +398,7 @@ export function DonorProfileForm({
           </div>
         </form>
       </section>
-      {hasOrganizationRelationship ? (
+      {!isOrganization && hasOrganizationRelationship ? (
         <section className="table-shell">
           <div className="section-header">
             <div>

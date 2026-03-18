@@ -179,7 +179,8 @@ export async function updateOrganizationDetailsAction(formData: FormData) {
       organizationContactLastName: formData.get("organizationContactLastName"),
       organizationContactName: formData.get("organizationContactName"),
       organizationContactEmail: formData.get("organizationContactEmail"),
-      organizationContactPhone: formData.get("organizationContactPhone")
+      organizationContactPhone: formData.get("organizationContactPhone"),
+      createOrganizationContactAsDonor: formData.get("createOrganizationContactAsDonor")
     },
     { userId: session.userId, ipAddress }
   );
@@ -351,7 +352,8 @@ export async function addOrganizationContactAction(formData: FormData) {
       middleName: String(formData.get("contactMiddleName") ?? ""),
       lastName: String(formData.get("contactLastName") ?? ""),
       email: String(formData.get("contactEmail") ?? ""),
-      primaryPhone: String(formData.get("contactPrimaryPhone") ?? "")
+      primaryPhone: String(formData.get("contactPrimaryPhone") ?? ""),
+      createAsDonor: formData.get("createContactAsDonor") === "on"
     },
     { userId: session.userId, ipAddress }
   );

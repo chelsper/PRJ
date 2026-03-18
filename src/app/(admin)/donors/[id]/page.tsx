@@ -78,6 +78,16 @@ export default async function DonorProfilePage({
   const activeTab =
     tab === "giving" || tab === "communications" || tab === "notes" || tab === "organization" ? tab : "profile";
   const noteCategoryLabels = Object.fromEntries(optionSets.note_categories.map((option) => [option.value, option.label]));
+  const derivedOrganizationContactName = [
+    donor.organization_contact_first_name,
+    donor.organization_contact_middle_name,
+    donor.organization_contact_last_name
+  ]
+    .filter(Boolean)
+    .join(" ")
+    .trim();
+  const organizationMainContactName =
+    donor.organization_contact_name ?? (derivedOrganizationContactName || "No main contact");
 
   return (
       <div className="grid donor-page-grid">
@@ -124,9 +134,33 @@ export default async function DonorProfilePage({
             <strong className="stat-value">${(Number(donor.current_year_recognition_cents) / 100).toLocaleString()}</strong>
           </article>
           <article className="stat">
-            <span className="muted">Primary email</span>
-            <strong className="stat-value">{donor.primary_email ?? "None"}</strong>
+            <span className="muted">{donor.donor_type === "ORGANIZATION" ? "Organization website" : "Primary email"}</span>
+            <strong className="stat-value">
+              {donor.donor_type === "ORGANIZATION"
+                ? donor.organization_website ?? "No website on file"
+                : donor.primary_email ?? "None"}
+            </strong>
           </article>
+          {donor.donor_type === "ORGANIZATION" ? (
+            <>
+              <article className="stat">
+                <span className="muted">Main organization contact</span>
+                <strong className="stat-value">{organizationMainContactName}</strong>
+              </article>
+              <article className="stat">
+                <span className="muted">Main contact info</span>
+                <strong className="stat-value">
+                  {donor.organization_contact_email ?? donor.organization_contact_phone ?? "No contact info on file"}
+                </strong>
+              </article>
+            </>
+          ) : null}
+          {donor.donor_type === "INDIVIDUAL" ? (
+            <article className="stat">
+              <span className="muted">Primary email</span>
+              <strong className="stat-value">{donor.primary_email ?? "None"}</strong>
+            </article>
+          ) : null}
           <article className="stat">
             <span className="muted">Last gift</span>
             <strong className="stat-value">

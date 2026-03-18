@@ -37,6 +37,7 @@ export const donorInputSchema = z
     organizationContactName: blankToUndefined(z.string().trim().max(200)),
     organizationContactEmail: blankToUndefined(z.string().trim().email().max(255)),
     organizationContactPhone: blankToUndefined(z.string().trim().max(30)),
+    createOrganizationContactAsDonor: z.preprocess((value) => value === "on" || value === true, z.boolean()).optional(),
     primaryEmail: blankToUndefined(z.string().trim().email().max(255)),
     primaryEmailType: blankToUndefined(z.string().trim().max(50)),
     alternateEmail: blankToUndefined(z.string().trim().email().max(255)),

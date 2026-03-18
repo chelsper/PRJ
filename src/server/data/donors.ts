@@ -1182,6 +1182,40 @@ export async function updateOrganizationDetails(
 
   await transaction(async (client) => {
     const before = await donorAuditSnapshot(client, Number(donorId));
+    let organizationContactDonorId = values.organizationContactDonorId ?? null;
+
+    if (
+      !organizationContactDonorId &&
+      values.createOrganizationContactAsDonor &&
+      values.organizationContactFirstName &&
+      values.organizationContactLastName
+    ) {
+      const inserted = await client.query<{ id: string }>(
+        `insert into public.donors (
+          donor_type,
+          title,
+          first_name,
+          middle_name,
+          last_name,
+          primary_email,
+          primary_phone,
+          created_by,
+          updated_by
+        ) values ('INDIVIDUAL', $1, $2, $3, $4, $5, $6, $7, $7)
+        returning id::text`,
+        [
+          values.organizationContactTitle ?? null,
+          values.organizationContactFirstName,
+          values.organizationContactMiddleName ?? null,
+          values.organizationContactLastName,
+          values.organizationContactEmail ?? null,
+          values.organizationContactPhone ?? null,
+          actor.userId
+        ]
+      );
+
+      organizationContactDonorId = Number(inserted.rows[0].id);
+    }
 
     await client.query(
       `update public.donors
@@ -1204,7 +1238,7 @@ export async function updateOrganizationDetails(
         values.organizationName ?? null,
         values.organizationWebsite ?? null,
         values.organizationEmail ?? null,
-        values.organizationContactDonorId ?? null,
+        organizationContactDonorId,
         values.organizationContactTitle ?? null,
         values.organizationContactFirstName ?? null,
         values.organizationContactMiddleName ?? null,
@@ -1225,7 +1259,12 @@ export async function updateOrganizationDetails(
         actor.userId,
         donorId,
         actor.ipAddress ?? null,
-        JSON.stringify({ before, after })
+        JSON.stringify({
+          before,
+          after,
+          createdOrganizationContactDonorId:
+            organizationContactDonorId && !values.organizationContactDonorId ? String(organizationContactDonorId) : null
+        })
       ]
     );
   });
@@ -1617,6 +1656,7 @@ export async function addOrganizationContact(
     lastName?: string | null;
     email?: string | null;
     primaryPhone?: string | null;
+    createAsDonor?: boolean;
   },
   actor: Actor
 ) {
@@ -1625,6 +1665,36 @@ export async function addOrganizationContact(
   }
 
   await transaction(async (client) => {
+    let contactDonorId = input.contactDonorId?.trim() ? Number(input.contactDonorId) : null;
+
+    if (!contactDonorId && input.createAsDonor && input.firstName?.trim() && input.lastName?.trim()) {
+      const inserted = await client.query<{ id: string }>(
+        `insert into public.donors (
+          donor_type,
+          title,
+          first_name,
+          middle_name,
+          last_name,
+          primary_email,
+          primary_phone,
+          created_by,
+          updated_by
+        ) values ('INDIVIDUAL', $1, $2, $3, $4, $5, $6, $7, $7)
+        returning id::text`,
+        [
+          input.title?.trim() || null,
+          input.firstName.trim(),
+          input.middleName?.trim() || null,
+          input.lastName.trim(),
+          input.email?.trim() || null,
+          input.primaryPhone?.trim() || null,
+          actor.userId
+        ]
+      );
+
+      contactDonorId = Number(inserted.rows[0].id);
+    }
+
     await client.query(
       `insert into public.donor_organization_contacts (
         donor_id,
@@ -1642,7 +1712,7 @@ export async function addOrganizationContact(
       [
         Number(donorId),
         input.contactType ?? "ADDITIONAL_CONTACT",
-        input.contactDonorId ? Number(input.contactDonorId) : null,
+        contactDonorId,
         input.title?.trim() || null,
         input.firstName?.trim() || null,
         input.middleName?.trim() || null,
@@ -1659,7 +1729,8 @@ export async function addOrganizationContact(
       entityType: "donor",
       entityId: donorId,
       status: "success",
-      ipAddress: actor.ipAddress ?? null
+      ipAddress: actor.ipAddress ?? null,
+      metadata: contactDonorId && !input.contactDonorId?.trim() ? { createdContactDonorId: String(contactDonorId) } : {}
     });
   });
 }
