@@ -249,6 +249,18 @@ button:hover {
   color: var(--accent-strong);
 }
 
+.sort-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--muted);
+  font-weight: 700;
+}
+
+.sort-link.active {
+  color: var(--accent-strong);
+}
+
 .checkbox-line {
   display: flex;
   align-items: center;

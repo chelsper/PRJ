@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 import { AdminSectionNav } from "@/components/admin/admin-section-nav";
 import { requireCapability } from "@/server/auth/permissions";
 import {
@@ -6,9 +8,9 @@ import {
   listManagedFunds,
   managedOptionSets,
   type ConfigLookupOption,
-  type ManagedOptionSetKey,
   type ManagedCampaignRow,
-  type ManagedFundRow
+  type ManagedFundRow,
+  type ManagedOptionSetKey
 } from "@/server/data/configurations";
 
 import {
@@ -29,13 +31,168 @@ const setLabels: Record<ManagedOptionSetKey, string> = {
   organization_contact_types: "Organization Contact Types"
 };
 
-export default async function AdminConfigurationsPage() {
+type SortDirection = "asc" | "desc";
+type FundSortKey = "name" | "code" | "archived";
+type CampaignSortKey = "name" | "code" | "starts" | "ends" | "archived";
+type OptionSortKey = "value" | "label" | "sort_order" | "active";
+
+function normalizedDirection(value: string | undefined): SortDirection {
+  return value === "desc" ? "desc" : "asc";
+}
+
+function nextDirection(active: boolean, direction: SortDirection): SortDirection {
+  if (!active) {
+    return "asc";
+  }
+
+  return direction === "asc" ? "desc" : "asc";
+}
+
+function sortArrow(active: boolean, direction: SortDirection) {
+  if (!active) {
+    return "↕";
+  }
+
+  return direction === "asc" ? "↑" : "↓";
+}
+
+function compareText(left: string | null | undefined, right: string | null | undefined, direction: SortDirection) {
+  const result = (left ?? "").localeCompare(right ?? "", undefined, { sensitivity: "base" });
+  return direction === "asc" ? result : result * -1;
+}
+
+function compareBoolean(left: boolean, right: boolean, direction: SortDirection) {
+  const result = Number(left) - Number(right);
+  return direction === "asc" ? result : result * -1;
+}
+
+function compareNumber(left: number, right: number, direction: SortDirection) {
+  const result = left - right;
+  return direction === "asc" ? result : result * -1;
+}
+
+function SortLink({
+  label,
+  active,
+  direction,
+  href
+}: {
+  label: string;
+  active: boolean;
+  direction: SortDirection;
+  href: string;
+}) {
+  return (
+    <Link href={href} className={active ? "sort-link active" : "sort-link"}>
+      <span>{label}</span>
+      <span aria-hidden="true">{sortArrow(active, direction)}</span>
+    </Link>
+  );
+}
+
+export default async function AdminConfigurationsPage({
+  searchParams
+}: {
+  searchParams: Promise<{
+    fundSort?: string;
+    fundDir?: string;
+    campaignSort?: string;
+    campaignDir?: string;
+    optionSort?: string;
+    optionDir?: string;
+  }>;
+}) {
   await requireCapability("users:manage");
+  const params = await searchParams;
   const [funds, campaigns, optionSets] = await Promise.all([
     listManagedFunds(),
     listManagedCampaigns(),
     listConfigOptionsBySet(true)
   ]);
+
+  const fundSort = (["name", "code", "archived"] as FundSortKey[]).includes(params.fundSort as FundSortKey)
+    ? (params.fundSort as FundSortKey)
+    : "name";
+  const fundDir = normalizedDirection(params.fundDir);
+
+  const campaignSort = (["name", "code", "starts", "ends", "archived"] as CampaignSortKey[]).includes(params.campaignSort as CampaignSortKey)
+    ? (params.campaignSort as CampaignSortKey)
+    : "name";
+  const campaignDir = normalizedDirection(params.campaignDir);
+
+  const optionSort = (["value", "label", "sort_order", "active"] as OptionSortKey[]).includes(params.optionSort as OptionSortKey)
+    ? (params.optionSort as OptionSortKey)
+    : "sort_order";
+  const optionDir = normalizedDirection(params.optionDir);
+
+  const sortedFunds = [...funds].sort((left, right) => {
+    if (fundSort === "code") {
+      return compareText(left.code, right.code, fundDir);
+    }
+
+    if (fundSort === "archived") {
+      return compareBoolean(Boolean(left.archived_at), Boolean(right.archived_at), fundDir);
+    }
+
+    return compareText(left.name, right.name, fundDir);
+  });
+
+  const sortedCampaigns = [...campaigns].sort((left, right) => {
+    if (campaignSort === "code") {
+      return compareText(left.code, right.code, campaignDir);
+    }
+
+    if (campaignSort === "starts") {
+      return compareText(left.starts_on, right.starts_on, campaignDir);
+    }
+
+    if (campaignSort === "ends") {
+      return compareText(left.ends_on, right.ends_on, campaignDir);
+    }
+
+    if (campaignSort === "archived") {
+      return compareBoolean(Boolean(left.archived_at), Boolean(right.archived_at), campaignDir);
+    }
+
+    return compareText(left.name, right.name, campaignDir);
+  });
+
+  const sortedOptionSets = Object.fromEntries(
+    managedOptionSets.map((setKey) => {
+      const sortedOptions = [...optionSets[setKey]].sort((left, right) => {
+        if (optionSort === "value") {
+          return compareText(left.value, right.value, optionDir);
+        }
+
+        if (optionSort === "label") {
+          return compareText(left.label, right.label, optionDir);
+        }
+
+        if (optionSort === "active") {
+          return compareBoolean(left.is_active, right.is_active, optionDir);
+        }
+
+        return compareNumber(left.sort_order, right.sort_order, optionDir);
+      });
+
+      return [setKey, sortedOptions];
+    })
+  ) as Record<ManagedOptionSetKey, ConfigLookupOption[]>;
+
+  function buildSortHref(updates: Record<string, string>) {
+    const next = new URLSearchParams();
+
+    if (params.fundSort) next.set("fundSort", params.fundSort);
+    if (params.fundDir) next.set("fundDir", params.fundDir);
+    if (params.campaignSort) next.set("campaignSort", params.campaignSort);
+    if (params.campaignDir) next.set("campaignDir", params.campaignDir);
+    if (params.optionSort) next.set("optionSort", params.optionSort);
+    if (params.optionDir) next.set("optionDir", params.optionDir);
+
+    Object.entries(updates).forEach(([key, value]) => next.set(key, value));
+
+    return `/admin/configurations?${next.toString()}`;
+  }
 
   return (
     <div className="grid">
@@ -58,14 +215,35 @@ export default async function AdminConfigurationsPage() {
           <table>
             <thead>
               <tr>
-                <th>Name</th>
-                <th>Code</th>
-                <th>Archived</th>
+                <th>
+                  <SortLink
+                    label="Name"
+                    active={fundSort === "name"}
+                    direction={fundDir}
+                    href={buildSortHref({ fundSort: "name", fundDir: nextDirection(fundSort === "name", fundDir) })}
+                  />
+                </th>
+                <th>
+                  <SortLink
+                    label="Code"
+                    active={fundSort === "code"}
+                    direction={fundDir}
+                    href={buildSortHref({ fundSort: "code", fundDir: nextDirection(fundSort === "code", fundDir) })}
+                  />
+                </th>
+                <th>
+                  <SortLink
+                    label="Archived"
+                    active={fundSort === "archived"}
+                    direction={fundDir}
+                    href={buildSortHref({ fundSort: "archived", fundDir: nextDirection(fundSort === "archived", fundDir) })}
+                  />
+                </th>
                 <th></th>
               </tr>
             </thead>
             <tbody>
-              {funds.map((fund: ManagedFundRow) => {
+              {sortedFunds.map((fund: ManagedFundRow) => {
                 const formId = `fund-${fund.id}`;
 
                 return (
@@ -126,16 +304,51 @@ export default async function AdminConfigurationsPage() {
           <table>
             <thead>
               <tr>
-                <th>Name</th>
-                <th>Code</th>
-                <th>Starts</th>
-                <th>Ends</th>
-                <th>Archived</th>
+                <th>
+                  <SortLink
+                    label="Name"
+                    active={campaignSort === "name"}
+                    direction={campaignDir}
+                    href={buildSortHref({ campaignSort: "name", campaignDir: nextDirection(campaignSort === "name", campaignDir) })}
+                  />
+                </th>
+                <th>
+                  <SortLink
+                    label="Code"
+                    active={campaignSort === "code"}
+                    direction={campaignDir}
+                    href={buildSortHref({ campaignSort: "code", campaignDir: nextDirection(campaignSort === "code", campaignDir) })}
+                  />
+                </th>
+                <th>
+                  <SortLink
+                    label="Starts"
+                    active={campaignSort === "starts"}
+                    direction={campaignDir}
+                    href={buildSortHref({ campaignSort: "starts", campaignDir: nextDirection(campaignSort === "starts", campaignDir) })}
+                  />
+                </th>
+                <th>
+                  <SortLink
+                    label="Ends"
+                    active={campaignSort === "ends"}
+                    direction={campaignDir}
+                    href={buildSortHref({ campaignSort: "ends", campaignDir: nextDirection(campaignSort === "ends", campaignDir) })}
+                  />
+                </th>
+                <th>
+                  <SortLink
+                    label="Archived"
+                    active={campaignSort === "archived"}
+                    direction={campaignDir}
+                    href={buildSortHref({ campaignSort: "archived", campaignDir: nextDirection(campaignSort === "archived", campaignDir) })}
+                  />
+                </th>
                 <th></th>
               </tr>
             </thead>
             <tbody>
-              {campaigns.map((campaign: ManagedCampaignRow) => {
+              {sortedCampaigns.map((campaign: ManagedCampaignRow) => {
                 const formId = `campaign-${campaign.id}`;
 
                 return (
@@ -211,15 +424,43 @@ export default async function AdminConfigurationsPage() {
             <table>
               <thead>
                 <tr>
-                  <th>Internal value</th>
-                  <th>Display label</th>
-                  <th>Sort order</th>
-                  <th>Active</th>
+                  <th>
+                    <SortLink
+                      label="Internal value"
+                      active={optionSort === "value"}
+                      direction={optionDir}
+                      href={buildSortHref({ optionSort: "value", optionDir: nextDirection(optionSort === "value", optionDir) })}
+                    />
+                  </th>
+                  <th>
+                    <SortLink
+                      label="Display label"
+                      active={optionSort === "label"}
+                      direction={optionDir}
+                      href={buildSortHref({ optionSort: "label", optionDir: nextDirection(optionSort === "label", optionDir) })}
+                    />
+                  </th>
+                  <th>
+                    <SortLink
+                      label="Sort order"
+                      active={optionSort === "sort_order"}
+                      direction={optionDir}
+                      href={buildSortHref({ optionSort: "sort_order", optionDir: nextDirection(optionSort === "sort_order", optionDir) })}
+                    />
+                  </th>
+                  <th>
+                    <SortLink
+                      label="Active"
+                      active={optionSort === "active"}
+                      direction={optionDir}
+                      href={buildSortHref({ optionSort: "active", optionDir: nextDirection(optionSort === "active", optionDir) })}
+                    />
+                  </th>
                   <th></th>
                 </tr>
               </thead>
               <tbody>
-                {optionSets[setKey].map((option: ConfigLookupOption) => {
+                {sortedOptionSets[setKey].map((option: ConfigLookupOption) => {
                   const formId = `${setKey}-${option.id}`;
 
                   return (
