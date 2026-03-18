@@ -494,6 +494,7 @@ export async function findPotentialDuplicateDonors(input: unknown): Promise<Pote
 
 export async function searchDonorLookupRows(search: string): Promise<DonorConnectionRow[]> {
   const trimmed = search.trim();
+  const fuzzySearch = trimmed.replace(/\s+/g, "%");
 
   if (trimmed.length < 2) {
     return [];
@@ -516,6 +517,17 @@ export async function searchDonorLookupRows(search: string): Promise<DonorConnec
     where d.deleted_at is null
       and (
         ${donorFullNameSql} ilike '%' || $1 || '%'
+        or concat_ws(
+          ' ',
+          coalesce(d.first_name, ''),
+          coalesce(d.preferred_name, ''),
+          coalesce(d.middle_name, ''),
+          coalesce(d.last_name, ''),
+          coalesce(d.organization_name, ''),
+          coalesce(d.primary_email::text, ''),
+          coalesce(d.alternate_email::text, ''),
+          coalesce(d.donor_number, '')
+        ) ilike '%' || $2 || '%'
         or coalesce(d.organization_name, '') ilike '%' || $1 || '%'
         or coalesce(d.first_name, '') ilike '%' || $1 || '%'
         or coalesce(d.last_name, '') ilike '%' || $1 || '%'
@@ -533,7 +545,7 @@ export async function searchDonorLookupRows(search: string): Promise<DonorConnec
       end,
       display_name asc
     limit 20`,
-    [trimmed]
+    [trimmed, fuzzySearch]
   );
 
   return result.rows;

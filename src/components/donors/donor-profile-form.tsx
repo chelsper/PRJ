@@ -331,10 +331,6 @@ export function DonorProfileForm({
               <input type="hidden" name="spouseSameAddress" value={donor.spouse_same_address ? "on" : ""} />
             </>
           )}
-          <label className="full">
-            General donor notes
-            <textarea name="notes" rows={5} defaultValue={donor.notes ?? ""} />
-          </label>
           <div className="full conditional-block">
             <label className="toggle-row">
               <input
@@ -348,6 +344,10 @@ export function DonorProfileForm({
               <p className="muted">Use the organization relationships section below to search for existing organizations, create draft organizations, and promote them into full donor records.</p>
             ) : null}
           </div>
+          <label className="full">
+            General donor notes
+            <textarea name="notes" rows={5} defaultValue={donor.notes ?? ""} />
+          </label>
           <div className="full button-row">
             <button type="submit">Save profile</button>
             <Link href={`/donors/${donorId}/addresses`} className="inline-link">
