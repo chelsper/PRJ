@@ -616,7 +616,7 @@ export async function updateGift(giftId: string, input: unknown, actor: Actor) {
            fund_id = $3,
            campaign_id = $4,
            parent_pledge_gift_id = $5,
-           gift_type = $6,
+           gift_type = $6::varchar(30),
            amount_cents = $7,
            gift_date = $8,
            pledge_start_date = $9,
@@ -624,8 +624,8 @@ export async function updateGift(giftId: string, input: unknown, actor: Actor) {
            installment_count = $11,
            installment_frequency = $12,
            pledge_status = case
-             when $6 in ('PLEDGE', 'MATCHING_GIFT_PLEDGE') and pledge_status in ('WRITTEN_OFF', 'CANCELLED') then pledge_status
-             when $6 in ('PLEDGE', 'MATCHING_GIFT_PLEDGE') then coalesce(pledge_status, 'ACTIVE')
+             when $6::text in ('PLEDGE', 'MATCHING_GIFT_PLEDGE') and pledge_status in ('WRITTEN_OFF', 'CANCELLED') then pledge_status
+             when $6::text in ('PLEDGE', 'MATCHING_GIFT_PLEDGE') then coalesce(pledge_status, 'ACTIVE')
              else null
            end,
            payment_method = $13,
