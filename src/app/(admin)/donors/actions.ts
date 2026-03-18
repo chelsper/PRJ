@@ -14,6 +14,7 @@ import {
   createDonor,
   deleteDonorOrganizationRelationship,
   deleteOrganizationContact,
+  findPotentialDuplicateDonors,
   promoteOrganizationRelationshipToDonor,
   promoteSpouseToDonor,
   softDeleteDonor,
@@ -26,22 +27,41 @@ export async function createDonorAction(formData: FormData) {
   const session = await requireCapability("donors:write");
   const requestHeaders = await headers();
   const ipAddress = requestHeaders.get("x-forwarded-for")?.split(",")[0]?.trim() ?? null;
+  const payload = {
+    donorType: formData.get("donorType"),
+    firstName: formData.get("firstName"),
+    lastName: formData.get("lastName"),
+    organizationName: formData.get("organizationName"),
+    primaryEmail: formData.get("primaryEmail"),
+    primaryPhone: formData.get("primaryPhone"),
+    notes: formData.get("notes")
+  };
+  const confirmUnique = formData.get("confirmUnique") === "on";
 
-  await createDonor(
-    {
-      donorType: formData.get("donorType"),
-      firstName: formData.get("firstName"),
-      lastName: formData.get("lastName"),
-      organizationName: formData.get("organizationName"),
-      primaryEmail: formData.get("primaryEmail"),
-      primaryPhone: formData.get("primaryPhone"),
-      notes: formData.get("notes")
-    },
-    { userId: session.userId, ipAddress }
-  );
+  if (!confirmUnique) {
+    const duplicates = await findPotentialDuplicateDonors(payload);
+
+    if (duplicates.length > 0) {
+      const params = new URLSearchParams({
+        donorType: String(payload.donorType ?? ""),
+        firstName: String(payload.firstName ?? ""),
+        lastName: String(payload.lastName ?? ""),
+        organizationName: String(payload.organizationName ?? ""),
+        primaryEmail: String(payload.primaryEmail ?? ""),
+        primaryPhone: String(payload.primaryPhone ?? ""),
+        notes: String(payload.notes ?? ""),
+        duplicateIds: duplicates.map((duplicate) => duplicate.id).join(",")
+      });
+
+      redirect(`/donors?${params.toString()}`);
+    }
+  }
+
+  const donorId = await createDonor(payload, { userId: session.userId, ipAddress });
 
   revalidatePath("/donors");
   revalidatePath("/dashboard");
+  redirect(`/donors/${donorId}`);
 }
 
 export async function updateDonorProfileAction(formData: FormData) {

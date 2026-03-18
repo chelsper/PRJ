@@ -1,18 +1,35 @@
 import Link from "next/link";
 
 import { requireCapability } from "@/server/auth/permissions";
-import { listRecentlyAccessedDonors, type DonorListRow } from "@/server/data/donors";
+import { getDonorLookupRowsByIds, listRecentlyAccessedDonors, type DonorListRow } from "@/server/data/donors";
 
 import { createDonorAction } from "./actions";
 
 export default async function DonorsPage({
   searchParams
 }: {
-  searchParams: Promise<{ q?: string }>;
+  searchParams: Promise<{
+    q?: string;
+    donorType?: string;
+    firstName?: string;
+    lastName?: string;
+    organizationName?: string;
+    primaryEmail?: string;
+    primaryPhone?: string;
+    notes?: string;
+    duplicateIds?: string;
+  }>;
 }) {
   await requireCapability("donors:read");
   const params = await searchParams;
-  const donors = await listRecentlyAccessedDonors(params.q);
+  const duplicateIds = (params.duplicateIds ?? "")
+    .split(",")
+    .map((value) => value.trim())
+    .filter(Boolean);
+  const [donors, possibleMatches] = await Promise.all([
+    listRecentlyAccessedDonors(params.q),
+    duplicateIds.length > 0 ? getDonorLookupRowsByIds(duplicateIds) : Promise.resolve([])
+  ]);
 
   return (
     <div className="grid">
@@ -37,35 +54,67 @@ export default async function DonorsPage({
           <form action={createDonorAction} className="form-grid">
             <label>
               Donor type
-              <select name="donorType" defaultValue="INDIVIDUAL">
+              <select name="donorType" defaultValue={params.donorType ?? "INDIVIDUAL"}>
                 <option value="INDIVIDUAL">Individual</option>
                 <option value="ORGANIZATION">Organization</option>
               </select>
             </label>
             <label>
               First name
-              <input name="firstName" />
+              <input name="firstName" defaultValue={params.firstName ?? ""} />
             </label>
             <label>
               Last name
-              <input name="lastName" />
+              <input name="lastName" defaultValue={params.lastName ?? ""} />
             </label>
             <label>
               Organization name
-              <input name="organizationName" />
+              <input name="organizationName" defaultValue={params.organizationName ?? ""} />
             </label>
             <label>
               Email
-              <input name="primaryEmail" type="email" />
+              <input name="primaryEmail" type="email" defaultValue={params.primaryEmail ?? ""} />
             </label>
             <label>
               Phone
-              <input name="primaryPhone" />
+              <input name="primaryPhone" defaultValue={params.primaryPhone ?? ""} />
             </label>
             <label className="full">
               Notes
-              <textarea name="notes" rows={4} />
+              <textarea name="notes" rows={4} defaultValue={params.notes ?? ""} />
             </label>
+            {possibleMatches.length > 0 ? (
+              <div className="full conditional-block">
+                <p className="danger">Possible duplicate donors were found. Confirm this constituent is not already in the system before proceeding.</p>
+                <div className="table-scroll">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>Possible match</th>
+                        <th>Email</th>
+                        <th>Recognition Total</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {possibleMatches.map((match: DonorListRow) => (
+                        <tr key={match.id}>
+                          <td>
+                            <Link href={`/donors/${match.id}`}>{match.full_name || "Unnamed donor"}</Link>
+                            <div className="muted">{match.donor_number ?? "Pending donor number"}</div>
+                          </td>
+                          <td>{match.primary_email ?? "—"}</td>
+                          <td>${(Number(match.donor_recognition_cents) / 100).toLocaleString()}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                <label className="checkbox-line">
+                  <input type="checkbox" name="confirmUnique" required />
+                  I confirm this constituent is not the same as an existing donor.
+                </label>
+              </div>
+            ) : null}
             <div className="full">
               <button type="submit">Save donor</button>
             </div>

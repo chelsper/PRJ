@@ -211,6 +211,16 @@ button:hover {
   color: var(--ink);
 }
 
+.danger-button {
+  color: var(--danger);
+}
+
+.button-compact {
+  padding: 8px 12px;
+  min-height: 36px;
+  font-size: 0.88rem;
+}
+
 .button-row {
   display: flex;
   gap: 12px;

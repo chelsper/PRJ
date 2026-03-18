@@ -19,6 +19,11 @@ export type DonorListRow = {
   donor_soft_credit_cents: string;
 };
 
+export type PotentialDuplicateDonorRow = DonorListRow & {
+  matched_fields: string[];
+  match_score: number;
+};
+
 export type DonorConnectionRow = {
   id: string;
   donor_number: string | null;
@@ -404,6 +409,86 @@ export async function listRecentlyAccessedDonors(search?: string): Promise<Donor
   );
 
   return result.rows;
+}
+
+export async function findPotentialDuplicateDonors(input: unknown): Promise<PotentialDuplicateDonorRow[]> {
+  const values = donorInputSchema.parse(input);
+  const firstName = values.firstName?.trim().toLowerCase() ?? null;
+  const lastName = values.lastName?.trim().toLowerCase() ?? null;
+  const organizationName = values.organizationName?.trim().toLowerCase() ?? null;
+  const primaryEmail = values.primaryEmail?.trim().toLowerCase() ?? null;
+  const primaryPhone = values.primaryPhone?.trim() ?? null;
+
+  const result = await query<DonorListRow & { alternate_email: string | null; primary_phone: string | null }>(
+    `select
+      d.id::text,
+      d.donor_number,
+      d.donor_type,
+      ${donorFullNameSql} as full_name,
+      d.first_name,
+      d.last_name,
+      d.organization_name,
+      d.primary_email,
+      d.alternate_email::text,
+      d.primary_phone,
+      coalesce(t.donor_recognition_cents, 0)::text as donor_recognition_cents,
+      coalesce(t.donor_hard_credit_cents, 0)::text as donor_hard_credit_cents,
+      coalesce(t.donor_soft_credit_cents, 0)::text as donor_soft_credit_cents
+    from public.donors d
+    left join public.donor_giving_totals t on t.donor_id = d.id
+    where d.deleted_at is null
+      and (
+        ($1::text is not null and lower(coalesce(d.first_name, '')) = $1)
+        or ($2::text is not null and lower(coalesce(d.last_name, '')) = $2)
+        or ($3::text is not null and lower(coalesce(d.organization_name, '')) = $3)
+        or ($4::text is not null and (
+          lower(coalesce(d.primary_email::text, '')) = $4
+          or lower(coalesce(d.alternate_email::text, '')) = $4
+        ))
+        or ($5::text is not null and coalesce(d.primary_phone, '') = $5)
+      )
+    order by d.last_name nulls last, d.organization_name nulls last
+    limit 20`,
+    [firstName, lastName, organizationName, primaryEmail, primaryPhone]
+  );
+
+  return result.rows
+    .map((row) => {
+      const matchedFields: string[] = [];
+
+      if (firstName && row.first_name?.trim().toLowerCase() === firstName) {
+        matchedFields.push("First name");
+      }
+
+      if (lastName && row.last_name?.trim().toLowerCase() === lastName) {
+        matchedFields.push("Last name");
+      }
+
+      if (organizationName && row.organization_name?.trim().toLowerCase() === organizationName) {
+        matchedFields.push("Organization name");
+      }
+
+      if (
+        primaryEmail &&
+        [row.primary_email, row.alternate_email]
+          .filter(Boolean)
+          .some((email) => email?.trim().toLowerCase() === primaryEmail)
+      ) {
+        matchedFields.push("Email");
+      }
+
+      if (primaryPhone && row.primary_phone?.trim() === primaryPhone) {
+        matchedFields.push("Phone");
+      }
+
+      return {
+        ...row,
+        matched_fields: matchedFields,
+        match_score: matchedFields.length
+      };
+    })
+    .filter((row) => row.match_score >= 2)
+    .sort((left, right) => right.match_score - left.match_score || left.full_name.localeCompare(right.full_name));
 }
 
 export async function searchDonorLookupRows(search: string): Promise<DonorConnectionRow[]> {
@@ -800,7 +885,10 @@ export async function createDonor(input: unknown, actor: Actor) {
         notes,
         created_by,
         updated_by
-      ) values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $29)
+      ) values (
+        $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17,
+        $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31, $32, $33, $33
+      )
       returning id::text`,
       [
         values.donorType,

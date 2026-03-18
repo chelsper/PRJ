@@ -3,6 +3,7 @@ import { headers } from "next/headers";
 import { notFound } from "next/navigation";
 
 import { DonorProfileForm } from "@/components/donors/donor-profile-form";
+import { DeleteDonorForm } from "@/components/donors/delete-donor-form";
 import { OrganizationTab } from "@/components/donors/organization-tab";
 import { SendReceiptButton } from "@/components/gifts/send-receipt-button";
 import { writeAuditLog } from "@/server/audit";
@@ -81,7 +82,12 @@ export default async function DonorProfilePage({
   return (
       <div className="grid donor-page-grid">
       <section className="hero">
-        <p className="eyebrow">Donor Profile</p>
+        <div className="section-header">
+          <p className="eyebrow">Donor Profile</p>
+          {donorWriteSession ? (
+            <DeleteDonorForm donorId={donor.id} label="Delete" className="secondary danger-button" compact />
+          ) : null}
+        </div>
         <h1>{donor.full_name}</h1>
         <p className="muted">
           Donor ID {donor.donor_number ?? "Pending"} · {donor.donor_type === "ORGANIZATION" ? "Organization" : "Individual"}
