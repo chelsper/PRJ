@@ -36,7 +36,8 @@ export default async function DonorProfilePage({
     listDonorSoftCredits(id),
     getSessionWithCapability("gifts:write")
   ]);
-  const activeTab = tab === "giving" ? "giving" : "profile";
+  const activeTab = tab === "giving" || tab === "communications" ? tab : "profile";
+  const latestGift = giving[0] ?? null;
 
   return (
     <div className="grid">
@@ -86,6 +87,9 @@ export default async function DonorProfilePage({
         </Link>
         <Link href={`/donors/${id}?tab=giving`} className={activeTab === "giving" ? "tab-link active" : "tab-link"}>
           Giving
+        </Link>
+        <Link href={`/donors/${id}?tab=communications`} className={activeTab === "communications" ? "tab-link active" : "tab-link"}>
+          Communications
         </Link>
         <Link href={`/donors/${id}/addresses`} className="tab-link">
           Addresses
@@ -176,6 +180,81 @@ export default async function DonorProfilePage({
                     </tr>
                   ))
                 )}
+              </tbody>
+            </table>
+          </section>
+        </div>
+      ) : activeTab === "communications" ? (
+        <div className="grid grid-2">
+          <section className="card">
+            <p className="eyebrow">Communication Summary</p>
+            <div className="stats">
+              <article className="stat">
+                <span className="muted">Preferred email</span>
+                <strong>{donor.primary_email ?? "No email on file"}</strong>
+              </article>
+              <article className="stat">
+                <span className="muted">Preferred email type</span>
+                <strong>{donor.primary_email_type ?? "Unspecified"}</strong>
+              </article>
+              <article className="stat">
+                <span className="muted">Most recent gift</span>
+                <strong>{latestGift ? `${latestGift.gift_date} · $${(latestGift.amount_cents / 100).toLocaleString()}` : "No gifts yet"}</strong>
+              </article>
+            </div>
+          </section>
+
+          <section className="table-shell">
+            <p className="eyebrow">Receipts and Acknowledgments</p>
+            <table>
+              <thead>
+                <tr>
+                  <th>Type</th>
+                  <th>Status</th>
+                  <th>Last relevant gift</th>
+                  <th>Delivery target</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>Gift receipt</td>
+                  <td>{latestGift ? "Ready for future automation" : "Waiting for gift activity"}</td>
+                  <td>{latestGift ? `${latestGift.gift_number ?? latestGift.id} · ${latestGift.gift_date}` : "—"}</td>
+                  <td>{donor.primary_email ?? "No email on file"}</td>
+                </tr>
+                <tr>
+                  <td>Acknowledgment</td>
+                  <td>{latestGift ? "Ready for future workflow" : "Waiting for gift activity"}</td>
+                  <td>{latestGift ? `${latestGift.gift_type.replaceAll("_", " ")} · $${(latestGift.amount_cents / 100).toLocaleString()}` : "—"}</td>
+                  <td>{donor.primary_email ?? donor.primary_phone ?? "No contact method on file"}</td>
+                </tr>
+              </tbody>
+            </table>
+          </section>
+
+          <section className="table-shell full">
+            <div className="section-header">
+              <div>
+                <p className="eyebrow">Communication History</p>
+                <p className="muted">This tab is structured for future receipt sending, acknowledgment tracking, and contact history.</p>
+              </div>
+            </div>
+            <table>
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th>Channel</th>
+                  <th>Category</th>
+                  <th>Status</th>
+                  <th>Notes</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td colSpan={5} className="muted">
+                    No communication history is stored yet. Future updates can add receipt sends, acknowledgment entries, and manual outreach notes here.
+                  </td>
+                </tr>
               </tbody>
             </table>
           </section>
