@@ -10,6 +10,8 @@ type DonorLookupOption = {
   email: string | null;
 };
 
+export type { DonorLookupOption };
+
 function donorLabel(option: DonorLookupOption) {
   return option.fullName;
 }

@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
-import { requireCapability } from "@/server/auth/permissions";
+import { getSessionWithCapability, requireCapability } from "@/server/auth/permissions";
 import {
   getDonorProfile,
   listDonorConnections,
@@ -30,10 +30,11 @@ export default async function DonorProfilePage({
     notFound();
   }
 
-  const [connections, giving, softCredits] = await Promise.all([
+  const [connections, giving, softCredits, giftWriteSession] = await Promise.all([
     listDonorConnections(id),
     listDonorGiving(id),
-    listDonorSoftCredits(id)
+    listDonorSoftCredits(id),
+    getSessionWithCapability("gifts:write")
   ]);
   const activeTab = tab === "giving" ? "giving" : "profile";
 
@@ -45,6 +46,16 @@ export default async function DonorProfilePage({
         <p className="muted">
           Donor ID {donor.donor_number ?? "Pending"} · {donor.donor_type === "ORGANIZATION" ? "Organization" : "Individual"}
         </p>
+        {giftWriteSession ? (
+          <div className="button-row">
+            <Link href={`/gifts?donorId=${donor.id}`} className="button-link">
+              Add Gift
+            </Link>
+            <Link href={`/donors/${id}?tab=giving`} className="inline-link">
+              Open Giving tab
+            </Link>
+          </div>
+        ) : null}
         <div className="stats">
           <article className="stat">
             <span className="muted">Donor recognition total</span>
@@ -84,7 +95,17 @@ export default async function DonorProfilePage({
       {activeTab === "giving" ? (
         <div className="grid">
           <section className="table-shell">
-            <p className="eyebrow">Direct Gifts</p>
+            <div className="section-header">
+              <div>
+                <p className="eyebrow">Direct Gifts</p>
+                <p className="muted">Record and review gifts without leaving this donor context.</p>
+              </div>
+              {giftWriteSession ? (
+                <Link href={`/gifts?donorId=${donor.id}`} className="button-link secondary-link">
+                  Add Gift
+                </Link>
+              ) : null}
+            </div>
             <table>
               <thead>
                 <tr>

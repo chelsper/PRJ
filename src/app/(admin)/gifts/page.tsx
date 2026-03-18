@@ -1,25 +1,43 @@
+import type { DonorLookupOption } from "@/components/donors/donor-lookup";
 import { requireCapability } from "@/server/auth/permissions";
 import { DonorLookup } from "@/components/donors/donor-lookup";
+import { getDonorLookupRowsByIds } from "@/server/data/donors";
 import { listPledgeOptions, listRecentGifts, type PledgeOptionRow, type RecentGiftRow } from "@/server/data/gifts";
 import { listCampaigns, listFunds, type LookupRow } from "@/server/data/lookups";
 
 import { createGiftAction } from "./actions";
 
-export default async function GiftsPage() {
+export default async function GiftsPage({
+  searchParams
+}: {
+  searchParams: Promise<{ donorId?: string }>;
+}) {
   await requireCapability("gifts:read");
-  const [gifts, funds, campaigns, pledges] = await Promise.all([
+  const { donorId } = await searchParams;
+  const [gifts, funds, campaigns, pledges, lookupDonors] = await Promise.all([
     listRecentGifts(),
     listFunds(),
     listCampaigns(),
-    listPledgeOptions()
+    listPledgeOptions(),
+    donorId ? getDonorLookupRowsByIds([donorId]) : Promise.resolve([])
   ]);
+  const donorSelection = lookupDonors[0];
+  const initialDonorSelection: DonorLookupOption | null = donorSelection
+    ? {
+        id: donorSelection.id,
+        donorNumber: donorSelection.donor_number,
+        donorType: donorSelection.donor_type,
+        fullName: donorSelection.full_name,
+        email: donorSelection.primary_email
+      }
+    : null;
 
   return (
     <div className="grid grid-2">
       <section className="card">
         <p className="eyebrow">Gift Entry</p>
         <form action={createGiftAction} className="form-grid">
-          <DonorLookup label="Donor" name="donorId" required />
+          <DonorLookup label="Donor" name="donorId" required initialSelection={initialDonorSelection} />
           <label>
             Fund
             <select name="fundId" required>
