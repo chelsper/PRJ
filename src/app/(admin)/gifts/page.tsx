@@ -1,6 +1,7 @@
 import type { DonorLookupOption } from "@/components/donors/donor-lookup";
 import { requireCapability } from "@/server/auth/permissions";
 import { DonorLookup } from "@/components/donors/donor-lookup";
+import { ParentPledgeField } from "@/components/gifts/parent-pledge-field";
 import { getDonorLookupRowsByIds } from "@/server/data/donors";
 import { listPledgeOptions, listRecentGifts, type PledgeOptionRow, type RecentGiftRow } from "@/server/data/gifts";
 import { listCampaigns, listFunds, type LookupRow } from "@/server/data/lookups";
@@ -37,7 +38,13 @@ export default async function GiftsPage({
       <section className="card">
         <p className="eyebrow">Gift Entry</p>
         <form action={createGiftAction} className="form-grid">
-          <DonorLookup label="Donor" name="donorId" required initialSelection={initialDonorSelection} />
+          <DonorLookup
+            label="Donor"
+            name="donorId"
+            required
+            initialSelection={initialDonorSelection}
+            hiddenInputId="gift-donor-id"
+          />
           <label>
             Fund
             <select name="fundId" required>
@@ -61,20 +68,23 @@ export default async function GiftsPage({
             </select>
           </label>
           <DonorLookup label="Manual soft credit" name="softCreditDonorId" />
-          <label>
-            Parent pledge
-            <select name="parentPledgeGiftId">
-              <option value="">None</option>
-              {pledges.map((pledge: PledgeOptionRow) => (
-                <option key={pledge.id} value={pledge.id}>
-                  {(pledge.gift_number ?? pledge.id) + " · " + pledge.donor_name + " · $" + (pledge.balance_remaining_cents / 100).toLocaleString() + " open"}
-                </option>
-              ))}
-            </select>
-          </label>
+          <ParentPledgeField
+            donorFieldId="gift-donor-id"
+            giftTypeFieldId="gift-type"
+            initialGiftType="CASH"
+            initialDonorId={initialDonorSelection?.id ?? null}
+            initialOptions={pledges.map((pledge: PledgeOptionRow) => ({
+              id: pledge.id,
+              giftNumber: pledge.gift_number,
+              donorId: pledge.donor_id,
+              donorName: pledge.donor_name,
+              giftType: pledge.gift_type,
+              balanceRemainingCents: pledge.balance_remaining_cents
+            }))}
+          />
           <label>
             Gift type
-            <select name="giftType" defaultValue="CASH" required>
+            <select id="gift-type" name="giftType" defaultValue="CASH" required>
               <option value="PLEDGE">Pledge</option>
               <option value="PLEDGE_PAYMENT">Pledge Payment</option>
               <option value="CASH">Cash</option>

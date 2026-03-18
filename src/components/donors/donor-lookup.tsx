@@ -1,6 +1,6 @@
 "use client";
 
-import { useDeferredValue, useEffect, useState } from "react";
+import { useDeferredValue, useEffect, useRef, useState } from "react";
 
 type DonorLookupOption = {
   id: string;
@@ -24,12 +24,14 @@ export function DonorLookup({
   label,
   name,
   required = false,
-  initialSelection = null
+  initialSelection = null,
+  hiddenInputId
 }: {
   label: string;
   name: string;
   required?: boolean;
   initialSelection?: DonorLookupOption | null;
+  hiddenInputId?: string;
 }) {
   const [query, setQuery] = useState(initialSelection ? donorLabel(initialSelection) : "");
   const [selected, setSelected] = useState<DonorLookupOption | null>(initialSelection);
@@ -37,6 +39,15 @@ export function DonorLookup({
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const deferredQuery = useDeferredValue(query);
+  const hiddenInputRef = useRef<HTMLInputElement | null>(null);
+
+  useEffect(() => {
+    if (!hiddenInputRef.current) {
+      return;
+    }
+
+    hiddenInputRef.current.dispatchEvent(new Event("change", { bubbles: true }));
+  }, [selected]);
 
   useEffect(() => {
     const search = deferredQuery.trim();
@@ -83,7 +94,14 @@ export function DonorLookup({
   return (
     <label className="full donor-lookup">
       <span>{label}</span>
-      <input type="hidden" name={name} value={selected?.id ?? ""} required={required} />
+      <input
+        ref={hiddenInputRef}
+        id={hiddenInputId}
+        type="hidden"
+        name={name}
+        value={selected?.id ?? ""}
+        required={required}
+      />
       <input
         type="text"
         value={query}

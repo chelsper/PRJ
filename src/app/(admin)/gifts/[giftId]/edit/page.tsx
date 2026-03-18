@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 
 import { DonorLookup } from "@/components/donors/donor-lookup";
+import { ParentPledgeField } from "@/components/gifts/parent-pledge-field";
 import { requireCapability } from "@/server/auth/permissions";
 import { getDonorLookupRowsByIds } from "@/server/data/donors";
 import { getGiftById, listPledgeInstallments, listPledgeOptions, type InstallmentRow, type PledgeOptionRow } from "@/server/data/gifts";
@@ -45,6 +46,7 @@ export default async function EditGiftPage({
             label="Donor"
             name="donorId"
             required
+            hiddenInputId="gift-donor-id"
             initialSelection={
               donorSelection
                 ? {
@@ -93,20 +95,24 @@ export default async function EditGiftPage({
                 : null
             }
           />
-          <label>
-            Parent pledge
-            <select name="parentPledgeGiftId" defaultValue={gift.parent_pledge_gift_id ?? ""}>
-              <option value="">None</option>
-              {pledges.map((pledge: PledgeOptionRow) => (
-                <option key={pledge.id} value={pledge.id}>
-                  {(pledge.gift_number ?? pledge.id) + " · " + pledge.donor_name + " · $" + (pledge.balance_remaining_cents / 100).toLocaleString() + " open"}
-                </option>
-              ))}
-            </select>
-          </label>
+          <ParentPledgeField
+            donorFieldId="gift-donor-id"
+            giftTypeFieldId="gift-type"
+            initialGiftType={gift.gift_type}
+            initialDonorId={gift.donor_id}
+            initialValue={gift.parent_pledge_gift_id ?? ""}
+            initialOptions={pledges.map((pledge: PledgeOptionRow) => ({
+              id: pledge.id,
+              giftNumber: pledge.gift_number,
+              donorId: pledge.donor_id,
+              donorName: pledge.donor_name,
+              giftType: pledge.gift_type,
+              balanceRemainingCents: pledge.balance_remaining_cents
+            }))}
+          />
           <label>
             Gift type
-            <select name="giftType" defaultValue={gift.gift_type} required>
+            <select id="gift-type" name="giftType" defaultValue={gift.gift_type} required>
               <option value="PLEDGE">Pledge</option>
               <option value="PLEDGE_PAYMENT">Pledge Payment</option>
               <option value="CASH">Cash</option>
