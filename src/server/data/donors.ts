@@ -70,12 +70,25 @@ export type DonorAddressRow = {
 
 export type DonorGiftRow = {
   id: string;
+  gift_number: string | null;
   gift_date: string;
   amount_cents: number;
   fund_name: string;
   campaign_name: string | null;
   payment_method: string;
   reference_number: string | null;
+};
+
+export type DonorSoftCreditRow = {
+  soft_credit_id: string;
+  gift_id: string;
+  gift_number: string | null;
+  credit_type: "MANUAL" | "AUTO_SPOUSE";
+  amount_cents: number;
+  gift_date: string;
+  legal_donor_name: string;
+  fund_name: string;
+  campaign_name: string | null;
 };
 
 const donorFullNameSql = `
@@ -208,6 +221,7 @@ export async function listDonorGiving(donorId: string): Promise<DonorGiftRow[]> 
   const result = await query<DonorGiftRow>(
     `select
       g.id::text,
+      g.gift_number,
       g.gift_date::text,
       g.amount_cents,
       f.name as fund_name,
@@ -219,6 +233,44 @@ export async function listDonorGiving(donorId: string): Promise<DonorGiftRow[]> 
     left join public.campaigns c on c.id = g.campaign_id
     where g.donor_id = $1
       and g.deleted_at is null
+    order by g.gift_date desc, g.created_at desc`,
+    [Number(donorId)]
+  );
+
+  return result.rows;
+}
+
+export async function listDonorSoftCredits(donorId: string): Promise<DonorSoftCreditRow[]> {
+  const result = await query<DonorSoftCreditRow>(
+    `select
+      sc.id::text as soft_credit_id,
+      g.id::text as gift_id,
+      g.gift_number,
+      sc.credit_type,
+      sc.amount_cents,
+      g.gift_date::text,
+      case
+        when d.donor_type = 'ORGANIZATION' then coalesce(d.organization_name, 'Unnamed organization')
+        else trim(
+          concat_ws(
+            ' ',
+            coalesce(nullif(d.preferred_name, ''), nullif(d.first_name, '')),
+            case
+              when d.middle_name is not null and d.middle_name <> '' then left(d.middle_name, 1) || '.'
+              else null
+            end,
+            d.last_name
+          )
+        )
+      end as legal_donor_name,
+      f.name as fund_name,
+      c.name as campaign_name
+    from public.soft_credits sc
+    inner join public.gifts g on g.id = sc.gift_id and g.deleted_at is null
+    inner join public.donors d on d.id = g.donor_id
+    inner join public.funds f on f.id = g.fund_id
+    left join public.campaigns c on c.id = g.campaign_id
+    where sc.donor_id = $1
     order by g.gift_date desc, g.created_at desc`,
     [Number(donorId)]
   );

@@ -6,9 +6,11 @@ import {
   getDonorProfile,
   listDonorConnections,
   listDonorGiving,
+  listDonorSoftCredits,
   type DonorConnectionRow,
   type DonorGiftRow
 } from "@/server/data/donors";
+import type { DonorSoftCreditRow } from "@/server/data/donors";
 
 import { updateDonorProfileAction } from "../actions";
 
@@ -28,7 +30,11 @@ export default async function DonorProfilePage({
     notFound();
   }
 
-  const [connections, giving] = await Promise.all([listDonorConnections(id), listDonorGiving(id)]);
+  const [connections, giving, softCredits] = await Promise.all([
+    listDonorConnections(id),
+    listDonorGiving(id),
+    listDonorSoftCredits(id)
+  ]);
   const activeTab = tab === "giving" ? "giving" : "profile";
 
   return (
@@ -68,37 +74,79 @@ export default async function DonorProfilePage({
       </nav>
 
       {activeTab === "giving" ? (
-        <section className="table-shell">
-          <p className="eyebrow">Giving</p>
-          <table>
-            <thead>
-              <tr>
-                <th>Date</th>
-                <th>Fund</th>
-                <th>Campaign</th>
-                <th>Payment</th>
-                <th>Amount</th>
-                <th></th>
-              </tr>
-            </thead>
-            <tbody>
-              {giving.map((gift: DonorGiftRow) => (
-                <tr key={gift.id}>
-                  <td>{gift.gift_date}</td>
-                  <td>{gift.fund_name}</td>
-                  <td>{gift.campaign_name ?? "—"}</td>
-                  <td>{gift.payment_method}</td>
-                  <td>${(gift.amount_cents / 100).toLocaleString()}</td>
-                  <td>
-                    <Link href={`/gifts/${gift.id}/edit`} className="inline-link">
-                      Edit gift
-                    </Link>
-                  </td>
+        <div className="grid">
+          <section className="table-shell">
+            <p className="eyebrow">Direct Gifts</p>
+            <table>
+              <thead>
+                <tr>
+                  <th>Gift ID</th>
+                  <th>Date</th>
+                  <th>Fund</th>
+                  <th>Campaign</th>
+                  <th>Payment</th>
+                  <th>Amount</th>
+                  <th></th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </section>
+              </thead>
+              <tbody>
+                {giving.map((gift: DonorGiftRow) => (
+                  <tr key={gift.id}>
+                    <td>{gift.gift_number ?? gift.id}</td>
+                    <td>{gift.gift_date}</td>
+                    <td>{gift.fund_name}</td>
+                    <td>{gift.campaign_name ?? "—"}</td>
+                    <td>{gift.payment_method}</td>
+                    <td>${(gift.amount_cents / 100).toLocaleString()}</td>
+                    <td>
+                      <Link href={`/gifts/${gift.id}/edit`} className="inline-link">
+                        Edit gift
+                      </Link>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </section>
+
+          <section className="table-shell">
+            <p className="eyebrow">Soft Credits</p>
+            <table>
+              <thead>
+                <tr>
+                  <th>Gift ID</th>
+                  <th>Date</th>
+                  <th>Legal donor</th>
+                  <th>Fund</th>
+                  <th>Campaign</th>
+                  <th>Credit type</th>
+                  <th>Amount</th>
+                </tr>
+              </thead>
+              <tbody>
+                {softCredits.length === 0 ? (
+                  <tr>
+                    <td colSpan={7} className="muted">
+                      No soft credits recorded.
+                    </td>
+                  </tr>
+                ) : (
+                  softCredits.map((credit: DonorSoftCreditRow) => (
+                    <tr key={credit.soft_credit_id}>
+                      <td>{credit.gift_number ?? credit.gift_id}</td>
+                      <td>{credit.gift_date}</td>
+                      <td>{credit.legal_donor_name}</td>
+                      <td>{credit.fund_name}</td>
+                      <td>{credit.campaign_name ?? "—"}</td>
+                      <td>{credit.credit_type === "AUTO_SPOUSE" ? "Auto spouse" : "Manual"}</td>
+                      <td>${(credit.amount_cents / 100).toLocaleString()}</td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </section>
+        </div>
       ) : (
         <section className="card">
           <p className="eyebrow">Profile Details</p>
