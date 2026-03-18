@@ -7,10 +7,25 @@ import { AUTH_COOKIE } from "@/server/auth/constants";
 import { createSessionToken } from "@/server/auth/session";
 import { env } from "@/server/env";
 import { query } from "@/server/db";
-import { verifyPassword } from "@/server/auth/passwords";
+import { hashPassword, verifyPassword } from "@/server/auth/passwords";
 import { assertSameOrigin } from "@/server/security/csrf";
 import { assertRateLimit, recordRateLimitEvent } from "@/server/security/rate-limit";
 import { writeAuditLog } from "@/server/audit";
+import { signUpSchema } from "@/server/validation/auth";
+import type { Role } from "@/server/auth/roles";
+
+async function establishSession(input: { userId: string; email: string; role: Role }) {
+  const token = await createSessionToken(input);
+
+  const cookieStore = await cookies();
+  cookieStore.set(AUTH_COOKIE, token, {
+    httpOnly: true,
+    sameSite: "lax",
+    secure: true,
+    path: "/",
+    maxAge: 60 * 60 * 12
+  });
+}
 
 export async function loginAction(formData: FormData) {
   await assertSameOrigin();
@@ -55,19 +70,10 @@ export async function loginAction(formData: FormData) {
     redirect("/login?error=invalid");
   }
 
-  const token = await createSessionToken({
+  await establishSession({
     userId: user.id,
     email: user.email,
     role: user.role
-  });
-
-  const cookieStore = await cookies();
-  cookieStore.set(AUTH_COOKIE, token, {
-    httpOnly: true,
-    sameSite: "lax",
-    secure: true,
-    path: "/",
-    maxAge: 60 * 60 * 12
   });
 
   await writeAuditLog({
@@ -77,6 +83,77 @@ export async function loginAction(formData: FormData) {
     entityId: user.id,
     status: "success",
     ipAddress
+  });
+
+  redirect("/dashboard");
+}
+
+export async function signUpAction(formData: FormData) {
+  await assertSameOrigin();
+
+  const values = signUpSchema.parse({
+    email: String(formData.get("email") ?? "").trim().toLowerCase(),
+    password: String(formData.get("password") ?? ""),
+    confirmPassword: String(formData.get("confirmPassword") ?? "")
+  });
+
+  const requestHeaders = await headers();
+  const ipAddress = requestHeaders.get("x-forwarded-for")?.split(",")[0]?.trim() ?? null;
+
+  await assertRateLimit({
+    key: `signup:${values.email || ipAddress || "unknown"}`,
+    action: "signup",
+    maxAttempts: env.RATE_LIMIT_MAX_AUTH_ATTEMPTS,
+    windowSeconds: env.RATE_LIMIT_WINDOW_SECONDS
+  });
+  await recordRateLimitEvent({ key: `signup:${values.email || ipAddress || "unknown"}`, action: "signup" });
+
+  const existingUserResult = await query<{ id: string }>(
+    `select id::text
+     from users
+     where email = $1`,
+    [values.email]
+  );
+
+  if (existingUserResult.rows[0]) {
+    await writeAuditLog({
+      actorUserId: null,
+      action: "auth.signup",
+      entityType: "user",
+      entityId: null,
+      status: "failed",
+      ipAddress,
+      metadata: { email: values.email, reason: "email_exists" }
+    });
+    redirect("/signup?error=exists");
+  }
+
+  const countResult = await query<{ count: string }>("select count(*)::text as count from users");
+  const role: Role = countResult.rows[0]?.count === "0" ? "admin" : "read_only";
+
+  const inserted = await query<{ id: string }>(
+    `insert into users (email, password_hash, role, status)
+     values ($1, $2, $3, 'active')
+     returning id::text`,
+    [values.email, hashPassword(values.password), role]
+  );
+
+  const userId = inserted.rows[0].id;
+
+  await writeAuditLog({
+    actorUserId: userId,
+    action: "auth.signup",
+    entityType: "user",
+    entityId: userId,
+    status: "success",
+    ipAddress,
+    metadata: { role }
+  });
+
+  await establishSession({
+    userId,
+    email: values.email,
+    role
   });
 
   redirect("/dashboard");

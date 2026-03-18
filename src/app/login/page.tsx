@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 import { getCurrentSession } from "@/server/auth/session-store";
 
 import { loginAction } from "./actions";
@@ -40,6 +42,9 @@ export default async function LoginPage({
               <button type="submit">Sign in</button>
             </div>
           </form>
+          <p className="muted">
+            Need an account? <Link href="/signup">Create one</Link>
+          </p>
         </section>
       </div>
     </main>
