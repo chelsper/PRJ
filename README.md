@@ -1,10 +1,11 @@
 # Nonprofit Donor Database Starter
 
-This repository is now structured as a simple Vercel-ready API backed by PostgreSQL for donor and gift records.
+This repository is now structured as a simple Vercel-ready admin app and API backed by PostgreSQL for donor and gift records.
 
 ## What is included
 
 - `sql/schema.sql`: the core donor and gift schema
+- `index.html`, `styles.css`, `app.js`: no-build admin interface
 - `api/health.js`: database health check
 - `api/donors/index.js`: list and create donor records
 - `api/gifts/index.js`: list and create gift records
@@ -14,6 +15,7 @@ This repository is now structured as a simple Vercel-ready API backed by Postgre
 
 - The database connection lives in `DATABASE_URL`, not in source control.
 - Every donor and gift endpoint requires `Authorization: Bearer <API_TOKEN>`.
+- The admin UI stores the token in browser local storage for same-origin API calls.
 - Gift amounts are stored as integer cents rather than floating point values.
 - The schema uses check constraints, foreign keys, and indexes for data integrity.
 
@@ -46,6 +48,8 @@ This is a minimal secure starter, not a complete compliance program. For real no
    npm run dev
    ```
 
+5. Open `http://localhost:3000`, paste your `API_TOKEN`, and use the admin interface.
+
 ## Vercel setup
 
 1. In Vercel, import this GitHub repository.
@@ -56,6 +60,7 @@ This is a minimal secure starter, not a complete compliance program. For real no
 
 3. Deploy the project.
 4. Apply `sql/schema.sql` to the production database.
+5. Open the deployed site root and use the admin interface there.
 
 ## Example requests
 
