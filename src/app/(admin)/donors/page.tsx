@@ -1,7 +1,7 @@
 import Link from "next/link";
 
 import { requireCapability } from "@/server/auth/permissions";
-import { getDonorLookupRowsByIds, listRecentlyAccessedDonors, type DonorListRow } from "@/server/data/donors";
+import { getDonorLookupRowsByIds, listDonors, listRecentlyAccessedDonors, type DonorListRow } from "@/server/data/donors";
 
 import { createDonorAction } from "./actions";
 
@@ -26,8 +26,9 @@ export default async function DonorsPage({
     .split(",")
     .map((value) => value.trim())
     .filter(Boolean);
+  const search = params.q?.trim() ?? "";
   const [donors, possibleMatches] = await Promise.all([
-    listRecentlyAccessedDonors(params.q),
+    search ? listDonors(search) : listRecentlyAccessedDonors(),
     duplicateIds.length > 0 ? getDonorLookupRowsByIds(duplicateIds) : Promise.resolve([])
   ]);
 
@@ -122,7 +123,7 @@ export default async function DonorsPage({
         </article>
 
         <article className="table-shell">
-          <p className="eyebrow">Recently Accessed Donors</p>
+          <p className="eyebrow">{search ? "Donor Search Results" : "Recently Accessed Donors"}</p>
           <table>
             <thead>
               <tr>
