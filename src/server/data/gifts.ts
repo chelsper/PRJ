@@ -3,15 +3,17 @@ import { giftInputSchema } from "@/server/validation/gifts";
 
 type Actor = { userId: string; ipAddress?: string | null };
 
-export async function listRecentGifts() {
-  const result = await query<{
-    id: string;
-    donor_name: string;
-    amount_cents: number;
-    gift_date: string;
-    fund_name: string;
-    campaign_name: string | null;
-  }>(
+export type RecentGiftRow = {
+  id: string;
+  donor_name: string;
+  amount_cents: number;
+  gift_date: string;
+  fund_name: string;
+  campaign_name: string | null;
+};
+
+export async function listRecentGifts(): Promise<RecentGiftRow[]> {
+  const result = await query<RecentGiftRow>(
     `select
       g.id::text,
       coalesce(d.organization_name, concat_ws(' ', d.first_name, d.last_name)) as donor_name,

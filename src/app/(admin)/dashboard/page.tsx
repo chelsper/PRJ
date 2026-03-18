@@ -9,7 +9,7 @@ export default async function DashboardPage() {
   await requireCapability("reports:read");
 
   const [donors, gifts, auditEvents] = await Promise.all([listDonors(), listRecentGifts(), recentAuditEvents()]);
-  const givingTotal = gifts.reduce((sum, gift) => sum + Number(gift.amount_cents), 0) / 100;
+  const givingTotal = gifts.reduce((sum: number, gift) => sum + Number(gift.amount_cents), 0) / 100;
 
   return (
     <div className="grid">
