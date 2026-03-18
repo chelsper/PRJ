@@ -39,8 +39,10 @@ export async function acceptInvitationAction(formData: FormData) {
   });
   await recordRateLimitEvent({ key, action: "invite_accept" });
 
+  let user: Awaited<ReturnType<typeof acceptInvitation>>;
+
   try {
-    const user = await acceptInvitation(
+    user = await acceptInvitation(
       {
         token,
         password: String(formData.get("password") ?? ""),
@@ -48,9 +50,6 @@ export async function acceptInvitationAction(formData: FormData) {
       },
       { ipAddress }
     );
-
-    await establishSession(user);
-    redirect("/dashboard");
   } catch (error) {
     await writeAuditLog({
       actorUserId: null,
@@ -63,4 +62,7 @@ export async function acceptInvitationAction(formData: FormData) {
     });
     redirect(`/invite?token=${encodeURIComponent(token)}&error=invalid`);
   }
+
+  await establishSession(user);
+  redirect("/dashboard");
 }
