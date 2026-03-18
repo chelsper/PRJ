@@ -15,7 +15,6 @@ export const giftInputSchema = z.object({
   campaignId: blankToUndefined(z.coerce.number().int().positive()),
   softCreditDonorId: blankToUndefined(z.coerce.number().int().positive()),
   parentPledgeGiftId: blankToUndefined(z.coerce.number().int().positive()),
-  allowUnlinkedPayment: z.coerce.boolean().optional().default(false),
   giftType: z.enum([
     "PLEDGE",
     "PLEDGE_PAYMENT",
@@ -41,10 +40,10 @@ export const giftInputSchema = z.object({
   const isPledgeType =
     value.giftType === "PLEDGE" || value.giftType === "MATCHING_GIFT_PLEDGE";
 
-  if (requiresParent && !value.parentPledgeGiftId && !value.allowUnlinkedPayment) {
+  if (requiresParent && !value.parentPledgeGiftId) {
     ctx.addIssue({
       code: z.ZodIssueCode.custom,
-      message: "Payment gifts must link to a parent pledge or explicitly proceed as unlinked.",
+      message: "Payment gifts must link to a parent pledge.",
       path: ["parentPledgeGiftId"]
     });
   }

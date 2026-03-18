@@ -12,10 +12,10 @@ import { createGiftAction } from "./actions";
 export default async function GiftsPage({
   searchParams
 }: {
-  searchParams: Promise<{ donorId?: string }>;
+  searchParams: Promise<{ donorId?: string; giftType?: string }>;
 }) {
   await requireCapability("gifts:read");
-  const { donorId } = await searchParams;
+  const { donorId, giftType } = await searchParams;
   const [gifts, funds, campaigns, pledges, lookupDonors] = await Promise.all([
     listRecentGifts(),
     listFunds(),
@@ -33,6 +33,10 @@ export default async function GiftsPage({
         email: donorSelection.primary_email
       }
     : null;
+  const initialGiftType =
+    giftType && ["PLEDGE", "PLEDGE_PAYMENT", "CASH", "STOCK_PROPERTY", "GIFT_IN_KIND", "MATCHING_GIFT_PLEDGE", "MATCHING_GIFT_PAYMENT"].includes(giftType)
+      ? giftType
+      : "CASH";
 
   return (
     <div className="grid grid-2">
@@ -72,7 +76,7 @@ export default async function GiftsPage({
           <ParentPledgeField
             donorFieldId="gift-donor-id"
             giftTypeFieldId="gift-type"
-            initialGiftType="CASH"
+            initialGiftType={initialGiftType}
             initialDonorId={initialDonorSelection?.id ?? null}
             initialOptions={pledges.map((pledge: PledgeOptionRow) => ({
               id: pledge.id,
@@ -85,7 +89,7 @@ export default async function GiftsPage({
           />
           <label>
             Gift type
-            <select id="gift-type" name="giftType" defaultValue="CASH" required>
+            <select id="gift-type" name="giftType" defaultValue={initialGiftType} required>
               <option value="PLEDGE">Pledge</option>
               <option value="PLEDGE_PAYMENT">Pledge Payment</option>
               <option value="CASH">Cash</option>

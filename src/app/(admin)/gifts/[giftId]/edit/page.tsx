@@ -102,7 +102,6 @@ export default async function EditGiftPage({
             initialGiftType={gift.gift_type}
             initialDonorId={gift.donor_id}
             initialValue={gift.parent_pledge_gift_id ?? ""}
-            initialAllowUnlinkedPayment={!gift.parent_pledge_gift_id && (gift.gift_type === "PLEDGE_PAYMENT" || gift.gift_type === "MATCHING_GIFT_PAYMENT")}
             initialOptions={pledges.map((pledge: PledgeOptionRow) => ({
               id: pledge.id,
               giftNumber: pledge.gift_number,

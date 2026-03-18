@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 
 type PledgeOption = {
@@ -23,8 +24,7 @@ export function ParentPledgeField({
   initialGiftType,
   initialDonorId,
   initialValue = "",
-  initialOptions = [],
-  initialAllowUnlinkedPayment = false
+  initialOptions = []
 }: {
   donorFieldId: string;
   giftTypeFieldId: string;
@@ -32,12 +32,10 @@ export function ParentPledgeField({
   initialDonorId?: string | null;
   initialValue?: string;
   initialOptions?: PledgeOption[];
-  initialAllowUnlinkedPayment?: boolean;
 }) {
   const [giftType, setGiftType] = useState(initialGiftType);
   const [donorId, setDonorId] = useState(initialDonorId ?? "");
   const [value, setValue] = useState(initialValue);
-  const [allowUnlinkedPayment, setAllowUnlinkedPayment] = useState(initialAllowUnlinkedPayment);
   const [options, setOptions] = useState<PledgeOption[]>(initialOptions);
   const [loading, setLoading] = useState(false);
 
@@ -81,7 +79,6 @@ export function ParentPledgeField({
   useEffect(() => {
     if (!visible) {
       setValue("");
-      setAllowUnlinkedPayment(false);
       return;
     }
 
@@ -134,6 +131,9 @@ export function ParentPledgeField({
     return null;
   }
 
+  const createGiftType = giftType === "MATCHING_GIFT_PAYMENT" ? "MATCHING_GIFT_PLEDGE" : "PLEDGE";
+  const warningVisible = !value;
+
   return (
     <>
       <label>
@@ -147,16 +147,33 @@ export function ParentPledgeField({
           ))}
         </select>
       </label>
-      <label className="full">
-        <span>Proceed without parent pledge</span>
-        <input
-          name="allowUnlinkedPayment"
-          type="checkbox"
-          value="true"
-          checked={allowUnlinkedPayment}
-          onChange={(event) => setAllowUnlinkedPayment(event.target.checked)}
-        />
-      </label>
+      {warningVisible ? (
+        <div className="full inline-warning">
+          <strong>Parent pledge required.</strong>
+          <p className="muted">
+            Link an existing {giftType === "MATCHING_GIFT_PAYMENT" ? "matching gift pledge" : "pledge"}, create a new parent pledge, or change the gift type.
+          </p>
+          <div className="button-row">
+            {donorId ? (
+              <Link href={`/gifts?donorId=${donorId}&giftType=${createGiftType}`} className="button-link secondary-link">
+                Create parent pledge
+              </Link>
+            ) : (
+              <span className="muted">Select a donor to create the parent pledge.</span>
+            )}
+            <button
+              type="button"
+              className="secondary"
+              onClick={() => {
+                const giftTypeField = document.getElementById(giftTypeFieldId) as HTMLSelectElement | null;
+                giftTypeField?.focus();
+              }}
+            >
+              Choose different gift type
+            </button>
+          </div>
+        </div>
+      ) : null}
     </>
   );
 }

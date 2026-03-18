@@ -205,7 +205,6 @@ async function validateParentPledge(
     donorId: number;
     giftType: GiftDetailRow["gift_type"];
     parentPledgeGiftId?: number | null;
-    allowUnlinkedPayment?: boolean;
   }
 ) {
   if (!isPaymentType(input.giftType)) {
@@ -213,11 +212,7 @@ async function validateParentPledge(
   }
 
   if (!input.parentPledgeGiftId) {
-    if (input.allowUnlinkedPayment) {
-      return null;
-    }
-
-    throw new Error("Payment gifts must link to a parent pledge or explicitly proceed as unlinked.");
+    throw new Error("Payment gifts must link to a parent pledge.");
   }
 
   const result = await client.query<{
@@ -483,8 +478,7 @@ export async function createGift(input: unknown, actor: Actor) {
     const parentPledgeGiftId = await validateParentPledge(client, {
       donorId: values.donorId,
       giftType: values.giftType,
-      parentPledgeGiftId: values.parentPledgeGiftId ?? null,
-      allowUnlinkedPayment: values.allowUnlinkedPayment
+      parentPledgeGiftId: values.parentPledgeGiftId ?? null
     });
 
     const inserted = await client.query<{ id: string }>(
@@ -561,8 +555,7 @@ export async function createGift(input: unknown, actor: Actor) {
         actor.ipAddress ?? null,
         JSON.stringify({
           before: null,
-          after,
-          unlinkedPayment: isPaymentType(values.giftType) && !parentPledgeGiftId
+          after
         })
       ]
     );
@@ -580,8 +573,7 @@ export async function updateGift(giftId: string, input: unknown, actor: Actor) {
     const nextParentPledgeGiftId = await validateParentPledge(client, {
       donorId: values.donorId,
       giftType: values.giftType,
-      parentPledgeGiftId: values.parentPledgeGiftId ?? null,
-      allowUnlinkedPayment: values.allowUnlinkedPayment
+      parentPledgeGiftId: values.parentPledgeGiftId ?? null
     });
 
     await client.query(
@@ -664,8 +656,7 @@ export async function updateGift(giftId: string, input: unknown, actor: Actor) {
         actor.ipAddress ?? null,
         JSON.stringify({
           before,
-          after,
-          unlinkedPayment: isPaymentType(values.giftType) && !nextParentPledgeGiftId
+          after
         })
       ]
     );
