@@ -29,6 +29,15 @@ update public.donors
 set donor_number = lpad((500000 + id)::text, 6, '0')
 where donor_number is null;
 
+select setval(
+  'donor_number_seq',
+  greatest(
+    500000,
+    coalesce((select max(donor_number::bigint) from public.donors where donor_number ~ '^[0-9]+$'), 500000)
+  ),
+  true
+);
+
 create unique index if not exists donors_donor_number_idx on public.donors (donor_number) where deleted_at is null;
 
 drop trigger if exists donors_set_donor_number on public.donors;
