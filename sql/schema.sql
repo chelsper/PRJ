@@ -89,6 +89,7 @@ create table if not exists donors (
   alternate_email_type varchar(50),
   primary_phone varchar(30),
   spouse_donor_id bigint references donors(id),
+  spouse_gender varchar(30),
   spouse_title varchar(20),
   spouse_first_name varchar(100),
   spouse_middle_name varchar(100),

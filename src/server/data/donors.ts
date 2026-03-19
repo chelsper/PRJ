@@ -63,6 +63,10 @@ export type DonorProfileRow = {
   spouse_name: string | null;
   spouse_donor_number: string | null;
   spouse_primary_email_record: string | null;
+  spouse_gender: string | null;
+  spouse_preferred_name_record: string | null;
+  spouse_first_name_record: string | null;
+  spouse_last_name_record: string | null;
   spouse_title: string | null;
   spouse_first_name: string | null;
   spouse_middle_name: string | null;
@@ -261,6 +265,7 @@ async function donorAuditSnapshot(client: PoolClient, donorId: number) {
       'alternate_email_type', d.alternate_email_type,
       'primary_phone', d.primary_phone,
       'spouse_donor_id', d.spouse_donor_id,
+      'spouse_gender', d.spouse_gender,
       'spouse_title', d.spouse_title,
       'spouse_first_name', d.spouse_first_name,
       'spouse_middle_name', d.spouse_middle_name,
@@ -639,6 +644,10 @@ export async function getDonorProfile(donorId: string): Promise<DonorProfileRow 
       ${linkedDonorNameSql("sp")} as spouse_name,
       sp.donor_number as spouse_donor_number,
       sp.primary_email::text as spouse_primary_email_record,
+      coalesce(sp.gender, d.spouse_gender) as spouse_gender,
+      sp.preferred_name as spouse_preferred_name_record,
+      sp.first_name as spouse_first_name_record,
+      sp.last_name as spouse_last_name_record,
       d.spouse_title,
       d.spouse_first_name,
       d.spouse_middle_name,
@@ -892,6 +901,7 @@ export async function createDonor(input: unknown, actor: Actor) {
         alternate_email_type,
         primary_phone,
         spouse_donor_id,
+        spouse_gender,
         spouse_title,
         spouse_first_name,
         spouse_middle_name,
@@ -905,7 +915,7 @@ export async function createDonor(input: unknown, actor: Actor) {
         updated_by
       ) values (
         $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18,
-        $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31, $32, $33, $34, $34
+        $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31, $32, $33, $34, $35, $35
       )
       returning id::text`,
       [
@@ -933,6 +943,7 @@ export async function createDonor(input: unknown, actor: Actor) {
         values.alternateEmailType ?? null,
         values.primaryPhone ?? null,
         values.spouseDonorId ?? null,
+        values.spouseGender ?? null,
         values.spouseTitle ?? null,
         values.spouseFirstName ?? null,
         values.spouseMiddleName ?? null,
@@ -1047,16 +1058,17 @@ export async function updateDonorProfile(donorId: string, input: unknown, actor:
            alternate_email_type = $23,
            primary_phone = $24,
            spouse_donor_id = $25,
-           spouse_title = $26,
-           spouse_first_name = $27,
-           spouse_middle_name = $28,
-           spouse_last_name = $29,
-           spouse_preferred_email = $30,
-           spouse_alternate_email = $31,
-           spouse_primary_phone = $32,
-           spouse_same_address = $33,
-           notes = $34,
-           updated_by = $35
+           spouse_gender = $26,
+           spouse_title = $27,
+           spouse_first_name = $28,
+           spouse_middle_name = $29,
+           spouse_last_name = $30,
+           spouse_preferred_email = $31,
+           spouse_alternate_email = $32,
+           spouse_primary_phone = $33,
+           spouse_same_address = $34,
+           notes = $35,
+           updated_by = $36
        where id = $1`,
       [
         Number(donorId),
@@ -1084,6 +1096,7 @@ export async function updateDonorProfile(donorId: string, input: unknown, actor:
         values.alternateEmailType ?? null,
         values.primaryPhone ?? null,
         values.spouseDonorId ?? null,
+        values.spouseGender ?? null,
         values.spouseTitle ?? null,
         values.spouseFirstName ?? null,
         values.spouseMiddleName ?? null,
@@ -1338,6 +1351,7 @@ export async function promoteSpouseToDonor(donorId: string, actor: Actor) {
   return transaction(async (client) => {
     const source = await client.query<{
       spouse_donor_id: string | null;
+      spouse_gender: string | null;
       spouse_title: string | null;
       spouse_first_name: string | null;
       spouse_middle_name: string | null;
@@ -1349,6 +1363,7 @@ export async function promoteSpouseToDonor(donorId: string, actor: Actor) {
     }>(
       `select
         spouse_donor_id::text,
+        spouse_gender,
         spouse_title,
         spouse_first_name,
         spouse_middle_name,
@@ -1379,6 +1394,7 @@ export async function promoteSpouseToDonor(donorId: string, actor: Actor) {
     const inserted = await client.query<{ id: string }>(
       `insert into public.donors (
         donor_type,
+        gender,
         title,
         first_name,
         middle_name,
@@ -1388,9 +1404,10 @@ export async function promoteSpouseToDonor(donorId: string, actor: Actor) {
         primary_phone,
         created_by,
         updated_by
-      ) values ('INDIVIDUAL', $1, $2, $3, $4, $5, $6, $7, $8, $8)
+      ) values ('INDIVIDUAL', $1, $2, $3, $4, $5, $6, $7, $8, $9, $9)
       returning id::text`,
       [
+        row.spouse_gender,
         row.spouse_title,
         row.spouse_first_name,
         row.spouse_middle_name,

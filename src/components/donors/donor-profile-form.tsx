@@ -51,6 +51,7 @@ export function DonorProfileForm({
       donor.spouse_donor_id ||
         donor.spouse_first_name ||
         donor.spouse_last_name ||
+        donor.spouse_gender ||
         donor.spouse_preferred_email ||
         donor.spouse_primary_phone
     )
@@ -60,6 +61,7 @@ export function DonorProfileForm({
       Boolean(
         donor.spouse_first_name ||
           donor.spouse_last_name ||
+          donor.spouse_gender ||
           donor.spouse_preferred_email ||
           donor.spouse_primary_phone
       )
@@ -316,6 +318,17 @@ export function DonorProfileForm({
                         </select>
                       </label>
                       <label>
+                        Spouse gender
+                        <select name="spouseGender" defaultValue={donor.spouse_gender ?? ""}>
+                          <option value="">None</option>
+                          {genderOptions.map((option) => (
+                            <option key={option.id} value={option.value}>
+                              {option.label}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                      <label>
                         Spouse first name
                         <input name="spouseFirstName" defaultValue={donor.spouse_first_name ?? ""} />
                       </label>
@@ -352,6 +365,7 @@ export function DonorProfileForm({
                   ) : (
                     <>
                       <input type="hidden" name="spouseTitle" value={donor.spouse_title ?? ""} />
+                      <input type="hidden" name="spouseGender" value={donor.spouse_gender ?? ""} />
                       <input type="hidden" name="spouseFirstName" value={donor.spouse_first_name ?? ""} />
                       <input type="hidden" name="spouseMiddleName" value={donor.spouse_middle_name ?? ""} />
                       <input type="hidden" name="spouseLastName" value={donor.spouse_last_name ?? ""} />
@@ -366,6 +380,7 @@ export function DonorProfileForm({
                 <>
                   <input type="hidden" name="spouseDonorId" value="" />
                   <input type="hidden" name="spouseTitle" value="" />
+                  <input type="hidden" name="spouseGender" value="" />
                   <input type="hidden" name="spouseFirstName" value="" />
                   <input type="hidden" name="spouseMiddleName" value="" />
                   <input type="hidden" name="spouseLastName" value="" />
@@ -380,6 +395,7 @@ export function DonorProfileForm({
             <>
               <input type="hidden" name="spouseDonorId" value={donor.spouse_donor_id ?? ""} />
               <input type="hidden" name="spouseTitle" value={donor.spouse_title ?? ""} />
+              <input type="hidden" name="spouseGender" value={donor.spouse_gender ?? ""} />
               <input type="hidden" name="spouseFirstName" value={donor.spouse_first_name ?? ""} />
               <input type="hidden" name="spouseMiddleName" value={donor.spouse_middle_name ?? ""} />
               <input type="hidden" name="spouseLastName" value={donor.spouse_last_name ?? ""} />
@@ -394,6 +410,7 @@ export function DonorProfileForm({
             <>
               <input type="hidden" name="spouseDonorId" value={donor.spouse_donor_id ?? ""} />
               <input type="hidden" name="spouseTitle" value={donor.spouse_title ?? ""} />
+              <input type="hidden" name="spouseGender" value={donor.spouse_gender ?? ""} />
               <input type="hidden" name="spouseFirstName" value={donor.spouse_first_name ?? ""} />
               <input type="hidden" name="spouseMiddleName" value={donor.spouse_middle_name ?? ""} />
               <input type="hidden" name="spouseLastName" value={donor.spouse_last_name ?? ""} />

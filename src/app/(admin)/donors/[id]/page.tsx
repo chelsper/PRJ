@@ -42,6 +42,59 @@ export default async function DonorProfilePage({
   params: Promise<{ id: string }>;
   searchParams: Promise<{ tab?: string }>;
 }) {
+  function displayFirstName(preferredName: string | null | undefined, firstName: string | null | undefined) {
+    return preferredName?.trim() || firstName?.trim() || null;
+  }
+
+  function computeHouseholdName(
+    donor: NonNullable<Awaited<ReturnType<typeof getDonorProfile>>>
+  ) {
+    if (donor.donor_type !== "INDIVIDUAL") {
+      return null;
+    }
+
+    const hasSpouseData =
+      Boolean(donor.spouse_donor_id) ||
+      Boolean(donor.spouse_first_name || donor.spouse_last_name || donor.spouse_preferred_email || donor.spouse_primary_phone);
+
+    if (!hasSpouseData) {
+      return null;
+    }
+
+    const donorFirst = displayFirstName(donor.preferred_name, donor.first_name);
+    const donorLast = donor.last_name?.trim() || null;
+    const spouseFirst = donor.spouse_donor_id
+      ? displayFirstName(donor.spouse_preferred_name_record, donor.spouse_first_name_record)
+      : displayFirstName(null, donor.spouse_first_name);
+    const spouseLast = donor.spouse_donor_id
+      ? donor.spouse_last_name_record?.trim() || null
+      : donor.spouse_last_name?.trim() || null;
+
+    if (!donorFirst || !donorLast || !spouseFirst || !spouseLast) {
+      return null;
+    }
+
+    const donorDisplay = { first: donorFirst, last: donorLast, gender: donor.gender };
+    const spouseDisplay = { first: spouseFirst, last: spouseLast, gender: donor.spouse_gender };
+
+    let left = donorDisplay;
+    let right = spouseDisplay;
+
+    if (donor.gender === "MALE" && donor.spouse_gender === "FEMALE") {
+      left = spouseDisplay;
+      right = donorDisplay;
+    } else if (donor.gender === "FEMALE" && donor.spouse_gender === "MALE") {
+      left = donorDisplay;
+      right = spouseDisplay;
+    }
+
+    if (left.last === right.last) {
+      return `${left.first} & ${right.first} ${left.last}`;
+    }
+
+    return `${left.first} ${left.last} & ${right.first} ${right.last}`;
+  }
+
   const session = await requireCapability("donors:read");
   const requestHeaders = await headers();
   const ipAddress = requestHeaders.get("x-forwarded-for")?.split(",")[0]?.trim() ?? null;
@@ -88,6 +141,7 @@ export default async function DonorProfilePage({
     .trim();
   const organizationMainContactName =
     donor.organization_contact_name ?? (derivedOrganizationContactName || "No main contact");
+  const householdName = computeHouseholdName(donor);
 
   return (
       <div className="grid donor-page-grid">
@@ -102,6 +156,7 @@ export default async function DonorProfilePage({
         <p className="muted">
           Donor ID {donor.donor_number ?? "Pending"} · {donor.donor_type === "ORGANIZATION" ? "Organization" : "Individual"}
         </p>
+        {householdName ? <p className="muted">Household: {householdName}</p> : null}
         {giftWriteSession ? (
           <div className="button-row">
             <Link href={`/gifts?donorId=${donor.id}`} className="button-link">

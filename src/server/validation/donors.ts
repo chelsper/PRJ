@@ -46,6 +46,7 @@ export const donorInputSchema = z
     primaryPhone: blankToUndefined(z.string().trim().max(30)),
     spouseDonorId: blankToUndefined(z.coerce.number().int().positive()),
     spouseTitle: blankToUndefined(z.string().trim().max(20)),
+    spouseGender: blankToUndefined(z.string().trim().max(30)),
     spouseFirstName: blankToUndefined(z.string().trim().max(100)),
     spouseMiddleName: blankToUndefined(z.string().trim().max(100)),
     spouseLastName: blankToUndefined(z.string().trim().max(100)),
