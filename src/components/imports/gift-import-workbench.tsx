@@ -1,8 +1,6 @@
 "use client";
 
-import { useMemo, useState, type ChangeEvent } from "react";
-
-import { normalizeImportHeader, parseImportCsv } from "@/components/imports/import-workbench-utils";
+import { CsvImportWorkbench } from "@/components/imports/csv-import-workbench";
 
 type GiftImportTargetField =
   | "donor_name"
@@ -67,138 +65,15 @@ const headerGuessMap: Record<string, GiftImportTargetField> = {
 };
 
 export function GiftImportWorkbench() {
-  const [fileName, setFileName] = useState("");
-  const [headers, setHeaders] = useState<string[]>([]);
-  const [rows, setRows] = useState<Array<Record<string, string>>>([]);
-  const [mapping, setMapping] = useState<MappingRecord>({});
-
-  const mappedPreviewRows = useMemo(() => {
-    return rows.slice(0, 8).map((row) =>
-      targetFieldOptions.reduce<Record<string, string>>((accumulator, field) => {
-        const sourceHeader = Object.entries(mapping).find(([, target]) => target === field.value)?.[0];
-        accumulator[field.label] = sourceHeader ? row[sourceHeader] ?? "" : "";
-        return accumulator;
-      }, {})
-    );
-  }, [mapping, rows]);
-
-  async function handleFileChange(event: ChangeEvent<HTMLInputElement>) {
-    const file = event.target.files?.[0];
-
-    if (!file) {
-      setFileName("");
-      setHeaders([]);
-      setRows([]);
-      setMapping({});
-      return;
-    }
-
-    const text = await file.text();
-    const parsed = parseImportCsv(text);
-
-    setFileName(file.name);
-    setHeaders(parsed.headers);
-    setRows(parsed.rows);
-    setMapping(
-      parsed.headers.reduce<MappingRecord>((accumulator, header) => {
-        accumulator[header] = headerGuessMap[normalizeImportHeader(header)] ?? "";
-        return accumulator;
-      }, {})
-    );
-  }
-
   return (
-    <div className="grid">
-      <section className="card">
-        <p className="eyebrow">Gift Import</p>
-        <h1>Upload and map a CSV</h1>
-        <p className="muted">
-          Upload a gift file, review the detected columns, and map them to Pink Ribbon CRM gift fields before moving into import validation.
-        </p>
-        <label className="full">
-          CSV file
-          <input type="file" accept=".csv,text/csv" onChange={handleFileChange} />
-        </label>
-        {fileName ? <p className="muted top-gap">Loaded file: {fileName} · {rows.length} data rows detected.</p> : null}
-      </section>
-
-      {headers.length > 0 ? (
-        <>
-          <section className="table-shell">
-            <p className="eyebrow">Column Mapping</p>
-            <p className="muted">Map each incoming CSV column to a CRM field, or leave it ignored.</p>
-            <div className="table-scroll">
-              <table>
-                <thead>
-                  <tr>
-                    <th>CSV column</th>
-                    <th>Map to CRM field</th>
-                    <th>Sample value</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {headers.map((header) => (
-                    <tr key={header}>
-                      <td>{header}</td>
-                      <td>
-                        <select
-                          value={mapping[header] ?? ""}
-                          onChange={(event) =>
-                            setMapping((current) => ({
-                              ...current,
-                              [header]: event.target.value as GiftImportTargetField | ""
-                            }))
-                          }
-                        >
-                          <option value="">Ignore</option>
-                          {targetFieldOptions.map((field) => (
-                            <option key={field.value} value={field.value}>
-                              {field.label}
-                            </option>
-                          ))}
-                        </select>
-                      </td>
-                      <td>{rows[0]?.[header] ?? ""}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </section>
-
-          <section className="table-shell">
-            <p className="eyebrow">Import Preview</p>
-            <p className="muted">Preview how the first rows line up after mapping before import validation and duplicate checks.</p>
-            <div className="table-scroll">
-              <table>
-                <thead>
-                  <tr>
-                    {targetFieldOptions
-                      .filter((field) => Object.values(mapping).includes(field.value))
-                      .map((field) => (
-                        <th key={field.value}>{field.label}</th>
-                      ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {mappedPreviewRows.map((row, index) => (
-                    <tr key={`preview-${index}`}>
-                      {targetFieldOptions
-                        .filter((field) => Object.values(mapping).includes(field.value))
-                        .map((field) => (
-                          <td key={`${field.value}-${index}`}>{row[field.label] || "—"}</td>
-                        ))}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-            <p className="muted top-gap">
-              This step prepares the mapping only. Final import validation, donor matching, and record creation can be added on top of this workflow next.
-            </p>
-          </section>
-        </>
-      ) : null}
-    </div>
+    <CsvImportWorkbench<GiftImportTargetField>
+      eyebrow="Gift Import"
+      description="Upload a gift file, review the detected columns, and map them to Pink Ribbon CRM gift fields before moving into import validation."
+      mappingDescription="Map each incoming CSV column to a CRM field, or leave it ignored."
+      previewDescription="Preview how the first rows line up after mapping before import validation and duplicate checks."
+      footerNote="This step prepares the mapping only. Final import validation, donor matching, and record creation can be added on top of this workflow next."
+      targetFieldOptions={targetFieldOptions}
+      headerGuessMap={headerGuessMap}
+    />
   );
 }
