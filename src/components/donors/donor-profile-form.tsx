@@ -15,6 +15,7 @@ export function DonorProfileForm({
   connections,
   relationships,
   titleOptions,
+  genderOptions,
   emailTypeOptions,
   addressTypeOptions,
   stateOptions,
@@ -30,6 +31,7 @@ export function DonorProfileForm({
   connections: DonorConnectionRow[];
   relationships: DonorOrganizationRelationshipRow[];
   titleOptions: ConfigLookupOption[];
+  genderOptions: ConfigLookupOption[];
   emailTypeOptions: ConfigLookupOption[];
   addressTypeOptions: ConfigLookupOption[];
   stateOptions: ConfigLookupOption[];
@@ -105,6 +107,17 @@ export function DonorProfileForm({
                 </select>
               </label>
               <label>
+                Gender
+                <select name="gender" defaultValue={donor.gender ?? ""}>
+                  <option value="">None</option>
+                  {genderOptions.map((option) => (
+                    <option key={option.id} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label>
                 First name
                 <input name="firstName" defaultValue={donor.first_name ?? ""} />
               </label>
@@ -136,6 +149,7 @@ export function DonorProfileForm({
                 <input name="organizationEmail" type="email" defaultValue={donor.organization_email ?? ""} />
               </label>
               <input type="hidden" name="title" value={donor.title ?? ""} />
+              <input type="hidden" name="gender" value={donor.gender ?? ""} />
               <input type="hidden" name="firstName" value={donor.first_name ?? ""} />
               <input type="hidden" name="middleName" value={donor.middle_name ?? ""} />
               <input type="hidden" name="lastName" value={donor.last_name ?? ""} />

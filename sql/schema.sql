@@ -67,6 +67,7 @@ create table if not exists donors (
   donor_number varchar(6) unique,
   donor_type text not null check (donor_type in ('INDIVIDUAL', 'ORGANIZATION')),
   title varchar(20),
+  gender varchar(30),
   first_name varchar(100),
   middle_name varchar(100),
   last_name varchar(100),

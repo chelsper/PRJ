@@ -29,6 +29,7 @@ import {
 
 const setLabels: Record<ManagedOptionSetKey, string> = {
   titles: "Titles",
+  genders: "Genders",
   email_types: "Email Types",
   address_types: "Address Types",
   states: "States",

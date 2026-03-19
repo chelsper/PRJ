@@ -34,6 +34,7 @@ export type ManagedAppealRow = {
 
 export const managedOptionSets = [
   "titles",
+  "genders",
   "email_types",
   "address_types",
   "states",

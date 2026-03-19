@@ -76,6 +76,7 @@ export async function updateDonorProfileAction(formData: FormData) {
     {
       donorType: formData.get("donorType"),
       title: formData.get("title"),
+      gender: formData.get("gender"),
       firstName: formData.get("firstName"),
       middleName: formData.get("middleName"),
       lastName: formData.get("lastName"),
@@ -234,6 +235,7 @@ export async function promoteSpouseToDonorAction(formData: FormData) {
     {
       donorType: formData.get("donorType"),
       title: formData.get("title"),
+      gender: formData.get("gender"),
       firstName: formData.get("firstName"),
       middleName: formData.get("middleName"),
       lastName: formData.get("lastName"),

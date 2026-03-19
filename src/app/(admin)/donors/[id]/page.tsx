@@ -451,6 +451,7 @@ export default async function DonorProfilePage({
           connections={connections}
           relationships={relationships}
           titleOptions={optionSets.titles}
+          genderOptions={optionSets.genders}
           emailTypeOptions={optionSets.email_types}
               addressTypeOptions={optionSets.address_types}
               stateOptions={optionSets.states}

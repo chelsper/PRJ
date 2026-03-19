@@ -22,6 +22,7 @@ export const donorInputSchema = z
   .object({
     donorType: z.enum(["INDIVIDUAL", "ORGANIZATION"]),
     title: blankToUndefined(z.string().trim().max(20)),
+    gender: blankToUndefined(z.string().trim().max(30)),
     firstName: blankToUndefined(z.string().trim().max(100)),
     middleName: blankToUndefined(z.string().trim().max(100)),
     lastName: blankToUndefined(z.string().trim().max(100)),
