@@ -279,7 +279,11 @@ export async function promoteSpouseToDonorAction(formData: FormData) {
     { userId: session.userId, ipAddress }
   );
 
-  await promoteSpouseToDonor(donorId, { userId: session.userId, ipAddress });
+  await promoteSpouseToDonor(donorId, {
+    userId: session.userId,
+    ipAddress,
+    softCreditHistory: formData.get("softCreditSpouseHistory") === "on"
+  });
 
   revalidatePath(`/donors/${donorId}`);
   redirect(`/donors/${donorId}`);

@@ -4,6 +4,7 @@ import { donorInputSchema } from "@/server/validation/donors";
 import type { PoolClient } from "pg";
 
 type Actor = { userId: string; ipAddress?: string | null };
+type PromoteSpouseActor = Actor & { softCreditHistory?: boolean };
 
 export type DonorListRow = {
   id: string;
@@ -1347,7 +1348,7 @@ async function copyPrimaryAddressToDonor(client: PoolClient, sourceDonorId: numb
   );
 }
 
-export async function promoteSpouseToDonor(donorId: string, actor: Actor) {
+export async function promoteSpouseToDonor(donorId: string, actor: PromoteSpouseActor) {
   return transaction(async (client) => {
     const source = await client.query<{
       spouse_donor_id: string | null;
@@ -1433,6 +1434,45 @@ export async function promoteSpouseToDonor(donorId: string, actor: Actor) {
       [Number(donorId), Number(spouseId), actor.userId]
     );
 
+    let softCreditedGiftCount = 0;
+
+    if (actor.softCreditHistory) {
+      const insertedSoftCredits = await client.query<{ count: string }>(
+        `with inserted as (
+          insert into public.soft_credits (
+            gift_id,
+            donor_id,
+            amount_cents,
+            credit_type,
+            created_by,
+            updated_by
+          )
+          select
+            g.id,
+            $2,
+            g.amount_cents,
+            'MANUAL',
+            $3,
+            $3
+          from public.gifts g
+          where g.donor_id = $1
+            and g.deleted_at is null
+            and not exists (
+              select 1
+              from public.soft_credits sc
+              where sc.gift_id = g.id
+                and sc.donor_id = $2
+            )
+          returning 1
+        )
+        select count(*)::text as count
+        from inserted`,
+        [Number(donorId), Number(spouseId), actor.userId]
+      );
+
+      softCreditedGiftCount = Number(insertedSoftCredits.rows[0]?.count ?? 0);
+    }
+
     await client.query(
       `insert into public.audit_log (actor_user_id, action, entity_type, entity_id, status, ip_address, metadata)
        values ($1, 'donor.spouse.promote', 'donor', $2, 'success', $3, $4::jsonb)`,
@@ -1440,7 +1480,11 @@ export async function promoteSpouseToDonor(donorId: string, actor: Actor) {
         actor.userId,
         donorId,
         actor.ipAddress ?? null,
-        JSON.stringify({ spouseDonorId: spouseId })
+        JSON.stringify({
+          spouseDonorId: spouseId,
+          softCreditHistory: Boolean(actor.softCreditHistory),
+          softCreditedGiftCount
+        })
       ]
     );
 

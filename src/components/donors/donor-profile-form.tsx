@@ -356,6 +356,10 @@ export function DonorProfileForm({
                         <input type="checkbox" name="spouseSameAddress" defaultChecked={donor.spouse_same_address} />
                         <span>Address is the same</span>
                       </label>
+                      <label className="toggle-row full">
+                        <input type="checkbox" name="softCreditSpouseHistory" />
+                        <span>Would you like to soft-credit your spouse on all your previous giving?</span>
+                      </label>
                       <div className="full button-row">
                         <button type="submit" formAction={promoteSpouseAction} className="secondary">
                           Promote spouse to full donor record
@@ -373,6 +377,7 @@ export function DonorProfileForm({
                       <input type="hidden" name="spouseAlternateEmail" value={donor.spouse_alternate_email ?? ""} />
                       <input type="hidden" name="spousePrimaryPhone" value={donor.spouse_primary_phone ?? ""} />
                       <input type="hidden" name="spouseSameAddress" value={donor.spouse_same_address ? "on" : ""} />
+                      <input type="hidden" name="softCreditSpouseHistory" value="" />
                     </>
                   )}
                 </>
@@ -388,6 +393,7 @@ export function DonorProfileForm({
                   <input type="hidden" name="spouseAlternateEmail" value="" />
                   <input type="hidden" name="spousePrimaryPhone" value="" />
                   <input type="hidden" name="spouseSameAddress" value="" />
+                  <input type="hidden" name="softCreditSpouseHistory" value="" />
                 </>
               )}
             </div>
@@ -403,6 +409,7 @@ export function DonorProfileForm({
               <input type="hidden" name="spouseAlternateEmail" value={donor.spouse_alternate_email ?? ""} />
               <input type="hidden" name="spousePrimaryPhone" value={donor.spouse_primary_phone ?? ""} />
               <input type="hidden" name="spouseSameAddress" value={donor.spouse_same_address ? "on" : ""} />
+              <input type="hidden" name="softCreditSpouseHistory" value="" />
             </>
           )}
             </>
@@ -418,6 +425,7 @@ export function DonorProfileForm({
               <input type="hidden" name="spouseAlternateEmail" value={donor.spouse_alternate_email ?? ""} />
               <input type="hidden" name="spousePrimaryPhone" value={donor.spouse_primary_phone ?? ""} />
               <input type="hidden" name="spouseSameAddress" value={donor.spouse_same_address ? "on" : ""} />
+              <input type="hidden" name="softCreditSpouseHistory" value="" />
             </>
           )}
           <div className="full conditional-block">
