@@ -1,3 +1,4 @@
+import Link from "next/link";
 import type { DonorLookupOption } from "@/components/donors/donor-lookup";
 import { requireCapability } from "@/server/auth/permissions";
 import { DonorLookup } from "@/components/donors/donor-lookup";
@@ -190,7 +191,15 @@ export default async function GiftsPage({
             {gifts.map((gift: RecentGiftRow) => (
               <tr key={gift.id}>
                 <td>{gift.gift_date}</td>
-                <td>{gift.donor_name}</td>
+                <td>
+                  {gift.donor_id ? (
+                    <Link href={`/donors/${gift.donor_id}`} className="table-link">
+                      {gift.donor_name}
+                    </Link>
+                  ) : (
+                    gift.donor_name
+                  )}
+                </td>
                 <td>{formatGiftTypeLabel(gift.gift_type)}</td>
                 <td>{gift.fund_name}</td>
                 <td>${(gift.amount_cents / 100).toLocaleString()}</td>

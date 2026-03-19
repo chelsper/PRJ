@@ -49,7 +49,7 @@ export function PaymentMethodFields({
     <>
       <input type="hidden" name="checkDate" value="" />
       <label>
-        Reference number
+        Reference
         <input name="referenceNumber" defaultValue={initialReferenceNumber} />
       </label>
     </>

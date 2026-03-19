@@ -39,6 +39,7 @@ export async function createGiftAction(formData: FormData) {
 
   revalidatePath("/gifts");
   revalidatePath("/dashboard");
+  redirect("/gifts");
 }
 
 export async function updateGiftAction(formData: FormData) {
