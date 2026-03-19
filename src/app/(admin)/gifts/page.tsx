@@ -11,6 +11,27 @@ import { listCampaigns, listFunds, type LookupRow } from "@/server/data/lookups"
 
 import { createGiftAction } from "./actions";
 
+function formatGiftTypeLabel(
+  giftType: "PLEDGE" | "PLEDGE_PAYMENT" | "CASH" | "STOCK_PROPERTY" | "GIFT_IN_KIND" | "MATCHING_GIFT_PLEDGE" | "MATCHING_GIFT_PAYMENT"
+) {
+  switch (giftType) {
+    case "PLEDGE":
+      return "Pledge";
+    case "PLEDGE_PAYMENT":
+      return "Pledge Payment";
+    case "CASH":
+      return "Cash";
+    case "STOCK_PROPERTY":
+      return "Stock/Property";
+    case "GIFT_IN_KIND":
+      return "Gift-in-Kind";
+    case "MATCHING_GIFT_PLEDGE":
+      return "Matching Gift Pledge";
+    case "MATCHING_GIFT_PAYMENT":
+      return "Matching Gift Payment";
+  }
+}
+
 export default async function GiftsPage({
   searchParams
 }: {
@@ -158,7 +179,6 @@ export default async function GiftsPage({
         <table>
           <thead>
             <tr>
-              <th>Gift ID</th>
               <th>Date</th>
               <th>Donor</th>
               <th>Gift type</th>
@@ -169,10 +189,9 @@ export default async function GiftsPage({
           <tbody>
             {gifts.map((gift: RecentGiftRow) => (
               <tr key={gift.id}>
-                <td>{gift.gift_number ?? gift.id}</td>
                 <td>{gift.gift_date}</td>
                 <td>{gift.donor_name}</td>
-                <td>{gift.gift_type.replaceAll("_", " ")}</td>
+                <td>{formatGiftTypeLabel(gift.gift_type)}</td>
                 <td>{gift.fund_name}</td>
                 <td>${(gift.amount_cents / 100).toLocaleString()}</td>
               </tr>
