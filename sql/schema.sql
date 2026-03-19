@@ -183,6 +183,7 @@ create table if not exists gifts (
   payment_method text check (payment_method in ('ACH', 'CARD', 'CHECK', 'CASH', 'WIRE', 'OTHER')),
   reference_number varchar(100),
   receipt_amount_cents integer,
+  fair_market_value_cents integer,
   receipt_sent boolean not null default false,
   receipt_sent_at timestamptz,
   receipt_sent_by_user_id bigint references users(id),
