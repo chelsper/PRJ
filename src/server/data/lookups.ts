@@ -23,3 +23,14 @@ export async function listCampaigns(): Promise<LookupRow[]> {
 
   return result.rows;
 }
+
+export async function listAppeals(): Promise<LookupRow[]> {
+  const result = await query<LookupRow>(
+    `select id::text, name
+     from public.appeals
+     where archived_at is null
+     order by name asc`
+  );
+
+  return result.rows;
+}

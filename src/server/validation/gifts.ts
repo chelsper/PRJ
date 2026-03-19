@@ -37,6 +37,7 @@ export const giftInputSchema = z.object({
   donorId: z.coerce.number().int().positive(),
   fundId: z.coerce.number().int().positive(),
   campaignId: blankToUndefined(z.coerce.number().int().positive()),
+  appealId: blankToUndefined(z.coerce.number().int().positive()),
   softCreditDonorId: blankToUndefined(z.coerce.number().int().positive()),
   parentPledgeGiftId: blankToUndefined(z.coerce.number().int().positive()),
   giftType: z.enum([

@@ -22,6 +22,7 @@ export type RecentGiftRow = {
   gift_date: string;
   fund_name: string;
   campaign_name: string | null;
+  appeal_name: string | null;
   parent_pledge_gift_id: string | null;
 };
 
@@ -31,6 +32,7 @@ export type GiftDetailRow = {
   donor_id: string;
   fund_id: string;
   campaign_id: string | null;
+  appeal_id: string | null;
   soft_credit_donor_id: string | null;
   parent_pledge_gift_id: string | null;
   gift_type:
@@ -83,6 +85,7 @@ async function giftAuditSnapshot(client: PoolClient, giftId: number) {
       'donor_id', g.donor_id,
       'fund_id', g.fund_id,
       'campaign_id', g.campaign_id,
+      'appeal_id', g.appeal_id,
       'parent_pledge_gift_id', g.parent_pledge_gift_id,
       'gift_type', g.gift_type,
       'amount_cents', g.amount_cents,
@@ -429,16 +432,19 @@ export async function listRecentGifts(): Promise<RecentGiftRow[]> {
     `select
       g.id::text,
       g.gift_number,
+      g.donor_id::text,
       coalesce(d.organization_name, concat_ws(' ', d.first_name, d.last_name)) as donor_name,
       g.gift_type,
       g.amount_cents,
       g.gift_date::text,
       f.name as fund_name,
-      c.name as campaign_name
+      c.name as campaign_name,
+      a.name as appeal_name
     from public.gifts g
     inner join public.donors d on d.id = g.donor_id
     inner join public.funds f on f.id = g.fund_id
     left join public.campaigns c on c.id = g.campaign_id
+    left join public.appeals a on a.id = g.appeal_id
     where g.deleted_at is null
     order by g.gift_date desc, g.created_at desc
     limit 100`
@@ -455,6 +461,7 @@ export async function getGiftById(giftId: string): Promise<GiftDetailRow | null>
       g.donor_id::text,
       g.fund_id::text,
       g.campaign_id::text,
+      g.appeal_id::text,
       sc.donor_id::text as soft_credit_donor_id,
       g.parent_pledge_gift_id::text,
       g.gift_type,
@@ -515,6 +522,7 @@ export async function createGift(input: unknown, actor: Actor) {
         donor_id,
         fund_id,
         campaign_id,
+        appeal_id,
         parent_pledge_gift_id,
         gift_type,
         amount_cents,
@@ -531,12 +539,13 @@ export async function createGift(input: unknown, actor: Actor) {
         notes,
         created_by,
         updated_by
-      ) values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $18)
+      ) values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $19)
       returning id::text`,
       [
         values.donorId,
         values.fundId,
         values.campaignId ?? null,
+        values.appealId ?? null,
         parentPledgeGiftId,
         values.giftType,
         amountCents,
@@ -615,31 +624,33 @@ export async function updateGift(giftId: string, input: unknown, actor: Actor) {
        set donor_id = $2,
            fund_id = $3,
            campaign_id = $4,
-           parent_pledge_gift_id = $5,
-           gift_type = $6::varchar(30),
-           amount_cents = $7,
-           gift_date = $8,
-           pledge_start_date = $9,
-           expected_fulfillment_date = $10,
-           installment_count = $11,
-           installment_frequency = $12,
+           appeal_id = $5,
+           parent_pledge_gift_id = $6,
+           gift_type = $7::varchar(30),
+           amount_cents = $8,
+           gift_date = $9,
+           pledge_start_date = $10,
+           expected_fulfillment_date = $11,
+           installment_count = $12,
+           installment_frequency = $13,
            pledge_status = case
-             when $6::text in ('PLEDGE', 'MATCHING_GIFT_PLEDGE') and pledge_status in ('WRITTEN_OFF', 'CANCELLED') then pledge_status
-             when $6::text in ('PLEDGE', 'MATCHING_GIFT_PLEDGE') then coalesce(pledge_status, 'ACTIVE')
+             when $7::text in ('PLEDGE', 'MATCHING_GIFT_PLEDGE') and pledge_status in ('WRITTEN_OFF', 'CANCELLED') then pledge_status
+             when $7::text in ('PLEDGE', 'MATCHING_GIFT_PLEDGE') then coalesce(pledge_status, 'ACTIVE')
              else null
            end,
-           payment_method = $13,
-           receipt_amount_cents = $14,
-           check_date = $15,
-           reference_number = $16,
-           notes = $17,
-           updated_by = $18
+           payment_method = $14,
+           receipt_amount_cents = $15,
+           check_date = $16,
+           reference_number = $17,
+           notes = $18,
+           updated_by = $19
        where id = $1`,
       [
         Number(giftId),
         values.donorId,
         values.fundId,
         values.campaignId ?? null,
+        values.appealId ?? null,
         nextParentPledgeGiftId,
         values.giftType,
         Math.round(values.amount * 100),

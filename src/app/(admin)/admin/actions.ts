@@ -15,6 +15,7 @@ function adminRedirect(path = "/admin/configurations") {
   revalidatePath("/admin/configurations");
   revalidatePath("/gifts");
   revalidatePath("/donors");
+  revalidatePath("/imports");
   redirect(path);
 }
 
@@ -121,6 +122,38 @@ export async function createCampaignAction(formData: FormData) {
   adminRedirect();
 }
 
+export async function createAppealAction(formData: FormData) {
+  await assertSameOrigin();
+  const session = await requireCapability("users:manage");
+  const requestHeaders = await headers();
+  const ipAddress = requestHeaders.get("x-forwarded-for")?.split(",")[0]?.trim() ?? null;
+
+  const name = String(formData.get("name") ?? "").trim();
+  const code = String(formData.get("code") ?? "").trim() || null;
+
+  if (!name) {
+    adminRedirect("/admin/configurations?error=appeal_name");
+  }
+
+  await query(
+    `insert into public.appeals (name, code)
+     values ($1, $2)`,
+    [name, code]
+  );
+
+  await writeAuditLog({
+    actorUserId: session.userId,
+    action: "config.appeal.create",
+    entityType: "appeal",
+    entityId: null,
+    status: "success",
+    ipAddress,
+    metadata: { name, code }
+  });
+
+  adminRedirect();
+}
+
 export async function updateCampaignAction(formData: FormData) {
   await assertSameOrigin();
   const session = await requireCapability("users:manage");
@@ -153,6 +186,39 @@ export async function updateCampaignAction(formData: FormData) {
     status: "success",
     ipAddress,
     metadata: { name, code, startsOn, endsOn, archived }
+  });
+
+  adminRedirect();
+}
+
+export async function updateAppealAction(formData: FormData) {
+  await assertSameOrigin();
+  const session = await requireCapability("users:manage");
+  const requestHeaders = await headers();
+  const ipAddress = requestHeaders.get("x-forwarded-for")?.split(",")[0]?.trim() ?? null;
+
+  const id = String(formData.get("id") ?? "");
+  const name = String(formData.get("name") ?? "").trim();
+  const code = String(formData.get("code") ?? "").trim() || null;
+  const archived = formData.get("archived") === "on";
+
+  await query(
+    `update public.appeals
+     set name = $2,
+         code = $3,
+         archived_at = case when $4::boolean then coalesce(archived_at, now()) else null end
+     where id = $1`,
+    [Number(id), name, code, archived]
+  );
+
+  await writeAuditLog({
+    actorUserId: session.userId,
+    action: "config.appeal.update",
+    entityType: "appeal",
+    entityId: id,
+    status: "success",
+    ipAddress,
+    metadata: { name, code, archived }
   });
 
   adminRedirect();

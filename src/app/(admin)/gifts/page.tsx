@@ -8,7 +8,7 @@ import { PledgeScheduleFields } from "@/components/gifts/pledge-schedule-fields"
 import { ReceiptAmountField } from "@/components/gifts/receipt-amount-field";
 import { getDonorLookupRowsByIds } from "@/server/data/donors";
 import { listPledgeOptions, listRecentGifts, type PledgeOptionRow, type RecentGiftRow } from "@/server/data/gifts";
-import { listCampaigns, listFunds, type LookupRow } from "@/server/data/lookups";
+import { listAppeals, listCampaigns, listFunds, type LookupRow } from "@/server/data/lookups";
 
 import { createGiftAction } from "./actions";
 
@@ -40,10 +40,11 @@ export default async function GiftsPage({
 }) {
   await requireCapability("gifts:read");
   const { donorId, giftType } = await searchParams;
-  const [gifts, funds, campaigns, pledges, lookupDonors] = await Promise.all([
+  const [gifts, funds, campaigns, appeals, pledges, lookupDonors] = await Promise.all([
     listRecentGifts(),
     listFunds(),
     listCampaigns(),
+    listAppeals(),
     listPledgeOptions(),
     donorId ? getDonorLookupRowsByIds([donorId]) : Promise.resolve([])
   ]);
@@ -96,6 +97,17 @@ export default async function GiftsPage({
               {campaigns.map((campaign: LookupRow) => (
                 <option key={campaign.id} value={campaign.id}>
                   {campaign.name}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label>
+            Appeal
+            <select name="appealId">
+              <option value="">None</option>
+              {appeals.map((appeal: LookupRow) => (
+                <option key={appeal.id} value={appeal.id}>
+                  {appeal.name}
                 </option>
               ))}
             </select>

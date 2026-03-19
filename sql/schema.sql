@@ -53,6 +53,15 @@ create table if not exists campaigns (
   updated_at timestamptz not null default now()
 );
 
+create table if not exists appeals (
+  id bigint generated always as identity primary key,
+  name varchar(150) not null unique,
+  code varchar(50),
+  archived_at timestamptz,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
 create table if not exists donors (
   id bigint generated always as identity primary key,
   donor_number varchar(6) unique,
@@ -151,6 +160,7 @@ create table if not exists gifts (
   donor_id bigint not null references donors(id) on delete restrict,
   fund_id bigint not null references funds(id) on delete restrict,
   campaign_id bigint references campaigns(id) on delete restrict,
+  appeal_id bigint references appeals(id) on delete restrict,
   parent_pledge_gift_id bigint references gifts(id) on delete restrict,
   gift_type varchar(30) not null check (gift_type in (
     'PLEDGE',
@@ -349,6 +359,8 @@ drop trigger if exists funds_set_updated_at on funds;
 create trigger funds_set_updated_at before update on funds for each row execute function set_updated_at();
 drop trigger if exists campaigns_set_updated_at on campaigns;
 create trigger campaigns_set_updated_at before update on campaigns for each row execute function set_updated_at();
+drop trigger if exists appeals_set_updated_at on appeals;
+create trigger appeals_set_updated_at before update on appeals for each row execute function set_updated_at();
 drop trigger if exists donors_set_updated_at on donors;
 create trigger donors_set_updated_at before update on donors for each row execute function set_updated_at();
 drop trigger if exists donors_set_donor_number on donors;

@@ -1,16 +1,12 @@
+import { GiftImportWorkbench } from "@/components/imports/gift-import-workbench";
 import { requireCapability } from "@/server/auth/permissions";
+import { listAppeals, listCampaigns, listFunds } from "@/server/data/lookups";
 
 export default async function ImportsPage() {
-  await requireCapability("donors:write");
+  await requireCapability("gifts:write");
+  const [funds, campaigns, appeals] = await Promise.all([listFunds(), listCampaigns(), listAppeals()]);
 
   return (
-    <section className="card">
-      <p className="eyebrow">Imports</p>
-      <h1>Imports are intentionally gated</h1>
-      <p className="muted">
-        Batch import is left as a follow-up so validation, deduplication, and audit requirements can be implemented
-        before bulk donor data enters the system.
-      </p>
-    </section>
+    <GiftImportWorkbench funds={funds} campaigns={campaigns} appeals={appeals} />
   );
 }

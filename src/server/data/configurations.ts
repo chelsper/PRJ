@@ -25,6 +25,13 @@ export type ManagedCampaignRow = {
   archived_at: string | null;
 };
 
+export type ManagedAppealRow = {
+  id: string;
+  name: string;
+  code: string | null;
+  archived_at: string | null;
+};
+
 export const managedOptionSets = [
   "titles",
   "email_types",
@@ -106,6 +113,20 @@ export async function listManagedCampaigns(): Promise<ManagedCampaignRow[]> {
       ends_on::text,
       archived_at::text
      from public.campaigns
+     order by archived_at asc nulls first, name asc`
+  );
+
+  return result.rows;
+}
+
+export async function listManagedAppeals(): Promise<ManagedAppealRow[]> {
+  const result = await query<ManagedAppealRow>(
+    `select
+      id::text,
+      name,
+      code,
+      archived_at::text
+     from public.appeals
      order by archived_at asc nulls first, name asc`
   );
 

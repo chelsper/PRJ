@@ -8,7 +8,7 @@ import { ReceiptAmountField } from "@/components/gifts/receipt-amount-field";
 import { requireCapability } from "@/server/auth/permissions";
 import { getDonorLookupRowsByIds } from "@/server/data/donors";
 import { getGiftById, listPledgeInstallments, listPledgeOptions, type InstallmentRow, type PledgeOptionRow } from "@/server/data/gifts";
-import { listCampaigns, listFunds, type LookupRow } from "@/server/data/lookups";
+import { listAppeals, listCampaigns, listFunds, type LookupRow } from "@/server/data/lookups";
 
 import { updateGiftAction } from "../../actions";
 
@@ -25,10 +25,11 @@ export default async function EditGiftPage({
     notFound();
   }
 
-  const [lookupDonors, funds, campaigns, pledges, installments] = await Promise.all([
+  const [lookupDonors, funds, campaigns, appeals, pledges, installments] = await Promise.all([
     getDonorLookupRowsByIds([gift.donor_id, gift.soft_credit_donor_id ?? ""].filter(Boolean)),
     listFunds(),
     listCampaigns(),
+    listAppeals(),
     listPledgeOptions(),
     listPledgeInstallments(giftId)
   ]);
@@ -83,6 +84,17 @@ export default async function EditGiftPage({
               {campaigns.map((campaign: LookupRow) => (
                 <option key={campaign.id} value={campaign.id}>
                   {campaign.name}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label>
+            Appeal
+            <select name="appealId" defaultValue={gift.appeal_id ?? ""}>
+              <option value="">None</option>
+              {appeals.map((appeal: LookupRow) => (
+                <option key={appeal.id} value={appeal.id}>
+                  {appeal.name}
                 </option>
               ))}
             </select>
