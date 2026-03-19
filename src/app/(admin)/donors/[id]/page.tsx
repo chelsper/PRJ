@@ -155,12 +155,6 @@ export default async function DonorProfilePage({
               </article>
             </>
           ) : null}
-          {donor.donor_type === "INDIVIDUAL" ? (
-            <article className="stat">
-              <span className="muted">Primary email</span>
-              <strong className="stat-value">{donor.primary_email ?? "None"}</strong>
-            </article>
-          ) : null}
           <article className="stat">
             <span className="muted">Last gift</span>
             <strong className="stat-value">
