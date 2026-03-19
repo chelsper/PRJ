@@ -4,69 +4,83 @@ import { useMemo, useState, type ChangeEvent } from "react";
 
 import { normalizeImportHeader, parseImportCsv } from "@/components/imports/import-workbench-utils";
 
-type GiftImportTargetField =
-  | "donor_name"
-  | "donor_email"
-  | "gift_type"
-  | "amount"
-  | "receipt_amount"
-  | "gift_date"
-  | "fund"
-  | "campaign"
-  | "appeal"
-  | "payment_method"
-  | "reference"
-  | "soft_credit_name"
+type ConstituentImportTargetField =
+  | "donor_type"
+  | "title"
+  | "first_name"
+  | "middle_name"
+  | "last_name"
+  | "preferred_name"
+  | "organization_name"
+  | "primary_email"
+  | "alternate_email"
+  | "primary_phone"
+  | "address_type"
+  | "street1"
+  | "street2"
+  | "city"
+  | "state_region"
+  | "postal_code"
+  | "country"
   | "notes";
 
-type MappingRecord = Record<string, GiftImportTargetField | "">;
+type MappingRecord = Record<string, ConstituentImportTargetField | "">;
 
-const targetFieldOptions: Array<{ value: GiftImportTargetField; label: string }> = [
-  { value: "donor_name", label: "Donor name" },
-  { value: "donor_email", label: "Donor email" },
-  { value: "gift_type", label: "Gift type" },
-  { value: "amount", label: "Amount" },
-  { value: "receipt_amount", label: "Receipt amount" },
-  { value: "gift_date", label: "Gift date" },
-  { value: "fund", label: "Fund" },
-  { value: "campaign", label: "Campaign" },
-  { value: "appeal", label: "Appeal" },
-  { value: "payment_method", label: "Payment method" },
-  { value: "reference", label: "Reference" },
-  { value: "soft_credit_name", label: "Manual soft credit donor" },
+const targetFieldOptions: Array<{ value: ConstituentImportTargetField; label: string }> = [
+  { value: "donor_type", label: "Constituent type" },
+  { value: "title", label: "Title" },
+  { value: "first_name", label: "First name" },
+  { value: "middle_name", label: "Middle name" },
+  { value: "last_name", label: "Last name" },
+  { value: "preferred_name", label: "Preferred name" },
+  { value: "organization_name", label: "Organization name" },
+  { value: "primary_email", label: "Preferred email" },
+  { value: "alternate_email", label: "Additional email" },
+  { value: "primary_phone", label: "Primary phone" },
+  { value: "address_type", label: "Address type" },
+  { value: "street1", label: "Street 1" },
+  { value: "street2", label: "Street 2" },
+  { value: "city", label: "City" },
+  { value: "state_region", label: "State / Region" },
+  { value: "postal_code", label: "Postal code" },
+  { value: "country", label: "Country" },
   { value: "notes", label: "Notes" }
 ];
 
-const headerGuessMap: Record<string, GiftImportTargetField> = {
-  donor: "donor_name",
-  donorname: "donor_name",
-  donorfullname: "donor_name",
-  name: "donor_name",
-  email: "donor_email",
-  donoremail: "donor_email",
-  gifttype: "gift_type",
-  type: "gift_type",
-  amount: "amount",
-  giftamount: "amount",
-  receiptamount: "receipt_amount",
-  receiptableamount: "receipt_amount",
-  date: "gift_date",
-  giftdate: "gift_date",
-  fund: "fund",
-  campaign: "campaign",
-  appeal: "appeal",
-  paymentmethod: "payment_method",
-  payment: "payment_method",
-  reference: "reference",
-  referencenumber: "reference",
-  checknumber: "reference",
-  softcredit: "soft_credit_name",
-  softcreditdonor: "soft_credit_name",
+const headerGuessMap: Record<string, ConstituentImportTargetField> = {
+  type: "donor_type",
+  constituenttype: "donor_type",
+  donortype: "donor_type",
+  title: "title",
+  firstname: "first_name",
+  middlename: "middle_name",
+  lastname: "last_name",
+  preferredname: "preferred_name",
+  organization: "organization_name",
+  organizationname: "organization_name",
+  email: "primary_email",
+  primaryemail: "primary_email",
+  alternateemail: "alternate_email",
+  additionalemail: "alternate_email",
+  phone: "primary_phone",
+  primaryphone: "primary_phone",
+  addresstype: "address_type",
+  street1: "street1",
+  address1: "street1",
+  street2: "street2",
+  address2: "street2",
+  city: "city",
+  state: "state_region",
+  stateregion: "state_region",
+  zipcode: "postal_code",
+  postalcode: "postal_code",
+  zip: "postal_code",
+  country: "country",
   notes: "notes",
   memo: "notes"
 };
 
-export function GiftImportWorkbench() {
+export function ConstituentImportWorkbench() {
   const [fileName, setFileName] = useState("");
   const [headers, setHeaders] = useState<string[]>([]);
   const [rows, setRows] = useState<Array<Record<string, string>>>([]);
@@ -110,10 +124,10 @@ export function GiftImportWorkbench() {
   return (
     <div className="grid">
       <section className="card">
-        <p className="eyebrow">Gift Import</p>
+        <p className="eyebrow">Constituent Import</p>
         <h1>Upload and map a CSV</h1>
         <p className="muted">
-          Upload a gift file, review the detected columns, and map them to Pink Ribbon CRM gift fields before moving into import validation.
+          Upload a constituent file, review the detected columns, and map them to Pink Ribbon CRM constituent fields before moving into import validation.
         </p>
         <label className="full">
           CSV file
@@ -126,7 +140,7 @@ export function GiftImportWorkbench() {
         <>
           <section className="table-shell">
             <p className="eyebrow">Column Mapping</p>
-            <p className="muted">Map each incoming CSV column to a CRM field, or leave it ignored.</p>
+            <p className="muted">Map each incoming CSV column to a CRM constituent field, or leave it ignored.</p>
             <div className="table-scroll">
               <table>
                 <thead>
@@ -146,7 +160,7 @@ export function GiftImportWorkbench() {
                           onChange={(event) =>
                             setMapping((current) => ({
                               ...current,
-                              [header]: event.target.value as GiftImportTargetField | ""
+                              [header]: event.target.value as ConstituentImportTargetField | ""
                             }))
                           }
                         >
@@ -168,7 +182,7 @@ export function GiftImportWorkbench() {
 
           <section className="table-shell">
             <p className="eyebrow">Import Preview</p>
-            <p className="muted">Preview how the first rows line up after mapping before import validation and duplicate checks.</p>
+            <p className="muted">Preview how the first rows line up after mapping before duplicate checks and constituent creation.</p>
             <div className="table-scroll">
               <table>
                 <thead>
@@ -182,7 +196,7 @@ export function GiftImportWorkbench() {
                 </thead>
                 <tbody>
                   {mappedPreviewRows.map((row, index) => (
-                    <tr key={`preview-${index}`}>
+                    <tr key={`constituent-preview-${index}`}>
                       {targetFieldOptions
                         .filter((field) => Object.values(mapping).includes(field.value))
                         .map((field) => (
@@ -194,7 +208,7 @@ export function GiftImportWorkbench() {
               </table>
             </div>
             <p className="muted top-gap">
-              This step prepares the mapping only. Final import validation, donor matching, and record creation can be added on top of this workflow next.
+              This prepares the mapping only. Duplicate management, constituent matching, and record creation can be layered onto this workflow next.
             </p>
           </section>
         </>
