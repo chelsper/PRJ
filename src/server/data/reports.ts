@@ -166,10 +166,16 @@ export async function donorsThisYearSummary(limit?: number): Promise<DonorsThisY
       select
         d.id::text as donor_id,
         coalesce(d.organization_name, concat_ws(' ', d.first_name, d.last_name)) as donor_name,
-        nullif(string_agg(
-          distinct coalesce(sd.organization_name, concat_ws(' ', sd.first_name, sd.last_name)),
-          ', '
-        ), '') as soft_credit_donors,
+        nullif(
+          string_agg(
+            distinct coalesce(sd.organization_name, concat_ws(' ', sd.first_name, sd.last_name)),
+            ', '
+          ) filter (
+            where sd.id is not null
+              and coalesce(sd.organization_name, concat_ws(' ', sd.first_name, sd.last_name)) <> ''
+          ),
+          ''
+        ) as soft_credit_donors,
         coalesce(sum(
           case
             when g.gift_type in ('CASH', 'STOCK_PROPERTY', 'GIFT_IN_KIND', 'PLEDGE_PAYMENT', 'MATCHING_GIFT_PAYMENT')

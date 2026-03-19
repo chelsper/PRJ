@@ -3,6 +3,10 @@ import { NextRequest, NextResponse } from "next/server";
 
 import { getSessionWithCapability } from "@/server/auth/permissions";
 import { writeAuditLog } from "@/server/audit";
+import {
+  donorsThisYearExportColumns,
+  type DonorsThisYearExportColumnKey
+} from "@/server/data/report-export-columns";
 import { query } from "@/server/db";
 import { env } from "@/server/env";
 import { assertRateLimit, recordRateLimitEvent } from "@/server/security/rate-limit";
@@ -43,15 +47,47 @@ export async function GET(request: NextRequest) {
   let fileName = "donors.csv";
 
   if (report === "donors_this_year") {
-    const availableColumns = [
-      { key: "donor_name", label: "Donor Name" },
-      { key: "soft_credit_donor", label: "Soft Credit Donor" },
-      { key: "total_amount_received", label: "Total Amount Received" },
-      { key: "total_amount_pledged", label: "Total Amount Pledged" }
-    ] as const;
-    const columns = selectedColumns.length > 0 ? selectedColumns : availableColumns.map((column) => column.key);
+    const allowedColumns = new Set<string>(donorsThisYearExportColumns.map((column) => column.key));
+    const columns =
+      selectedColumns.length > 0
+        ? selectedColumns.filter((column) => allowedColumns.has(column)) as DonorsThisYearExportColumnKey[]
+        : [...donorsThisYearExportColumns.map((column) => column.key)];
     const result = await query<{
+      donor_number: string | null;
+      donor_type: string;
+      title: string | null;
+      gender: string | null;
+      first_name: string | null;
+      middle_name: string | null;
+      last_name: string | null;
+      preferred_name: string | null;
       donor_name: string;
+      household_name: string | null;
+      organization_name: string | null;
+      organization_website: string | null;
+      organization_email: string | null;
+      organization_contact_name: string | null;
+      organization_contact_email: string | null;
+      organization_contact_phone: string | null;
+      primary_email: string | null;
+      primary_email_type: string | null;
+      alternate_email: string | null;
+      alternate_email_type: string | null;
+      primary_phone: string | null;
+      address_type: string | null;
+      street1: string | null;
+      street2: string | null;
+      city: string | null;
+      state_region: string | null;
+      postal_code: string | null;
+      country: string | null;
+      spouse_name: string | null;
+      spouse_gender: string | null;
+      spouse_preferred_email: string | null;
+      spouse_primary_phone: string | null;
+      notes: string | null;
+      giving_level_display: string | null;
+      giving_level_internal: string | null;
       soft_credit_donor: string | null;
       total_amount_received: number;
       total_amount_pledged: number;
@@ -67,11 +103,138 @@ export async function GET(request: NextRequest) {
             and extract(year from g.gift_date) = extract(year from current_date)
         )
         select
+          d.donor_number,
+          d.donor_type,
+          d.title,
+          d.gender,
+          d.first_name,
+          d.middle_name,
+          d.last_name,
+          d.preferred_name,
           coalesce(d.organization_name, concat_ws(' ', d.first_name, d.last_name)) as donor_name,
-          nullif(string_agg(
-            distinct coalesce(sd.organization_name, concat_ws(' ', sd.first_name, sd.last_name)),
-            ', '
-          ), '') as soft_credit_donor,
+          case
+            when d.donor_type = 'INDIVIDUAL'
+              and (
+                d.spouse_donor_id is not null
+                or d.spouse_first_name is not null
+                or d.spouse_last_name is not null
+                or d.spouse_preferred_email is not null
+                or d.spouse_primary_phone is not null
+              )
+              and coalesce(nullif(d.preferred_name, ''), nullif(d.first_name, '')) is not null
+              and d.last_name is not null
+              and coalesce(nullif(sp.preferred_name, ''), nullif(sp.first_name, ''), nullif(d.spouse_first_name, '')) is not null
+              and coalesce(sp.last_name, d.spouse_last_name) is not null
+            then
+              case
+                when d.gender = 'MALE' and coalesce(sp.gender, d.spouse_gender) = 'FEMALE' then
+                  case
+                    when coalesce(sp.last_name, d.spouse_last_name) = d.last_name then
+                      concat(
+                        coalesce(nullif(sp.preferred_name, ''), nullif(sp.first_name, ''), nullif(d.spouse_first_name, '')),
+                        ' & ',
+                        coalesce(nullif(d.preferred_name, ''), nullif(d.first_name, '')),
+                        ' ',
+                        d.last_name
+                      )
+                    else
+                      concat(
+                        coalesce(nullif(sp.preferred_name, ''), nullif(sp.first_name, ''), nullif(d.spouse_first_name, '')),
+                        ' ',
+                        coalesce(sp.last_name, d.spouse_last_name),
+                        ' & ',
+                        coalesce(nullif(d.preferred_name, ''), nullif(d.first_name, '')),
+                        ' ',
+                        d.last_name
+                      )
+                  end
+                when d.gender = 'FEMALE' and coalesce(sp.gender, d.spouse_gender) = 'MALE' then
+                  case
+                    when coalesce(sp.last_name, d.spouse_last_name) = d.last_name then
+                      concat(
+                        coalesce(nullif(d.preferred_name, ''), nullif(d.first_name, '')),
+                        ' & ',
+                        coalesce(nullif(sp.preferred_name, ''), nullif(sp.first_name, ''), nullif(d.spouse_first_name, '')),
+                        ' ',
+                        d.last_name
+                      )
+                    else
+                      concat(
+                        coalesce(nullif(d.preferred_name, ''), nullif(d.first_name, '')),
+                        ' ',
+                        d.last_name,
+                        ' & ',
+                        coalesce(nullif(sp.preferred_name, ''), nullif(sp.first_name, ''), nullif(d.spouse_first_name, '')),
+                        ' ',
+                        coalesce(sp.last_name, d.spouse_last_name)
+                      )
+                  end
+                else
+                  case
+                    when coalesce(sp.last_name, d.spouse_last_name) = d.last_name then
+                      concat(
+                        coalesce(nullif(d.preferred_name, ''), nullif(d.first_name, '')),
+                        ' & ',
+                        coalesce(nullif(sp.preferred_name, ''), nullif(sp.first_name, ''), nullif(d.spouse_first_name, '')),
+                        ' ',
+                        d.last_name
+                      )
+                    else
+                      concat(
+                        coalesce(nullif(d.preferred_name, ''), nullif(d.first_name, '')),
+                        ' ',
+                        d.last_name,
+                        ' & ',
+                        coalesce(nullif(sp.preferred_name, ''), nullif(sp.first_name, ''), nullif(d.spouse_first_name, '')),
+                        ' ',
+                        coalesce(sp.last_name, d.spouse_last_name)
+                      )
+                  end
+              end
+            else null
+          end as household_name,
+          d.organization_name,
+          d.organization_website::text,
+          d.organization_email::text,
+          d.organization_contact_name,
+          d.organization_contact_email::text,
+          d.organization_contact_phone,
+          d.primary_email::text,
+          d.primary_email_type,
+          d.alternate_email::text,
+          d.alternate_email_type,
+          d.primary_phone,
+          a.address_type,
+          a.street1,
+          a.street2,
+          a.city,
+          a.state_region,
+          a.postal_code,
+          a.country,
+          coalesce(
+            case
+              when sp.id is not null then coalesce(sp.organization_name, concat_ws(' ', sp.first_name, sp.last_name))
+              when d.spouse_first_name is not null or d.spouse_last_name is not null then concat_ws(' ', d.spouse_first_name, d.spouse_last_name)
+              else null
+            end,
+            null
+          ) as spouse_name,
+          coalesce(sp.gender, d.spouse_gender) as spouse_gender,
+          coalesce(sp.primary_email::text, d.spouse_preferred_email::text) as spouse_preferred_email,
+          coalesce(sp.primary_phone, d.spouse_primary_phone) as spouse_primary_phone,
+          d.notes,
+          gl.giving_level_display,
+          gl.giving_level_internal,
+          nullif(
+            string_agg(
+              distinct coalesce(sd.organization_name, concat_ws(' ', sd.first_name, sd.last_name)),
+              ', '
+            ) filter (
+              where sd.id is not null
+                and coalesce(sd.organization_name, concat_ws(' ', sd.first_name, sd.last_name)) <> ''
+            ),
+            ''
+          ) as soft_credit_donor,
           coalesce(sum(
             case
               when g.gift_type in ('CASH', 'STOCK_PROPERTY', 'GIFT_IN_KIND', 'PLEDGE_PAYMENT', 'MATCHING_GIFT_PAYMENT')
@@ -88,6 +251,9 @@ export async function GET(request: NextRequest) {
           ), 0)::int as total_amount_pledged
         from current_year_gifts g
         inner join public.donors d on d.id = g.donor_id
+        left join public.donors sp on sp.id = d.spouse_donor_id
+        left join public.donor_addresses a on a.donor_id = d.id and a.is_primary = true
+        left join public.donor_current_year_giving_levels gl on gl.donor_id = d.id
         left join public.soft_credits sc on sc.gift_id = g.id
         left join public.donors sd on sd.id = sc.donor_id
         group by d.id
@@ -97,18 +263,54 @@ export async function GET(request: NextRequest) {
     rowCount = result.rows.length;
     fileName = "donors-this-year.csv";
     csv = [
-      columns.join(","),
+      columns
+        .map((column) => donorsThisYearExportColumns.find((item) => item.key === column)?.label ?? column)
+        .map((value) => `"${String(value).replaceAll('"', '""')}"`)
+        .join(","),
       ...result.rows.map((row) =>
         columns
           .map((column) => {
-            const value =
-              column === "donor_name"
-                ? row.donor_name
-                : column === "soft_credit_donor"
-                  ? row.soft_credit_donor ?? ""
-                  : column === "total_amount_received"
-                    ? (row.total_amount_received / 100).toFixed(2)
-                    : (row.total_amount_pledged / 100).toFixed(2);
+            const rowValues: Record<DonorsThisYearExportColumnKey, string> = {
+              donor_number: row.donor_number ?? "",
+              donor_type: row.donor_type,
+              title: row.title ?? "",
+              gender: row.gender ?? "",
+              first_name: row.first_name ?? "",
+              middle_name: row.middle_name ?? "",
+              last_name: row.last_name ?? "",
+              preferred_name: row.preferred_name ?? "",
+              donor_name: row.donor_name,
+              household_name: row.household_name ?? "",
+              organization_name: row.organization_name ?? "",
+              organization_website: row.organization_website ?? "",
+              organization_email: row.organization_email ?? "",
+              organization_contact_name: row.organization_contact_name ?? "",
+              organization_contact_email: row.organization_contact_email ?? "",
+              organization_contact_phone: row.organization_contact_phone ?? "",
+              primary_email: row.primary_email ?? "",
+              primary_email_type: row.primary_email_type ?? "",
+              alternate_email: row.alternate_email ?? "",
+              alternate_email_type: row.alternate_email_type ?? "",
+              primary_phone: row.primary_phone ?? "",
+              address_type: row.address_type ?? "",
+              street1: row.street1 ?? "",
+              street2: row.street2 ?? "",
+              city: row.city ?? "",
+              state_region: row.state_region ?? "",
+              postal_code: row.postal_code ?? "",
+              country: row.country ?? "",
+              spouse_name: row.spouse_name ?? "",
+              spouse_gender: row.spouse_gender ?? "",
+              spouse_preferred_email: row.spouse_preferred_email ?? "",
+              spouse_primary_phone: row.spouse_primary_phone ?? "",
+              notes: row.notes ?? "",
+              giving_level_display: row.giving_level_display ?? "",
+              giving_level_internal: row.giving_level_internal ?? "",
+              soft_credit_donor: row.soft_credit_donor ?? "",
+              total_amount_received: (row.total_amount_received / 100).toFixed(2),
+              total_amount_pledged: (row.total_amount_pledged / 100).toFixed(2)
+            };
+            const value = rowValues[column];
             return `"${String(value).replaceAll('"', '""')}"`;
           })
           .join(",")

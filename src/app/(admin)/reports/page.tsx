@@ -2,6 +2,7 @@ import Link from "next/link";
 
 import { ReportsExportBuilder } from "@/components/reports/reports-export-builder";
 import { getSessionWithCapability, requireCapability } from "@/server/auth/permissions";
+import { donorsThisYearExportColumns } from "@/server/data/report-export-columns";
 import {
   donorRecognitionLeaderboard,
   donorsThisYearSummary,
@@ -75,12 +76,7 @@ export default async function ReportsPage({
             <p className="muted">Choose which columns to include, then download the full current-year donor export.</p>
             <ReportsExportBuilder
               report="donors_this_year"
-              columns={[
-                { key: "donor_name", label: "Donor Name" },
-                { key: "soft_credit_donor", label: "Soft Credit Donor" },
-                { key: "total_amount_received", label: "Total Amount Received" },
-                { key: "total_amount_pledged", label: "Total Amount Pledged" }
-              ]}
+              columns={[...donorsThisYearExportColumns]}
             />
           </section>
         ) : null
