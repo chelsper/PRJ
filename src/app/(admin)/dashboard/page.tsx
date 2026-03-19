@@ -63,27 +63,22 @@ export default async function DashboardPage() {
 
       <section className="grid grid-2">
         <article className="card">
-          <p className="eyebrow">Start Here</p>
-          <div className="grid">
-            <div className="stat">
-              <span className="muted">Donors</span>
-              <strong>Search, review, and update constituent records.</strong>
-              <div className="button-row">
-                <Link href="/donors" className="inline-link">
-                  Open donor lookup
-                </Link>
-              </div>
+          <p className="eyebrow">Giving Level Snapshot</p>
+          <h2>Giving Levels (This Year)</h2>
+          {levelSnapshot.length === 0 ? (
+            <p className="muted">No donors currently qualify for a giving level this year.</p>
+          ) : (
+            <div className="grid">
+              {levelSnapshot.map((level: GivingLevelSnapshotRow) => (
+                <div key={level.giving_level_internal} className="stat stat-row">
+                  <Link href={`/reports?givingLevel=${encodeURIComponent(level.giving_level_internal)}`} className="inline-link stat-inline-link">
+                    {level.donor_count}
+                  </Link>
+                  <strong>{dashboardGivingLevelLabel(level)}</strong>
+                </div>
+              ))}
             </div>
-            <div className="stat">
-              <span className="muted">Gifts</span>
-              <strong>Enter gifts, manage pledges, and send receipts.</strong>
-              <div className="button-row">
-                <Link href="/gifts" className="inline-link">
-                  Open gifts
-                </Link>
-              </div>
-            </div>
-          </div>
+          )}
         </article>
 
         <article className="card">
@@ -113,26 +108,6 @@ export default async function DashboardPage() {
         </article>
       </section>
 
-      <section className="grid grid-2">
-        <article className="card">
-          <p className="eyebrow">Giving Level Snapshot</p>
-          <h2>Giving Levels (This Year)</h2>
-          {levelSnapshot.length === 0 ? (
-            <p className="muted">No donors currently qualify for a giving level this year.</p>
-          ) : (
-            <div className="grid">
-              {levelSnapshot.map((level: GivingLevelSnapshotRow) => (
-                <div key={level.giving_level_internal} className="stat stat-row">
-                  <Link href={`/reports?givingLevel=${encodeURIComponent(level.giving_level_internal)}`} className="inline-link stat-inline-link">
-                    {level.donor_count}
-                  </Link>
-                  <strong>{dashboardGivingLevelLabel(level)}</strong>
-                </div>
-              ))}
-            </div>
-          )}
-        </article>
-      </section>
     </div>
   );
 }
