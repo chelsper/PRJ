@@ -34,6 +34,14 @@ export type DashboardTotals = {
   prj_total_pledged_cents: number;
 };
 
+export type DonorsThisYearRow = {
+  donor_id: string;
+  donor_name: string;
+  soft_credit_donors: string | null;
+  total_received_cents: number;
+  total_pledged_cents: number;
+};
+
 export type AuditEventRow = {
   id: string;
   occurred_at: string;
@@ -141,6 +149,58 @@ export async function dashboardTotals(): Promise<DashboardTotals> {
   );
 
   return result.rows[0];
+}
+
+export async function donorsThisYearSummary(limit?: number): Promise<DonorsThisYearRow[]> {
+  const result = await query<DonorsThisYearRow>(
+    `with current_year_gifts as (
+        select
+          g.id,
+          g.donor_id,
+          g.gift_type,
+          g.amount_cents
+        from public.gifts g
+        where g.deleted_at is null
+          and extract(year from g.gift_date) = extract(year from current_date)
+      )
+      select
+        d.id::text as donor_id,
+        coalesce(d.organization_name, concat_ws(' ', d.first_name, d.last_name)) as donor_name,
+        nullif(string_agg(
+          distinct coalesce(sd.organization_name, concat_ws(' ', sd.first_name, sd.last_name)),
+          ', '
+        ), '') as soft_credit_donors,
+        coalesce(sum(
+          case
+            when g.gift_type in ('CASH', 'STOCK_PROPERTY', 'GIFT_IN_KIND', 'PLEDGE_PAYMENT', 'MATCHING_GIFT_PAYMENT')
+              then g.amount_cents
+            else 0
+          end
+        ), 0)::int as total_received_cents,
+        coalesce(sum(
+          case
+            when g.gift_type in ('PLEDGE', 'MATCHING_GIFT_PLEDGE')
+              then g.amount_cents
+            else 0
+          end
+        ), 0)::int as total_pledged_cents
+      from current_year_gifts g
+      inner join public.donors d on d.id = g.donor_id
+      left join public.soft_credits sc on sc.gift_id = g.id
+      left join public.donors sd on sd.id = sc.donor_id
+      group by d.id
+      order by (coalesce(sum(
+        case
+          when g.gift_type in ('CASH', 'STOCK_PROPERTY', 'GIFT_IN_KIND', 'PLEDGE_PAYMENT', 'MATCHING_GIFT_PAYMENT', 'PLEDGE', 'MATCHING_GIFT_PLEDGE')
+            then g.amount_cents
+          else 0
+        end
+      ), 0)) desc, donor_name asc
+      limit coalesce($1::int, 1000)`,
+    [limit ?? null]
+  );
+
+  return result.rows;
 }
 
 export async function recentAuditEvents(): Promise<AuditEventRow[]> {

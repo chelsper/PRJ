@@ -1,13 +1,16 @@
 import Link from "next/link";
 
-import { requireCapability } from "@/server/auth/permissions";
+import { ReportsExportBuilder } from "@/components/reports/reports-export-builder";
+import { getSessionWithCapability, requireCapability } from "@/server/auth/permissions";
 import {
   donorRecognitionLeaderboard,
+  donorsThisYearSummary,
   givingLevelSnapshot,
   prjPledgedByCalendarYear,
   prjReceivedByCalendarYear,
   prjTotalSnapshot,
   type DonorRecognitionRow,
+  type DonorsThisYearRow,
   type GivingLevelSnapshotRow,
   type PrjYearRow
 } from "@/server/data/reports";
@@ -23,17 +26,20 @@ function reportGivingLevelLabel(level: string | null, snapshot: GivingLevelSnaps
 export default async function ReportsPage({
   searchParams
 }: {
-  searchParams: Promise<{ givingLevel?: string }>;
+  searchParams: Promise<{ givingLevel?: string; tab?: string; report?: string }>;
 }) {
   await requireCapability("reports:read");
-  const { givingLevel } = await searchParams;
+  const { givingLevel, tab, report } = await searchParams;
+  const exportSession = await getSessionWithCapability("exports:run");
+  const activeTab = tab === "exports" ? "exports" : "overview";
 
-  const [donorTotals, prjTotals, receivedByYear, pledgedByYear, levelSnapshot] = await Promise.all([
+  const [donorTotals, prjTotals, receivedByYear, pledgedByYear, levelSnapshot, donorsThisYear] = await Promise.all([
     donorRecognitionLeaderboard(givingLevel),
     prjTotalSnapshot(),
     prjReceivedByCalendarYear(),
     prjPledgedByCalendarYear(),
-    givingLevelSnapshot()
+    givingLevelSnapshot(),
+    donorsThisYearSummary(15)
   ]);
   const selectedGivingLevelLabel = reportGivingLevelLabel(givingLevel ?? null, levelSnapshot);
 
@@ -47,6 +53,39 @@ export default async function ReportsPage({
         </p>
       </section>
 
+      <nav className="tab-row">
+        <Link href="/reports" className={activeTab === "overview" ? "tab-link active" : "tab-link"}>
+          Overview
+        </Link>
+        {exportSession ? (
+          <Link
+            href={`/reports?tab=exports${report ? `&report=${encodeURIComponent(report)}` : ""}`}
+            className={activeTab === "exports" ? "tab-link active" : "tab-link"}
+          >
+            Exports
+          </Link>
+        ) : null}
+      </nav>
+
+      {activeTab === "exports" ? (
+        exportSession ? (
+          <section className="card">
+            <p className="eyebrow">Exports</p>
+            <h2>Donors This Year CSV</h2>
+            <p className="muted">Choose which columns to include, then download the full current-year donor export.</p>
+            <ReportsExportBuilder
+              report="donors_this_year"
+              columns={[
+                { key: "donor_name", label: "Donor Name" },
+                { key: "soft_credit_donor", label: "Soft Credit Donor" },
+                { key: "total_amount_received", label: "Total Amount Received" },
+                { key: "total_amount_pledged", label: "Total Amount Pledged" }
+              ]}
+            />
+          </section>
+        ) : null
+      ) : (
+        <>
       <section className="stats">
         <article className="stat">
           <span className="muted">PRJ total received to date</span>
@@ -56,6 +95,44 @@ export default async function ReportsPage({
           <span className="muted">PRJ total pledged to date</span>
           <strong>${(prjTotals.total_pledged_cents / 100).toLocaleString()}</strong>
         </article>
+      </section>
+
+      <section className="table-shell">
+        <div className="section-header">
+          <div>
+            <p className="eyebrow">Top 15 Donors This Calendar Year</p>
+            <p className="muted">Current-year hard-credit donors with associated soft-credit donors, received totals, and pledged totals.</p>
+          </div>
+          {exportSession ? (
+            <Link href="/reports?tab=exports&report=donors_this_year" className="button-link secondary-link">
+              Download donors this year CSV
+            </Link>
+          ) : null}
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th>Donor Name</th>
+              <th>Soft Credit Donor</th>
+              <th>Total Amount Received</th>
+              <th>Total Amount Pledged</th>
+            </tr>
+          </thead>
+          <tbody>
+            {donorsThisYear.map((row: DonorsThisYearRow) => (
+              <tr key={row.donor_id}>
+                <td>
+                  <Link href={`/donors/${row.donor_id}`} className="table-link">
+                    {row.donor_name}
+                  </Link>
+                </td>
+                <td>{row.soft_credit_donors ?? "—"}</td>
+                <td>${(row.total_received_cents / 100).toLocaleString()}</td>
+                <td>${(row.total_pledged_cents / 100).toLocaleString()}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </section>
 
       <section className="table-shell">
@@ -135,6 +212,8 @@ export default async function ReportsPage({
           </table>
         </article>
       </section>
+        </>
+      )}
     </div>
   );
 }
