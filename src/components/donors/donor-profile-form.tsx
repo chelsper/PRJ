@@ -20,6 +20,7 @@ export function DonorProfileForm({
   addressTypeOptions,
   stateOptions,
   relationshipTypeOptions,
+  organizationContactTypeOptions,
   updateAction,
   addRelationshipAction,
   deleteRelationshipAction,
@@ -36,6 +37,7 @@ export function DonorProfileForm({
   addressTypeOptions: ConfigLookupOption[];
   stateOptions: ConfigLookupOption[];
   relationshipTypeOptions: ConfigLookupOption[];
+  organizationContactTypeOptions: ConfigLookupOption[];
   updateAction: FormAction;
   addRelationshipAction: FormAction;
   deleteRelationshipAction: FormAction;
@@ -68,6 +70,8 @@ export function DonorProfileForm({
   );
   const [hasOrganizationRelationship, setHasOrganizationRelationship] = useState(relationships.length > 0);
   const [createOrganizationDraft, setCreateOrganizationDraft] = useState(false);
+  const [relationshipType, setRelationshipType] = useState("EMPLOYER");
+  const [isOrganizationContact, setIsOrganizationContact] = useState(false);
 
   const spouseSelection =
     donor.spouse_donor_id && donor.spouse_name
@@ -437,10 +441,10 @@ export function DonorProfileForm({
                 checked={hasOrganizationRelationship}
                 onChange={(event) => setHasOrganizationRelationship(event.target.checked)}
               />
-              <span>Has Organization Relationship</span>
+              <span>Has Employer Relationship</span>
             </label>
             {hasOrganizationRelationship ? (
-              <p className="muted">Use the organization relationships section below to search for existing organizations, create draft organizations, and promote them into full donor records.</p>
+              <p className="muted">Use the employer section below to link an organization, store the person&apos;s role, and mark whether they are an organization contact.</p>
             ) : null}
           </div>
           <label className="full">
@@ -459,8 +463,8 @@ export function DonorProfileForm({
         <section className="table-shell">
           <div className="section-header">
             <div>
-              <p className="eyebrow">Organization Relationships</p>
-              <p className="muted">Link existing organization records or store lightweight organization details until you are ready to promote them.</p>
+              <p className="eyebrow">Employer</p>
+              <p className="muted">Link an employer, capture the donor&apos;s role, and optionally flag them as an organization contact.</p>
             </div>
           </div>
           {relationships.length > 0 ? (
@@ -469,6 +473,8 @@ export function DonorProfileForm({
                 <tr>
                   <th>Organization</th>
                   <th>Relationship</th>
+                  <th>Role</th>
+                  <th>Contact status</th>
                   <th>Contact</th>
                   <th>Primary email</th>
                   <th></th>
@@ -490,6 +496,12 @@ export function DonorProfileForm({
                       ) : null}
                     </td>
                     <td>{relationshipTypeLabels[relationship.relationship_type] ?? relationship.relationship_type.replaceAll("_", " ")}</td>
+                    <td>{relationship.role ?? "—"}</td>
+                    <td>
+                      {relationship.is_contact
+                        ? organizationContactTypeOptions.find((option) => option.value === relationship.contact_type)?.label ?? "Contact"
+                        : "Employee"}
+                    </td>
                     <td>{relationship.contact_name ?? "—"}</td>
                     <td>{relationship.primary_email ?? "—"}</td>
                     <td>
@@ -527,7 +539,11 @@ export function DonorProfileForm({
             </div>
             <label>
               Relationship type
-              <select name="relationshipType" defaultValue={relationshipTypeOptions[0]?.value ?? "EMPLOYER"}>
+              <select
+                name="relationshipType"
+                value={relationshipType}
+                onChange={(event) => setRelationshipType(event.target.value)}
+              >
                 {relationshipTypeOptions.map((option) => (
                   <option key={option.id} value={option.value}>
                     {option.label}
@@ -557,6 +573,10 @@ export function DonorProfileForm({
                 <label className="full">
                   Organization name
                   <input name="organizationName" />
+                </label>
+                <label>
+                  Role
+                  <input name="role" placeholder={relationshipType === "EMPLOYER" ? "Job title or role" : "Relationship role"} />
                 </label>
                 <label>
                   Contact name
@@ -622,6 +642,7 @@ export function DonorProfileForm({
             ) : (
               <>
                 <input type="hidden" name="organizationName" value="" />
+                <input type="hidden" name="role" value="" />
                 <input type="hidden" name="contactName" value="" />
                 <input type="hidden" name="organizationPrimaryEmail" value="" />
                 <input type="hidden" name="organizationAlternateEmail" value="" />
@@ -635,12 +656,35 @@ export function DonorProfileForm({
                 <input type="hidden" name="organizationCountry" value="" />
               </>
             )}
+            <label className="toggle-row full">
+              <input
+                type="checkbox"
+                name="isContact"
+                checked={isOrganizationContact}
+                onChange={(event) => setIsOrganizationContact(event.target.checked)}
+              />
+              <span>Is contact</span>
+            </label>
+            {isOrganizationContact ? (
+              <label>
+                Contact type
+                <select name="contactType" defaultValue={organizationContactTypeOptions[0]?.value ?? "ADDITIONAL_CONTACT"}>
+                  {organizationContactTypeOptions.map((option) => (
+                    <option key={option.id} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            ) : (
+              <input type="hidden" name="contactType" value="" />
+            )}
             <label className="full">
               Relationship notes
               <input name="relationshipNotes" />
             </label>
             <div className="full">
-              <button type="submit">Add organization relationship</button>
+              <button type="submit">Add employer relationship</button>
             </div>
           </form>
         </section>

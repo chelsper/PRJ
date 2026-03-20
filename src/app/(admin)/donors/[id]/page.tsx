@@ -16,6 +16,7 @@ import {
   listDonorGiving,
   listDonorNotes,
   listOrganizationContacts,
+  listOrganizationRelationshipMembers,
   listDonorOrganizationRelationships,
   listDonorSoftCredits,
   type DonorConnectionRow,
@@ -116,7 +117,7 @@ export default async function DonorProfilePage({
     metadata: { tab: tab ?? "profile" }
   });
 
-  const [connections, giving, softCredits, giftWriteSession, latestGift, relationships, notes, donorWriteSession, organizationContacts, optionSets] = await Promise.all([
+  const [connections, giving, softCredits, giftWriteSession, latestGift, relationships, notes, donorWriteSession, organizationContacts, relationshipMembers, optionSets] = await Promise.all([
     listDonorConnections(id),
     listDonorGiving(id),
     listDonorSoftCredits(id),
@@ -126,6 +127,7 @@ export default async function DonorProfilePage({
     listDonorNotes(id),
     getSessionWithCapability("donors:write"),
     listOrganizationContacts(id),
+    listOrganizationRelationshipMembers(id),
     listConfigOptionsBySet()
   ]);
   const activeTab =
@@ -442,6 +444,7 @@ export default async function DonorProfilePage({
           donor={donor}
           donorId={id}
           contacts={organizationContacts}
+          relationshipMembers={relationshipMembers}
           titleOptions={optionSets.titles}
           organizationContactTypeOptions={optionSets.organization_contact_types}
           updateAction={updateOrganizationDetailsAction}
@@ -519,6 +522,7 @@ export default async function DonorProfilePage({
               addressTypeOptions={optionSets.address_types}
               stateOptions={optionSets.states}
               relationshipTypeOptions={optionSets.donor_relationship_types}
+              organizationContactTypeOptions={optionSets.organization_contact_types}
           updateAction={updateDonorProfileAction}
           addRelationshipAction={addDonorOrganizationRelationshipAction}
           deleteRelationshipAction={deleteDonorOrganizationRelationshipAction}

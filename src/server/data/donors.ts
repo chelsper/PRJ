@@ -5,6 +5,11 @@ import type { PoolClient } from "pg";
 
 type Actor = { userId: string; ipAddress?: string | null };
 type PromoteSpouseActor = Actor & { softCreditHistory?: boolean };
+type OrganizationContactType =
+  | "MAIN_CONTACT"
+  | "ADDITIONAL_CONTACT"
+  | "STEWARDSHIP_CONTACT"
+  | "ACKNOWLEDGMENT_CONTACT";
 
 async function ensureOrganizationRelationshipLink(
   client: PoolClient,
@@ -12,7 +17,12 @@ async function ensureOrganizationRelationshipLink(
   organizationDonorId: number,
   actor: Actor,
   relationshipType: "EMPLOYER" | "FOUNDATION" | "DONOR_ADVISED_FUND" | "OTHER" = "OTHER",
-  notes?: string | null
+  notes?: string | null,
+  options?: {
+    role?: string | null;
+    isContact?: boolean;
+    contactType?: OrganizationContactType | null;
+  }
 ) {
   const existing = await client.query<{ id: string }>(
     `select id::text
@@ -27,10 +37,21 @@ async function ensureOrganizationRelationshipLink(
     await client.query(
       `update public.donor_organization_relationships
        set relationship_type = $2,
-           notes = coalesce(notes, $3),
-           updated_by = $4
+           role = coalesce(role, $3),
+           is_contact = coalesce($4, is_contact),
+           contact_type = coalesce(contact_type, $5),
+           notes = coalesce(notes, $6),
+           updated_by = $7
        where id = $1`,
-      [Number(existing.rows[0].id), relationshipType, notes ?? null, actor.userId]
+      [
+        Number(existing.rows[0].id),
+        relationshipType,
+        options?.role ?? null,
+        options?.isContact ?? null,
+        options?.contactType ?? null,
+        notes ?? null,
+        actor.userId
+      ]
     );
     return;
   }
@@ -40,11 +61,23 @@ async function ensureOrganizationRelationshipLink(
       donor_id,
       organization_donor_id,
       relationship_type,
+      role,
+      is_contact,
+      contact_type,
       notes,
       created_by,
       updated_by
-    ) values ($1, $2, $3, $4, $5, $5)`,
-    [donorId, organizationDonorId, relationshipType, notes ?? null, actor.userId]
+    ) values ($1, $2, $3, $4, $5, $6, $7, $7)`,
+    [
+      donorId,
+      organizationDonorId,
+      relationshipType,
+      options?.role ?? null,
+      options?.isContact ?? false,
+      options?.contactType ?? null,
+      notes ?? null,
+      actor.userId
+    ]
   );
 }
 
@@ -147,6 +180,9 @@ export type DonorOrganizationRelationshipRow = {
   organization_name: string | null;
   organization_display_name: string;
   organization_donor_number: string | null;
+  role: string | null;
+  is_contact: boolean;
+  contact_type: OrganizationContactType | null;
   contact_name: string | null;
   primary_email: string | null;
   alternate_email: string | null;
@@ -163,7 +199,7 @@ export type DonorOrganizationRelationshipRow = {
 
 export type OrganizationContactRow = {
   id: string;
-  contact_type: "MAIN_CONTACT" | "ADDITIONAL_CONTACT" | "STEWARDSHIP_CONTACT" | "ACKNOWLEDGMENT_CONTACT";
+  contact_type: OrganizationContactType;
   contact_donor_id: string | null;
   linked_display_name: string | null;
   linked_donor_number: string | null;
@@ -172,6 +208,19 @@ export type OrganizationContactRow = {
   middle_name: string | null;
   last_name: string | null;
   email: string | null;
+  primary_phone: string | null;
+};
+
+export type OrganizationRelationshipMemberRow = {
+  relationship_id: string;
+  donor_id: string;
+  donor_number: string | null;
+  donor_name: string;
+  relationship_type: DonorOrganizationRelationshipRow["relationship_type"];
+  role: string | null;
+  is_contact: boolean;
+  contact_type: OrganizationContactRow["contact_type"] | null;
+  primary_email: string | null;
   primary_phone: string | null;
 };
 
@@ -354,6 +403,9 @@ async function donorOrganizationRelationshipsSnapshot(client: PoolClient, donorI
           'organization_donor_id', r.organization_donor_id,
           'organization_name', r.organization_name,
           'relationship_type', r.relationship_type,
+          'role', r.role,
+          'is_contact', r.is_contact,
+          'contact_type', r.contact_type,
           'address_type', r.address_type,
           'street1', r.street1,
           'street2', r.street2,
@@ -831,6 +883,9 @@ export async function listDonorOrganizationRelationships(
       r.organization_name,
       coalesce(${linkedDonorNameSql("org")}, r.organization_name, 'Unnamed organization') as organization_display_name,
       org.donor_number as organization_donor_number,
+      r.role,
+      r.is_contact,
+      r.contact_type,
       r.contact_name,
       r.primary_email::text,
       r.alternate_email::text,
@@ -848,6 +903,32 @@ export async function listDonorOrganizationRelationships(
     where r.donor_id = $1
     order by r.created_at asc, r.id asc`,
     [Number(donorId)]
+  );
+
+  return result.rows;
+}
+
+export async function listOrganizationRelationshipMembers(
+  organizationDonorId: string
+): Promise<OrganizationRelationshipMemberRow[]> {
+  const result = await query<OrganizationRelationshipMemberRow>(
+    `select
+      r.id::text as relationship_id,
+      d.id::text as donor_id,
+      d.donor_number,
+      ${linkedDonorNameSql("d")} as donor_name,
+      r.relationship_type,
+      r.role,
+      r.is_contact,
+      r.contact_type,
+      d.primary_email::text,
+      d.primary_phone
+    from public.donor_organization_relationships r
+    inner join public.donors d on d.id = r.donor_id
+    where r.organization_donor_id = $1
+      and d.deleted_at is null
+    order by r.is_contact desc, r.relationship_type asc, d.last_name nulls last, d.organization_name nulls last, d.id asc`,
+    [Number(organizationDonorId)]
   );
 
   return result.rows;
@@ -1583,6 +1664,9 @@ export async function promoteOrganizationRelationshipToDonor(
     const relationship = await client.query<{
       organization_donor_id: string | null;
       organization_name: string | null;
+      role: string | null;
+      is_contact: boolean;
+      contact_type: OrganizationContactType | null;
       contact_name: string | null;
       primary_email: string | null;
       alternate_email: string | null;
@@ -1598,6 +1682,9 @@ export async function promoteOrganizationRelationshipToDonor(
       `select
         organization_donor_id::text,
         organization_name,
+        role,
+        is_contact,
+        contact_type,
         contact_name,
         primary_email::text,
         alternate_email::text,
@@ -1690,6 +1777,42 @@ export async function promoteOrganizationRelationshipToDonor(
       [Number(relationshipId), Number(organizationId), actor.userId]
     );
 
+    if (row.is_contact) {
+      await client.query(
+        `insert into public.donor_organization_contacts (
+          donor_id,
+          contact_type,
+          contact_donor_id,
+          first_name,
+          last_name,
+          email,
+          primary_phone,
+          created_by,
+          updated_by
+        )
+        select
+          $1,
+          $2,
+          d.id,
+          d.first_name,
+          d.last_name,
+          d.primary_email,
+          d.primary_phone,
+          $3,
+          $3
+        from public.donors d
+        where d.id = $4
+          and not exists (
+            select 1
+            from public.donor_organization_contacts c
+            where c.donor_id = $1
+              and c.contact_donor_id = $4
+              and c.contact_type = $2
+          )`,
+        [Number(organizationId), row.contact_type ?? "ADDITIONAL_CONTACT", actor.userId, Number(donorId)]
+      );
+    }
+
     await client.query(
       `insert into public.audit_log (actor_user_id, action, entity_type, entity_id, status, ip_address, metadata)
        values ($1, 'donor.relationship.promote', 'donor', $2, 'success', $3, $4::jsonb)`,
@@ -1711,6 +1834,9 @@ export async function addDonorOrganizationRelationship(
     relationshipType?: string | null;
     organizationDonorId?: string | null;
     organizationName?: string | null;
+    role?: string | null;
+    isContact?: boolean | null;
+    contactType?: OrganizationContactRow["contact_type"] | null;
     contactName?: string | null;
     primaryEmail?: string | null;
     alternateEmail?: string | null;
@@ -1743,6 +1869,9 @@ export async function addDonorOrganizationRelationship(
         organization_donor_id,
         organization_name,
         relationship_type,
+        role,
+        is_contact,
+        contact_type,
         contact_name,
         primary_email,
         alternate_email,
@@ -1757,12 +1886,15 @@ export async function addDonorOrganizationRelationship(
         notes,
         created_by,
         updated_by
-      ) values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $17)`,
+      ) values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $18)`,
       [
         Number(donorId),
         input.organizationDonorId ? Number(input.organizationDonorId) : null,
         input.organizationName?.trim() || null,
         input.relationshipType ?? "OTHER",
+        input.role?.trim() || null,
+        Boolean(input.isContact),
+        input.isContact ? input.contactType ?? "ADDITIONAL_CONTACT" : null,
         input.contactName?.trim() || null,
         input.primaryEmail?.trim() || null,
         input.alternateEmail?.trim() || null,
@@ -1778,6 +1910,49 @@ export async function addDonorOrganizationRelationship(
         actor.userId
       ]
     );
+
+    if (input.organizationDonorId?.trim() && input.isContact) {
+      await client.query(
+        `insert into public.donor_organization_contacts (
+          donor_id,
+          contact_type,
+          contact_donor_id,
+          first_name,
+          middle_name,
+          last_name,
+          email,
+          primary_phone,
+          created_by,
+          updated_by
+        )
+        select
+          $1,
+          $2,
+          d.id,
+          d.first_name,
+          d.middle_name,
+          d.last_name,
+          d.primary_email,
+          d.primary_phone,
+          $3,
+          $3
+        from public.donors d
+        where d.id = $4
+          and not exists (
+            select 1
+            from public.donor_organization_contacts c
+            where c.donor_id = $1
+              and c.contact_donor_id = $4
+              and c.contact_type = $2
+          )`,
+        [
+          Number(input.organizationDonorId),
+          input.contactType ?? "ADDITIONAL_CONTACT",
+          actor.userId,
+          Number(donorId)
+        ]
+      );
+    }
 
     await client.query(
       `insert into public.audit_log (actor_user_id, action, entity_type, entity_id, status, ip_address, metadata)
@@ -1798,7 +1973,7 @@ export async function addDonorOrganizationRelationship(
 export async function addOrganizationContact(
   donorId: string,
   input: {
-    contactType?: string | null;
+    contactType?: OrganizationContactType | null;
     contactDonorId?: string | null;
     title?: string | null;
     firstName?: string | null;
@@ -1880,7 +2055,11 @@ export async function addOrganizationContact(
         Number(donorId),
         actor,
         "OTHER",
-        `Organization ${(input.contactType ?? "ADDITIONAL_CONTACT").replaceAll("_", " ").toLowerCase()}`
+        `Organization ${(input.contactType ?? "ADDITIONAL_CONTACT").replaceAll("_", " ").toLowerCase()}`,
+        {
+          isContact: true,
+          contactType: input.contactType ?? "ADDITIONAL_CONTACT"
+        }
       );
     }
 

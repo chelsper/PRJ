@@ -204,6 +204,15 @@ export async function addDonorOrganizationRelationshipAction(formData: FormData)
       relationshipType: String(formData.get("relationshipType") ?? ""),
       organizationDonorId: String(formData.get("organizationDonorId") ?? ""),
       organizationName: String(formData.get("organizationName") ?? ""),
+      role: String(formData.get("role") ?? ""),
+      isContact: formData.get("isContact") === "on",
+      contactType:
+        (String(formData.get("contactType") ?? "") || null) as
+          | "MAIN_CONTACT"
+          | "ADDITIONAL_CONTACT"
+          | "STEWARDSHIP_CONTACT"
+          | "ACKNOWLEDGMENT_CONTACT"
+          | null,
       contactName: String(formData.get("contactName") ?? ""),
       primaryEmail: String(formData.get("organizationPrimaryEmail") ?? ""),
       alternateEmail: String(formData.get("organizationAlternateEmail") ?? ""),
@@ -353,7 +362,13 @@ export async function addOrganizationContactAction(formData: FormData) {
   await addOrganizationContact(
     donorId,
     {
-      contactType: String(formData.get("contactType") ?? ""),
+      contactType:
+        (String(formData.get("contactType") ?? "") || null) as
+          | "MAIN_CONTACT"
+          | "ADDITIONAL_CONTACT"
+          | "STEWARDSHIP_CONTACT"
+          | "ACKNOWLEDGMENT_CONTACT"
+          | null,
       contactDonorId: String(formData.get("contactDonorId") ?? ""),
       title: String(formData.get("contactTitle") ?? ""),
       firstName: String(formData.get("contactFirstName") ?? ""),

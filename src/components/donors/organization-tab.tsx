@@ -5,7 +5,7 @@ import { useState } from "react";
 
 import { DonorLookup, type DonorLookupOption } from "@/components/donors/donor-lookup";
 import type { ConfigLookupOption } from "@/server/data/configurations";
-import type { DonorProfileRow, OrganizationContactRow } from "@/server/data/donors";
+import type { DonorProfileRow, OrganizationContactRow, OrganizationRelationshipMemberRow } from "@/server/data/donors";
 
 type FormAction = (formData: FormData) => void | Promise<void>;
 
@@ -21,6 +21,7 @@ export function OrganizationTab({
   donor,
   donorId,
   contacts,
+  relationshipMembers,
   titleOptions,
   organizationContactTypeOptions,
   updateAction,
@@ -30,6 +31,7 @@ export function OrganizationTab({
   donor: DonorProfileRow;
   donorId: string;
   contacts: OrganizationContactRow[];
+  relationshipMembers: OrganizationRelationshipMemberRow[];
   titleOptions: ConfigLookupOption[];
   organizationContactTypeOptions: ConfigLookupOption[];
   updateAction: FormAction;
@@ -195,6 +197,46 @@ export function OrganizationTab({
             <button type="submit">Save Contact</button>
           </div>
         </form>
+      </section>
+
+      <section className="table-shell">
+        <div className="section-header">
+          <div>
+            <p className="eyebrow">Linked People</p>
+            <p className="muted">Employees and linked constituents associated with this organization.</p>
+          </div>
+        </div>
+        {relationshipMembers.length > 0 ? (
+          <table>
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Relationship</th>
+                <th>Role</th>
+                <th>Contact status</th>
+                <th>Email</th>
+              </tr>
+            </thead>
+            <tbody>
+              {relationshipMembers.map((member) => (
+                <tr key={member.relationship_id}>
+                  <td>
+                    <Link href={`/donors/${member.donor_id}`} className="table-link">
+                      {member.donor_name}
+                    </Link>
+                    {member.donor_number ? <div className="muted">{member.donor_number}</div> : null}
+                  </td>
+                  <td>{member.relationship_type.replaceAll("_", " ")}</td>
+                  <td>{member.role ?? "—"}</td>
+                  <td>{member.is_contact ? contactTypeLabels[member.contact_type ?? ""] ?? "Contact" : "Employee"}</td>
+                  <td>{member.primary_email ?? "—"}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        ) : (
+          <p className="muted">No linked employees or constituents yet.</p>
+        )}
       </section>
 
       <section className="table-shell">
