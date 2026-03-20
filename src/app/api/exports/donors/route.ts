@@ -98,6 +98,38 @@ async function buildDonorsThisYearCsv(selectedColumns: string[]) {
         from public.gifts g
         where g.deleted_at is null
           and extract(year from g.gift_date) = extract(year from current_date)
+      ),
+      donor_year_totals as (
+        select
+          g.donor_id,
+          nullif(
+            string_agg(
+              distinct coalesce(sd.organization_name, concat_ws(' ', sd.first_name, sd.last_name)),
+              ', '
+            ) filter (
+              where sd.id is not null
+                and coalesce(sd.organization_name, concat_ws(' ', sd.first_name, sd.last_name)) <> ''
+            ),
+            ''
+          ) as soft_credit_donor,
+          coalesce(sum(
+            case
+              when g.gift_type in ('CASH', 'STOCK_PROPERTY', 'GIFT_IN_KIND', 'PLEDGE_PAYMENT', 'MATCHING_GIFT_PAYMENT')
+                then g.amount_cents
+              else 0
+            end
+          ), 0)::int as total_amount_received,
+          coalesce(sum(
+            case
+              when g.gift_type in ('PLEDGE', 'MATCHING_GIFT_PLEDGE')
+                then g.amount_cents
+              else 0
+            end
+          ), 0)::int as total_amount_pledged
+        from current_year_gifts g
+        left join public.soft_credits sc on sc.gift_id = g.id
+        left join public.donors sd on sd.id = sc.donor_id
+        group by g.donor_id
       )
       select
         d.donor_number,
@@ -222,38 +254,14 @@ async function buildDonorsThisYearCsv(selectedColumns: string[]) {
         d.notes,
         gl.giving_level_display,
         gl.giving_level_internal,
-        nullif(
-          string_agg(
-            distinct coalesce(sd.organization_name, concat_ws(' ', sd.first_name, sd.last_name)),
-            ', '
-          ) filter (
-            where sd.id is not null
-              and coalesce(sd.organization_name, concat_ws(' ', sd.first_name, sd.last_name)) <> ''
-          ),
-          ''
-        ) as soft_credit_donor,
-        coalesce(sum(
-          case
-            when g.gift_type in ('CASH', 'STOCK_PROPERTY', 'GIFT_IN_KIND', 'PLEDGE_PAYMENT', 'MATCHING_GIFT_PAYMENT')
-              then g.amount_cents
-            else 0
-          end
-        ), 0)::int as total_amount_received,
-        coalesce(sum(
-          case
-            when g.gift_type in ('PLEDGE', 'MATCHING_GIFT_PLEDGE')
-              then g.amount_cents
-            else 0
-          end
-        ), 0)::int as total_amount_pledged
-      from current_year_gifts g
-      inner join public.donors d on d.id = g.donor_id
+        t.soft_credit_donor,
+        t.total_amount_received,
+        t.total_amount_pledged
+      from donor_year_totals t
+      inner join public.donors d on d.id = t.donor_id
       left join public.donors sp on sp.id = d.spouse_donor_id
       left join public.donor_addresses a on a.donor_id = d.id and a.is_primary = true
       left join public.donor_current_year_giving_levels gl on gl.donor_id = d.id
-      left join public.soft_credits sc on sc.gift_id = g.id
-      left join public.donors sd on sd.id = sc.donor_id
-      group by d.id
       order by donor_name asc`
   );
 
