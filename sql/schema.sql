@@ -137,7 +137,14 @@ language plpgsql
 as $$
 begin
   if new.donor_number is null then
-    new.donor_number := nextval('donor_number_seq')::text;
+    loop
+      new.donor_number := nextval('donor_number_seq')::text;
+      exit when not exists (
+        select 1
+        from public.donors
+        where donor_number = new.donor_number
+      );
+    end loop;
   end if;
 
   return new;
