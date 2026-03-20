@@ -499,6 +499,20 @@ button:focus-visible,
   font-size: 0.86rem;
 }
 
+.dashboard-donor-search {
+  display: grid;
+  gap: 8px;
+  max-width: 860px;
+}
+
+.dashboard-donor-search .donor-lookup {
+  gap: 6px;
+}
+
+.dashboard-donor-search .lookup-selected {
+  margin-top: -2px;
+}
+
 .lookup-results {
   position: absolute;
   top: calc(100% + 6px);

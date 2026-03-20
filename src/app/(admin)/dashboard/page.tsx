@@ -30,7 +30,7 @@ export default async function DashboardPage() {
         <p className="muted">
           Quickly find donors, add gifts, send receipts, and track your impact.
         </p>
-        <DonorPageSearch />
+        <DonorPageSearch compact />
         <div className="button-row">
           <Link href="/donors" className="button-link">
             Find Donors

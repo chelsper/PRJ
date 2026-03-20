@@ -15,7 +15,7 @@ function donorMeta(option: DonorSearchOption) {
   return [option.donorNumber ?? "Pending donor ID", option.donorType, option.email ?? "No email"].join(" · ");
 }
 
-export function DonorPageSearch() {
+export function DonorPageSearch({ compact = false }: { compact?: boolean }) {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<DonorSearchOption[]>([]);
   const [open, setOpen] = useState(false);
@@ -65,7 +65,7 @@ export function DonorPageSearch() {
   }, [deferredQuery]);
 
   return (
-    <div className="form-grid">
+    <div className={compact ? "dashboard-donor-search" : "form-grid"}>
       <label className="full donor-lookup">
         Search donor name
         <input
