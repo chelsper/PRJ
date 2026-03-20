@@ -11,6 +11,31 @@ type OrganizationContactType =
   | "STEWARDSHIP_CONTACT"
   | "ACKNOWLEDGMENT_CONTACT";
 
+async function allocateDonorNumber(client: PoolClient) {
+  while (true) {
+    const nextNumberResult = await client.query<{ donor_number: string }>(
+      `select nextval('donor_number_seq')::text as donor_number`
+    );
+    const donorNumber = nextNumberResult.rows[0]?.donor_number;
+
+    if (!donorNumber) {
+      throw new Error("Unable to allocate donor number.");
+    }
+
+    const existing = await client.query<{ id: string }>(
+      `select id::text
+       from public.donors
+       where donor_number = $1
+       limit 1`,
+      [donorNumber]
+    );
+
+    if (!existing.rows[0]) {
+      return donorNumber;
+    }
+  }
+}
+
 async function ensureOrganizationRelationshipLink(
   client: PoolClient,
   donorId: number,
@@ -999,8 +1024,10 @@ export async function createDonor(input: unknown, actor: Actor) {
   const values = donorInputSchema.parse(input);
 
   return transaction(async (client) => {
+    const donorNumber = await allocateDonorNumber(client);
     const inserted = await client.query<{ id: string }>(
       `insert into public.donors (
+        donor_number,
         donor_type,
         title,
         gender,
@@ -1038,11 +1065,12 @@ export async function createDonor(input: unknown, actor: Actor) {
         created_by,
         updated_by
       ) values (
-        $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18,
-        $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31, $32, $33, $34, $35, $35
+        $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19,
+        $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31, $32, $33, $34, $35, $36, $36
       )
       returning id::text`,
       [
+        donorNumber,
         values.donorType,
         values.title ?? null,
         values.gender ?? null,
@@ -1363,8 +1391,10 @@ export async function updateOrganizationDetails(
       values.organizationContactFirstName &&
       values.organizationContactLastName
     ) {
+      const donorNumber = await allocateDonorNumber(client);
       const inserted = await client.query<{ id: string }>(
         `insert into public.donors (
+          donor_number,
           donor_type,
           title,
           first_name,
@@ -1374,9 +1404,10 @@ export async function updateOrganizationDetails(
           primary_phone,
           created_by,
           updated_by
-        ) values ('INDIVIDUAL', $1, $2, $3, $4, $5, $6, $7, $7)
+        ) values ($1, 'INDIVIDUAL', $2, $3, $4, $5, $6, $7, $8, $8)
         returning id::text`,
         [
+          donorNumber,
           values.organizationContactTitle ?? null,
           values.organizationContactFirstName,
           values.organizationContactMiddleName ?? null,
@@ -1555,8 +1586,10 @@ export async function promoteSpouseToDonor(donorId: string, actor: PromoteSpouse
       throw new Error("Spouse first and last name are required before promotion.");
     }
 
+    const donorNumber = await allocateDonorNumber(client);
     const inserted = await client.query<{ id: string }>(
       `insert into public.donors (
+        donor_number,
         donor_type,
         gender,
         title,
@@ -1568,9 +1601,10 @@ export async function promoteSpouseToDonor(donorId: string, actor: PromoteSpouse
         primary_phone,
         created_by,
         updated_by
-      ) values ('INDIVIDUAL', $1, $2, $3, $4, $5, $6, $7, $8, $9, $9)
+      ) values ($1, 'INDIVIDUAL', $2, $3, $4, $5, $6, $7, $8, $9, $10, $10)
       returning id::text`,
       [
+        donorNumber,
         row.spouse_gender,
         row.spouse_title,
         row.spouse_first_name,
@@ -1716,8 +1750,10 @@ export async function promoteOrganizationRelationshipToDonor(
       throw new Error("Organization name is required before promotion.");
     }
 
+    const donorNumber = await allocateDonorNumber(client);
     const inserted = await client.query<{ id: string }>(
       `insert into public.donors (
+        donor_number,
         donor_type,
         organization_name,
         organization_contact_name,
@@ -1726,9 +1762,10 @@ export async function promoteOrganizationRelationshipToDonor(
         primary_phone,
         created_by,
         updated_by
-      ) values ('ORGANIZATION', $1, $2, $3, $4, $5, $6, $6)
+      ) values ($1, 'ORGANIZATION', $2, $3, $4, $5, $6, $7, $7)
       returning id::text`,
       [
+        donorNumber,
         row.organization_name,
         row.contact_name,
         row.primary_email,
@@ -1993,8 +2030,10 @@ export async function addOrganizationContact(
     let contactDonorId = input.contactDonorId?.trim() ? Number(input.contactDonorId) : null;
 
     if (!contactDonorId && input.createAsDonor && input.firstName?.trim() && input.lastName?.trim()) {
+      const donorNumber = await allocateDonorNumber(client);
       const inserted = await client.query<{ id: string }>(
         `insert into public.donors (
+          donor_number,
           donor_type,
           title,
           first_name,
@@ -2004,9 +2043,10 @@ export async function addOrganizationContact(
           primary_phone,
           created_by,
           updated_by
-        ) values ('INDIVIDUAL', $1, $2, $3, $4, $5, $6, $7, $7)
+        ) values ($1, 'INDIVIDUAL', $2, $3, $4, $5, $6, $7, $8, $8)
         returning id::text`,
         [
+          donorNumber,
           input.title?.trim() || null,
           input.firstName.trim(),
           input.middleName?.trim() || null,
