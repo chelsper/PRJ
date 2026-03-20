@@ -1,5 +1,6 @@
 import Link from "next/link";
 
+import { TopNavLinks } from "@/components/ui/top-nav-links";
 import { logoutAction } from "@/app/login/actions";
 import { ViewModeToggle } from "@/components/ui/view-mode-toggle";
 import { getCurrentSession } from "@/server/auth/session-store";
@@ -17,16 +18,18 @@ export default async function AdminLayout({ children }: { children: React.ReactN
             {session?.email} · {session?.role}
           </div>
         </div>
-        <nav className="navlinks">
-          <Link href="/dashboard">Dashboard</Link>
-          <Link href="/donors">Donors</Link>
-          <Link href="/gifts">Gifts</Link>
-          <Link href="/reports">Reports</Link>
-          <Link href="/imports">Imports</Link>
-          {session && (roleHasCapability(session.role, "users:manage") || roleHasCapability(session.role, "audit:read")) ? (
-            <Link href="/admin">Admin</Link>
-          ) : null}
-        </nav>
+        <TopNavLinks
+          items={[
+            { href: "/dashboard", label: "Dashboard" },
+            { href: "/donors", label: "Donors" },
+            { href: "/gifts", label: "Gifts" },
+            { href: "/reports", label: "Reports" },
+            { href: "/imports", label: "Imports" },
+            ...(session && (roleHasCapability(session.role, "users:manage") || roleHasCapability(session.role, "audit:read"))
+              ? [{ href: "/admin", label: "Admin" }]
+              : [])
+          ]}
+        />
         <div className="topbar-actions">
           <ViewModeToggle />
           <form action={logoutAction}>

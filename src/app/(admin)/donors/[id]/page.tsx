@@ -166,9 +166,6 @@ export default async function DonorProfilePage({
             <Link href={`/gifts?donorId=${donor.id}`} className="button-link">
               Add Gift
             </Link>
-            <Link href={`/donors/${id}?tab=giving`} className="button-link secondary-link">
-              Open Giving tab
-            </Link>
           </div>
         ) : null}
         <div className="stats donor-summary-stats">
