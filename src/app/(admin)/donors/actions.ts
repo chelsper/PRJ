@@ -108,6 +108,7 @@ export async function updateDonorProfileAction(formData: FormData) {
       spouseAlternateEmail: formData.get("spouseAlternateEmail"),
       spousePrimaryPhone: formData.get("spousePrimaryPhone"),
       spouseSameAddress: formData.get("spouseSameAddress"),
+      syncSpousePrimaryAddress: formData.get("syncSpousePrimaryAddress"),
       addressType: formData.get("addressType"),
       street1: formData.get("street1"),
       street2: formData.get("street2"),
@@ -142,7 +143,8 @@ export async function addDonorAddressAction(formData: FormData) {
       stateRegion: String(formData.get("stateRegion") ?? ""),
       postalCode: String(formData.get("postalCode") ?? ""),
       country: String(formData.get("country") ?? "United States"),
-      isPrimary: formData.get("isPrimary") === "on"
+      isPrimary: formData.get("isPrimary") === "on",
+      syncSpousePrimaryAddress: formData.get("syncSpousePrimaryAddress") === "on"
     },
     { userId: session.userId, ipAddress }
   );
@@ -159,7 +161,11 @@ export async function setPrimaryDonorAddressAction(formData: FormData) {
   const requestHeaders = await headers();
   const ipAddress = requestHeaders.get("x-forwarded-for")?.split(",")[0]?.trim() ?? null;
 
-  await setPrimaryDonorAddress(addressId, donorId, { userId: session.userId, ipAddress });
+  await setPrimaryDonorAddress(addressId, donorId, {
+    userId: session.userId,
+    ipAddress,
+    syncSpousePrimaryAddress: formData.get("syncSpousePrimaryAddress") === "on"
+  });
 
   revalidatePath(`/donors/${donorId}/addresses`);
   revalidatePath(`/donors/${donorId}`);

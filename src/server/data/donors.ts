@@ -1353,6 +1353,10 @@ export async function updateDonorProfile(donorId: string, input: unknown, actor:
           ]
         );
       }
+
+      if (currentDonor.donor_type === "INDIVIDUAL" && nextSpouseDonorId && values.syncSpousePrimaryAddress) {
+        await copyPrimaryAddressToDonor(client, Number(donorId), nextSpouseDonorId, actor.userId);
+      }
     }
 
     const after = await donorAuditSnapshot(client, Number(donorId));
@@ -1514,6 +1518,92 @@ async function copyPrimaryAddressToDonor(client: PoolClient, sourceDonorId: numb
     return;
   }
 
+  const source = sourceAddress.rows[0];
+  const targetPrimary = await client.query<{
+    id: string;
+    address_type: string;
+    street1: string;
+    street2: string | null;
+    city: string;
+    state_region: string | null;
+    postal_code: string | null;
+    country: string;
+  }>(
+    `select
+      id::text,
+      address_type,
+      street1,
+      street2,
+      city,
+      state_region,
+      postal_code,
+      country
+    from public.donor_addresses
+    where donor_id = $1
+      and is_primary = true
+    limit 1`,
+    [targetDonorId]
+  );
+
+  const targetPrimaryRow = targetPrimary.rows[0];
+  const matchesSource =
+    targetPrimaryRow &&
+    targetPrimaryRow.street1 === source.street1 &&
+    (targetPrimaryRow.street2 ?? null) === (source.street2 ?? null) &&
+    targetPrimaryRow.city === source.city &&
+    (targetPrimaryRow.state_region ?? null) === (source.state_region ?? null) &&
+    (targetPrimaryRow.postal_code ?? null) === (source.postal_code ?? null) &&
+    targetPrimaryRow.country === source.country;
+
+  if (matchesSource && targetPrimaryRow) {
+    await client.query(
+      `update public.donor_addresses
+       set address_type = $2,
+           is_primary = true,
+           updated_by = $3
+       where id = $1`,
+      [Number(targetPrimaryRow.id), source.address_type, userId]
+    );
+    return;
+  }
+
+  if (targetPrimaryRow) {
+    await client.query(
+      `update public.donor_addresses
+       set is_primary = false,
+           address_type = 'PREVIOUS',
+           updated_by = $2
+       where id = $1`,
+      [Number(targetPrimaryRow.id), userId]
+    );
+  }
+
+  const existingMatch = await client.query<{ id: string }>(
+    `select id::text
+     from public.donor_addresses
+     where donor_id = $1
+       and street1 = $2
+       and coalesce(street2, '') = coalesce($3, '')
+       and city = $4
+       and coalesce(state_region, '') = coalesce($5, '')
+       and coalesce(postal_code, '') = coalesce($6, '')
+       and country = $7
+     limit 1`,
+    [targetDonorId, source.street1, source.street2 ?? null, source.city, source.state_region ?? null, source.postal_code ?? null, source.country]
+  );
+
+  if (existingMatch.rows[0]) {
+    await client.query(
+      `update public.donor_addresses
+       set address_type = $2,
+           is_primary = true,
+           updated_by = $3
+       where id = $1`,
+      [Number(existingMatch.rows[0].id), source.address_type, userId]
+    );
+    return;
+  }
+
   await client.query(
     `insert into public.donor_addresses (
       donor_id,
@@ -1530,13 +1620,13 @@ async function copyPrimaryAddressToDonor(client: PoolClient, sourceDonorId: numb
     ) values ($1, $2, $3, $4, $5, $6, $7, $8, true, $9, $9)`,
     [
       targetDonorId,
-      sourceAddress.rows[0].address_type,
-      sourceAddress.rows[0].street1,
-      sourceAddress.rows[0].street2,
-      sourceAddress.rows[0].city,
-      sourceAddress.rows[0].state_region,
-      sourceAddress.rows[0].postal_code,
-      sourceAddress.rows[0].country,
+      source.address_type,
+      source.street1,
+      source.street2,
+      source.city,
+      source.state_region,
+      source.postal_code,
+      source.country,
       userId
     ]
   );
@@ -2221,11 +2311,22 @@ export async function addDonorAddress(
     postalCode?: string | null;
     country?: string | null;
     isPrimary?: boolean;
+    syncSpousePrimaryAddress?: boolean;
   },
   actor: Actor
 ) {
   await transaction(async (client) => {
     const before = await donorAuditSnapshot(client, Number(donorId));
+    const donorContext = await client.query<{ spouse_donor_id: string | null; donor_type: "INDIVIDUAL" | "ORGANIZATION" }>(
+      `select spouse_donor_id::text, donor_type
+       from public.donors
+       where id = $1`,
+      [Number(donorId)]
+    );
+    const spouseDonorId =
+      donorContext.rows[0]?.donor_type === "INDIVIDUAL" && donorContext.rows[0]?.spouse_donor_id
+        ? Number(donorContext.rows[0].spouse_donor_id)
+        : null;
 
     if (input.isPrimary) {
       await client.query(
@@ -2265,6 +2366,10 @@ export async function addDonorAddress(
       ]
     );
 
+    if (input.isPrimary && input.syncSpousePrimaryAddress && spouseDonorId) {
+      await copyPrimaryAddressToDonor(client, Number(donorId), spouseDonorId, actor.userId);
+    }
+
     await client.query(
       `insert into public.audit_log (actor_user_id, action, entity_type, entity_id, status, ip_address, metadata)
        values ($1, 'donor.address.create', 'donor', $2, 'success', $3, $4::jsonb)`,
@@ -2281,9 +2386,19 @@ export async function addDonorAddress(
   });
 }
 
-export async function setPrimaryDonorAddress(addressId: string, donorId: string, actor: Actor) {
+export async function setPrimaryDonorAddress(
+  addressId: string,
+  donorId: string,
+  actor: Actor & { syncSpousePrimaryAddress?: boolean }
+) {
   await transaction(async (client) => {
     const before = await donorAuditSnapshot(client, Number(donorId));
+    const donorContext = await client.query<{ spouse_donor_id: string | null; donor_type: "INDIVIDUAL" | "ORGANIZATION" }>(
+      `select spouse_donor_id::text, donor_type
+       from public.donors
+       where id = $1`,
+      [Number(donorId)]
+    );
 
     await client.query(
       `update public.donor_addresses
@@ -2301,6 +2416,15 @@ export async function setPrimaryDonorAddress(addressId: string, donorId: string,
          and donor_id = $2`,
       [Number(addressId), Number(donorId), actor.userId]
     );
+
+    const spouseDonorId =
+      donorContext.rows[0]?.donor_type === "INDIVIDUAL" && donorContext.rows[0]?.spouse_donor_id
+        ? Number(donorContext.rows[0].spouse_donor_id)
+        : null;
+
+    if (actor.syncSpousePrimaryAddress && spouseDonorId) {
+      await copyPrimaryAddressToDonor(client, Number(donorId), spouseDonorId, actor.userId);
+    }
 
     const after = await donorAuditSnapshot(client, Number(donorId));
 

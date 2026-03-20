@@ -54,6 +54,7 @@ export const donorInputSchema = z
     spouseAlternateEmail: blankToUndefined(z.string().trim().email().max(255)),
     spousePrimaryPhone: blankToUndefined(z.string().trim().max(30)),
     spouseSameAddress: z.preprocess((value) => value === "on" || value === true, z.boolean()).optional(),
+    syncSpousePrimaryAddress: z.preprocess((value) => value === "on" || value === true, z.boolean()).optional(),
     addressType: blankToUndefined(z.string().trim().max(50)),
     street1: blankToUndefined(z.string().trim().max(200)),
     street2: blankToUndefined(z.string().trim().max(200)),

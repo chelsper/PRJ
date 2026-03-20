@@ -274,6 +274,12 @@ export function DonorProfileForm({
             Country
             <input name="country" defaultValue={donor.country ?? "United States"} />
           </label>
+          {donor.donor_type === "INDIVIDUAL" && donor.spouse_donor_id ? (
+            <label className="full checkbox-line">
+              <input type="checkbox" name="syncSpousePrimaryAddress" />
+              <span>Also update the linked spouse primary address. Their previous primary address will be saved as a non-primary previous address.</span>
+            </label>
+          ) : null}
           {!isOrganization ? (
             <>
           <div className="full form-section-heading">

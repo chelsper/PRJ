@@ -12,6 +12,14 @@ export default async function DonorAddressesPage({
 }: {
   params: Promise<{ id: string }>;
 }) {
+  function formatAddressTypeLabel(value: string) {
+    if (value === "PREVIOUS") {
+      return "Previous Address";
+    }
+
+    return value;
+  }
+
   await requireCapability("donors:read");
   const { id } = await params;
   const donor = await getDonorProfile(id);
@@ -74,7 +82,7 @@ export default async function DonorAddressesPage({
             <tbody>
               {effectiveAddresses.map((address: DonorAddressRow) => (
                 <tr key={address.id}>
-                  <td>{address.address_type}</td>
+                  <td>{formatAddressTypeLabel(address.address_type)}</td>
                   <td>
                     {[address.street1, address.street2, address.city, address.state_region, address.postal_code]
                       .filter(Boolean)
@@ -91,6 +99,12 @@ export default async function DonorAddressesPage({
                       <form action={setPrimaryDonorAddressAction}>
                         <input type="hidden" name="donorId" value={donor.id} />
                         <input type="hidden" name="addressId" value={address.id} />
+                        {donor.donor_type === "INDIVIDUAL" && donor.spouse_donor_id ? (
+                          <label className="checkbox-line">
+                            <input type="checkbox" name="syncSpousePrimaryAddress" />
+                            <span>Update spouse too</span>
+                          </label>
+                        ) : null}
                         <button type="submit" className="secondary button-compact">
                           Make primary
                         </button>
@@ -152,6 +166,12 @@ export default async function DonorAddressesPage({
               <input type="checkbox" name="isPrimary" />
               Mark as primary
             </label>
+            {donor.donor_type === "INDIVIDUAL" && donor.spouse_donor_id ? (
+              <label className="full checkbox-line">
+                <input type="checkbox" name="syncSpousePrimaryAddress" />
+                <span>If this becomes the primary address, update the linked spouse primary address too.</span>
+              </label>
+            ) : null}
             <div className="full">
               <button type="submit">Add address</button>
             </div>
