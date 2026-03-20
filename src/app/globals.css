@@ -526,11 +526,56 @@ button:focus-visible,
 
 .donor-summary-stats {
   gap: var(--space-3);
+  grid-template-columns: repeat(12, minmax(0, 1fr));
 }
 
 .donor-summary-stats .stat {
   min-height: 116px;
   padding: var(--space-card);
+  grid-column: span 3;
+}
+
+.donor-stat-card-compact {
+  grid-column: span 2;
+}
+
+.donor-stat-card-wide {
+  grid-column: span 4;
+}
+
+.donor-stat-card-email {
+  grid-column: span 4;
+}
+
+.donor-stat-card .muted {
+  font-size: 0.88rem;
+}
+
+.donor-stat-card .stat-value {
+  font-size: clamp(1.18rem, 1.7vw, 2rem);
+  line-height: 1.02;
+}
+
+.donor-stat-card-compact .stat-value {
+  font-size: clamp(1.35rem, 1.9vw, 2.2rem);
+}
+
+.donor-stat-card-email .stat-value {
+  font-size: clamp(1rem, 1.28vw, 1.52rem);
+  line-height: 1.04;
+  overflow-wrap: normal;
+  word-break: normal;
+}
+
+.donor-stat-card-email .stat-value a,
+.donor-stat-card-wide .stat-value a {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.donor-stat-card-email .stat-value,
+.donor-stat-card-wide .stat-value {
+  max-width: 100%;
 }
 
 .donor-tab-row {
@@ -1146,7 +1191,7 @@ body.app-view-web .dashboard-hero h1 {
 
 body.app-view-web .donor-page-grid .stats,
 body.app-view-web .hero .stats.donor-summary-stats {
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(12, minmax(0, 1fr));
 }
 
 body.app-view-web .table-scroll {
@@ -1165,6 +1210,17 @@ body.app-view-mobile .hero h1 {
 body.app-view-mobile .stats,
 body.app-view-mobile .grid-2 {
   grid-template-columns: 1fr;
+}
+
+body.app-view-mobile .donor-summary-stats {
+  grid-template-columns: 1fr;
+}
+
+body.app-view-mobile .donor-summary-stats .stat,
+body.app-view-mobile .donor-stat-card-compact,
+body.app-view-mobile .donor-stat-card-wide,
+body.app-view-mobile .donor-stat-card-email {
+  grid-column: span 1;
 }
 
 body.app-view-mobile .tab-row {
@@ -1197,6 +1253,17 @@ body.app-view-mobile .table-scroll table {
   .stats,
   .form-grid {
     grid-template-columns: 1fr;
+  }
+
+  .donor-summary-stats {
+    grid-template-columns: 1fr;
+  }
+
+  .donor-summary-stats .stat,
+  .donor-stat-card-compact,
+  .donor-stat-card-wide,
+  .donor-stat-card-email {
+    grid-column: span 1;
   }
 
   .auth-shell {

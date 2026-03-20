@@ -169,27 +169,27 @@ export default async function DonorProfilePage({
           </div>
         ) : null}
         <div className="stats donor-summary-stats">
-          <article className="stat">
+          <article className="stat donor-stat-card donor-stat-card-compact">
             <span className="muted">Donor recognition total</span>
             <strong className="stat-value">${(Number(donor.donor_recognition_cents) / 100).toLocaleString()}</strong>
           </article>
-          <article className="stat">
+          <article className="stat donor-stat-card donor-stat-card-compact">
             <span className="muted">Hard-credit lifetime</span>
             <strong className="stat-value">${(Number(donor.donor_hard_credit_cents) / 100).toLocaleString()}</strong>
           </article>
-          <article className="stat">
+          <article className="stat donor-stat-card donor-stat-card-compact">
             <span className="muted">Soft-credit lifetime</span>
             <strong className="stat-value">${(Number(donor.donor_soft_credit_cents) / 100).toLocaleString()}</strong>
           </article>
-          <article className="stat">
+          <article className="stat donor-stat-card donor-stat-card-wide">
             <span className="muted">Current-year giving level</span>
             <strong className="stat-value">{donor.giving_level_display ?? "Below giving level threshold"}</strong>
           </article>
-          <article className="stat">
+          <article className="stat donor-stat-card donor-stat-card-compact">
             <span className="muted">Current-year recognition</span>
             <strong className="stat-value">${(Number(donor.current_year_recognition_cents) / 100).toLocaleString()}</strong>
           </article>
-          <article className="stat">
+          <article className="stat donor-stat-card donor-stat-card-email">
             <span className="muted">{donor.donor_type === "ORGANIZATION" ? "Organization website" : "Primary email"}</span>
             <strong className="stat-value">
               {donor.donor_type === "ORGANIZATION"
@@ -199,7 +199,7 @@ export default async function DonorProfilePage({
           </article>
           {donor.donor_type === "ORGANIZATION" ? (
             <>
-              <article className="stat">
+              <article className="stat donor-stat-card donor-stat-card-wide">
                 <span className="muted">Main organization contact</span>
                 <strong className="stat-value">
                   {donor.organization_contact_donor_id ? (
@@ -211,7 +211,7 @@ export default async function DonorProfilePage({
                   )}
                 </strong>
               </article>
-              <article className="stat">
+              <article className="stat donor-stat-card donor-stat-card-email">
                 <span className="muted">Main contact info</span>
                 <strong className="stat-value">
                   {donor.organization_contact_email ?? donor.organization_contact_phone ?? "No contact info on file"}
@@ -219,7 +219,7 @@ export default async function DonorProfilePage({
               </article>
             </>
           ) : null}
-          <article className="stat">
+          <article className="stat donor-stat-card donor-stat-card-wide">
             <span className="muted">Last gift</span>
             <strong className="stat-value">
               {latestGift
@@ -364,15 +364,15 @@ export default async function DonorProfilePage({
           <section className="card">
             <p className="eyebrow">Communication Summary</p>
             <div className="stats donor-summary-stats">
-              <article className="stat">
+              <article className="stat donor-stat-card donor-stat-card-email">
                 <span className="muted">Preferred email</span>
                 <strong className="stat-value">{donor.primary_email ?? "No email on file"}</strong>
               </article>
-              <article className="stat">
+              <article className="stat donor-stat-card donor-stat-card-compact">
                 <span className="muted">Preferred email type</span>
                 <strong className="stat-value">{donor.primary_email_type ?? "Unspecified"}</strong>
               </article>
-              <article className="stat">
+              <article className="stat donor-stat-card donor-stat-card-wide">
                 <span className="muted">Most recent gift</span>
                 <strong className="stat-value">{latestGift ? `${latestGift.gift_date} · $${(latestGift.amount_cents / 100).toLocaleString()}` : "No gifts yet"}</strong>
               </article>
