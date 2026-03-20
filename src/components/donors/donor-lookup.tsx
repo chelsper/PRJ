@@ -36,7 +36,8 @@ export function DonorLookup({
   placeholder,
   onSelectionChange,
   selectedHref,
-  selectedActionLabel
+  selectedActionLabel,
+  suppressNoResults = false
 }: {
   label: string;
   name: string;
@@ -48,6 +49,7 @@ export function DonorLookup({
   onSelectionChange?: (selection: DonorLookupOption | null) => void;
   selectedHref?: string | null;
   selectedActionLabel?: string;
+  suppressNoResults?: boolean;
 }) {
   const [query, setQuery] = useState(initialSelection ? donorLabel(initialSelection) : "");
   const [selected, setSelected] = useState<DonorLookupOption | null>(initialSelection);
@@ -143,10 +145,11 @@ export function DonorLookup({
       </div>
       {open ? (
         <div className="lookup-results">
-          {loading ? <div className="lookup-result muted">Searching donors...</div> : null}
+        {loading ? <div className="lookup-result muted">Searching donors...</div> : null}
           {!loading &&
           results.length === 0 &&
           deferredQuery.trim().length >= 2 &&
+          !suppressNoResults &&
           !(selected && deferredQuery.trim() === donorLabel(selected)) ? (
             <div className="lookup-result muted">No donor matches found.</div>
           ) : null}

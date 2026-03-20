@@ -313,6 +313,7 @@ export function DonorProfileForm({
                     placeholder="Search spouse by name or email"
                     selectedHref={donor.spouse_donor_id ? `/donors/${donor.spouse_donor_id}` : null}
                     selectedActionLabel="Open spouse record"
+                    suppressNoResults={createSpouseDraft}
                   />
                   <label className="toggle-row">
                     <input
