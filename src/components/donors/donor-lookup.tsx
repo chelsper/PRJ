@@ -58,6 +58,7 @@ export function DonorLookup({
   const [loading, setLoading] = useState(false);
   const deferredQuery = useDeferredValue(query);
   const hiddenInputRef = useRef<HTMLInputElement | null>(null);
+  const containerRef = useRef<HTMLLabelElement | null>(null);
 
   useEffect(() => {
     if (!hiddenInputRef.current) {
@@ -113,8 +114,44 @@ export function DonorLookup({
     return () => controller.abort();
   }, [allowedTypes, deferredQuery, selected]);
 
+  useEffect(() => {
+    if (!suppressNoResults) {
+      return;
+    }
+
+    setResults([]);
+    setLoading(false);
+    setOpen(false);
+  }, [suppressNoResults]);
+
+  useEffect(() => {
+    if (!open) {
+      return;
+    }
+
+    const handlePointerDown = (event: MouseEvent | TouchEvent) => {
+      if (!containerRef.current) {
+        return;
+      }
+
+      const target = event.target;
+
+      if (target instanceof Node && !containerRef.current.contains(target)) {
+        setOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handlePointerDown);
+    document.addEventListener("touchstart", handlePointerDown);
+
+    return () => {
+      document.removeEventListener("mousedown", handlePointerDown);
+      document.removeEventListener("touchstart", handlePointerDown);
+    };
+  }, [open]);
+
   return (
-    <label className="full donor-lookup">
+    <label ref={containerRef} className="full donor-lookup">
       <span>{label}</span>
       <input
         ref={hiddenInputRef}
@@ -138,6 +175,11 @@ export function DonorLookup({
           setQuery(event.target.value);
           setSelected(null);
           setOpen(true);
+        }}
+        onKeyDown={(event) => {
+          if (event.key === "Escape") {
+            setOpen(false);
+          }
         }}
       />
       <div className="lookup-selected muted">
