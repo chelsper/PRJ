@@ -295,14 +295,9 @@ export function DonorProfileForm({
                     initialSelection={spouseSelection}
                     hiddenInputId="spouse-donor-id"
                     placeholder="Search spouse by name or email"
+                    selectedHref={donor.spouse_donor_id ? `/donors/${donor.spouse_donor_id}` : null}
+                    selectedActionLabel="Open spouse record"
                   />
-                  {donor.spouse_donor_id ? (
-                    <div className="full">
-                      <Link href={`/donors/${donor.spouse_donor_id}`} className="inline-link">
-                        Open spouse record
-                      </Link>
-                    </div>
-                  ) : null}
                   <label className="toggle-row">
                     <input
                       type="checkbox"

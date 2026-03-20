@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useDeferredValue, useEffect, useRef, useState } from "react";
 
 type DonorLookupOption = {
@@ -33,7 +34,9 @@ export function DonorLookup({
   hiddenInputId,
   allowedTypes,
   placeholder,
-  onSelectionChange
+  onSelectionChange,
+  selectedHref,
+  selectedActionLabel
 }: {
   label: string;
   name: string;
@@ -43,6 +46,8 @@ export function DonorLookup({
   allowedTypes?: Array<DonorLookupOption["donorType"]>;
   placeholder?: string;
   onSelectionChange?: (selection: DonorLookupOption | null) => void;
+  selectedHref?: string | null;
+  selectedActionLabel?: string;
 }) {
   const [query, setQuery] = useState(initialSelection ? donorLabel(initialSelection) : "");
   const [selected, setSelected] = useState<DonorLookupOption | null>(initialSelection);
@@ -122,7 +127,11 @@ export function DonorLookup({
         value={query}
         placeholder={placeholder ?? "Search donor by name, preferred name, or email"}
         autoComplete="off"
-        onFocus={() => setOpen(true)}
+        onFocus={() => {
+          if (!(selected && deferredQuery.trim() === donorLabel(selected))) {
+            setOpen(true);
+          }
+        }}
         onChange={(event) => {
           setQuery(event.target.value);
           setSelected(null);
@@ -135,7 +144,10 @@ export function DonorLookup({
       {open ? (
         <div className="lookup-results">
           {loading ? <div className="lookup-result muted">Searching donors...</div> : null}
-          {!loading && results.length === 0 && deferredQuery.trim().length >= 2 ? (
+          {!loading &&
+          results.length === 0 &&
+          deferredQuery.trim().length >= 2 &&
+          !(selected && deferredQuery.trim() === donorLabel(selected)) ? (
             <div className="lookup-result muted">No donor matches found.</div>
           ) : null}
           {results.map((option: DonorLookupOption) => (
@@ -159,6 +171,11 @@ export function DonorLookup({
       ) : null}
       {selected ? (
         <div className="button-row">
+          {selectedHref ? (
+            <Link href={selectedHref} className="button-link secondary-link">
+              {selectedActionLabel ?? "Open linked record"}
+            </Link>
+          ) : null}
           <button
             type="button"
             className="secondary"
