@@ -85,12 +85,18 @@ export function DonorProfileForm({
       : null;
 
   return (
-    <div className="grid">
-      <section className="card">
+    <div className="grid donor-profile-sections">
+      <section className="card donor-profile-card">
         <p className="eyebrow">Profile Details</p>
-        <form action={updateAction} className="form-grid">
+        <form action={updateAction} className="form-grid donor-form-grid">
           <input type="hidden" name="donorId" value={donor.id} />
           <input type="hidden" name="donorType" value={donor.donor_type} />
+          <div className="full donor-form-savebar donor-form-savebar-top">
+            <button type="submit">Save profile</button>
+            <Link href={`/donors/${donorId}/addresses`} className="inline-link">
+              Manage alternate addresses
+            </Link>
+          </div>
           <div className="full form-section-heading">
             <p className="eyebrow">Identity</p>
             <p className="muted">
@@ -470,7 +476,7 @@ export function DonorProfileForm({
         </form>
       </section>
       {!isOrganization && hasOrganizationRelationship ? (
-        <section className="table-shell">
+        <section className="table-shell donor-relationship-shell">
           <div className="section-header">
             <div>
               <p className="eyebrow">Employer</p>
@@ -699,8 +705,8 @@ export function DonorProfileForm({
           </form>
         </section>
       ) : null}
-      <section className="card">
-        <form action={updateAction} className="form-grid">
+      <section className="card donor-notes-card">
+        <form action={updateAction} className="form-grid donor-form-grid">
           <input type="hidden" name="donorId" value={donor.id} />
           <input type="hidden" name="donorType" value={donor.donor_type} />
           <input type="hidden" name="title" value={donor.title ?? ""} />

@@ -147,7 +147,7 @@ export default async function DonorProfilePage({
 
   return (
       <div className="grid donor-page-grid">
-      <section className="hero">
+      <section className="hero donor-hero">
         <div className="section-header">
           <p className="eyebrow">Donor Profile</p>
           {donorWriteSession ? (
@@ -155,16 +155,18 @@ export default async function DonorProfilePage({
           ) : null}
         </div>
         <h1>{donor.full_name}</h1>
-        <p className="muted">
-          Donor ID {donor.donor_number ?? "Pending"} · {donor.donor_type === "ORGANIZATION" ? "Organization" : "Individual"}
-        </p>
-        {householdName ? <p className="muted">Household: {householdName}</p> : null}
+        <div className="donor-hero-meta">
+          <p className="muted">
+            Donor ID {donor.donor_number ?? "Pending"} · {donor.donor_type === "ORGANIZATION" ? "Organization" : "Individual"}
+          </p>
+          {householdName ? <p className="muted">Household: {householdName}</p> : null}
+        </div>
         {giftWriteSession ? (
-          <div className="button-row">
+          <div className="button-row donor-hero-actions">
             <Link href={`/gifts?donorId=${donor.id}`} className="button-link">
               Add Gift
             </Link>
-            <Link href={`/donors/${id}?tab=giving`} className="inline-link">
+            <Link href={`/donors/${id}?tab=giving`} className="button-link secondary-link">
               Open Giving tab
             </Link>
           </div>
@@ -231,7 +233,7 @@ export default async function DonorProfilePage({
         </div>
       </section>
 
-      <nav className="tab-row">
+      <nav className="tab-row donor-tab-row">
         <Link href={`/donors/${id}`} className={activeTab === "profile" ? "tab-link active" : "tab-link"}>
           Profile
         </Link>
