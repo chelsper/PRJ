@@ -296,6 +296,13 @@ export function DonorProfileForm({
                     hiddenInputId="spouse-donor-id"
                     placeholder="Search spouse by name or email"
                   />
+                  {donor.spouse_donor_id ? (
+                    <div className="full">
+                      <Link href={`/donors/${donor.spouse_donor_id}`} className="inline-link">
+                        Open spouse record
+                      </Link>
+                    </div>
+                  ) : null}
                   <label className="toggle-row">
                     <input
                       type="checkbox"
@@ -476,7 +483,13 @@ export function DonorProfileForm({
                 {relationships.map((relationship: DonorOrganizationRelationshipRow) => (
                   <tr key={relationship.id}>
                     <td>
-                      {relationship.organization_display_name}
+                      {relationship.organization_donor_id ? (
+                        <Link href={`/donors/${relationship.organization_donor_id}`} className="table-link">
+                          {relationship.organization_display_name}
+                        </Link>
+                      ) : (
+                        relationship.organization_display_name
+                      )}
                       {relationship.organization_donor_number ? (
                         <div className="muted">{relationship.organization_donor_number}</div>
                       ) : null}

@@ -200,7 +200,15 @@ export default async function DonorProfilePage({
             <>
               <article className="stat">
                 <span className="muted">Main organization contact</span>
-                <strong className="stat-value">{organizationMainContactName}</strong>
+                <strong className="stat-value">
+                  {donor.organization_contact_donor_id ? (
+                    <Link href={`/donors/${donor.organization_contact_donor_id}`} className="table-link">
+                      {organizationMainContactName}
+                    </Link>
+                  ) : (
+                    organizationMainContactName
+                  )}
+                </strong>
               </article>
               <article className="stat">
                 <span className="muted">Main contact info</span>

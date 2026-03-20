@@ -6,6 +6,48 @@ import type { PoolClient } from "pg";
 type Actor = { userId: string; ipAddress?: string | null };
 type PromoteSpouseActor = Actor & { softCreditHistory?: boolean };
 
+async function ensureOrganizationRelationshipLink(
+  client: PoolClient,
+  donorId: number,
+  organizationDonorId: number,
+  actor: Actor,
+  relationshipType: "EMPLOYER" | "FOUNDATION" | "DONOR_ADVISED_FUND" | "OTHER" = "OTHER",
+  notes?: string | null
+) {
+  const existing = await client.query<{ id: string }>(
+    `select id::text
+     from public.donor_organization_relationships
+     where donor_id = $1
+       and organization_donor_id = $2
+     limit 1`,
+    [donorId, organizationDonorId]
+  );
+
+  if (existing.rows[0]) {
+    await client.query(
+      `update public.donor_organization_relationships
+       set relationship_type = $2,
+           notes = coalesce(notes, $3),
+           updated_by = $4
+       where id = $1`,
+      [Number(existing.rows[0].id), relationshipType, notes ?? null, actor.userId]
+    );
+    return;
+  }
+
+  await client.query(
+    `insert into public.donor_organization_relationships (
+      donor_id,
+      organization_donor_id,
+      relationship_type,
+      notes,
+      created_by,
+      updated_by
+    ) values ($1, $2, $3, $4, $5, $5)`,
+    [donorId, organizationDonorId, relationshipType, notes ?? null, actor.userId]
+  );
+}
+
 export type DonorListRow = {
   id: string;
   donor_number: string | null;
@@ -1014,8 +1056,12 @@ export async function updateDonorProfile(donorId: string, input: unknown, actor:
   const values = donorInputSchema.parse(input);
 
   await transaction(async (client) => {
-    const currentDonorResult = await client.query<{ donor_type: "INDIVIDUAL" | "ORGANIZATION" }>(
+    const currentDonorResult = await client.query<{
+      donor_type: "INDIVIDUAL" | "ORGANIZATION";
+      spouse_donor_id: string | null;
+    }>(
       `select donor_type
+              , spouse_donor_id::text
        from public.donors
        where id = $1`,
       [Number(donorId)]
@@ -1032,6 +1078,8 @@ export async function updateDonorProfile(donorId: string, input: unknown, actor:
     }
 
     const before = await donorAuditSnapshot(client, Number(donorId));
+    const previousSpouseDonorId = currentDonor.spouse_donor_id ? Number(currentDonor.spouse_donor_id) : null;
+    const nextSpouseDonorId = values.spouseDonorId ? Number(values.spouseDonorId) : null;
 
     await client.query(
       `update public.donors
@@ -1110,6 +1158,29 @@ export async function updateDonorProfile(donorId: string, input: unknown, actor:
         actor.userId
       ]
     );
+
+    if (currentDonor.donor_type === "INDIVIDUAL") {
+      if (previousSpouseDonorId && previousSpouseDonorId !== nextSpouseDonorId) {
+        await client.query(
+          `update public.donors
+           set spouse_donor_id = null,
+               updated_by = $3
+           where id = $1
+             and spouse_donor_id = $2`,
+          [previousSpouseDonorId, Number(donorId), actor.userId]
+        );
+      }
+
+      if (nextSpouseDonorId) {
+        await client.query(
+          `update public.donors
+           set spouse_donor_id = $2,
+               updated_by = $3
+           where id = $1`,
+          [nextSpouseDonorId, Number(donorId), actor.userId]
+        );
+      }
+    }
 
     if (values.street1 && values.city) {
       const existingPrimary = await client.query<{ id: string }>(
@@ -1271,6 +1342,17 @@ export async function updateOrganizationDetails(
       ]
     );
 
+    if (organizationContactDonorId) {
+      await ensureOrganizationRelationshipLink(
+        client,
+        Number(organizationContactDonorId),
+        Number(donorId),
+        actor,
+        "OTHER",
+        "Organization main contact"
+      );
+    }
+
     const after = await donorAuditSnapshot(client, Number(donorId));
 
     await client.query(
@@ -1430,7 +1512,7 @@ export async function promoteSpouseToDonor(donorId: string, actor: PromoteSpouse
       `update public.donors
        set spouse_donor_id = $2,
            updated_by = $3
-       where id = $1`,
+       where id in ($1, $2)`,
       [Number(donorId), Number(spouseId), actor.userId]
     );
 
@@ -1790,6 +1872,17 @@ export async function addOrganizationContact(
         actor.userId
       ]
     );
+
+    if (contactDonorId) {
+      await ensureOrganizationRelationshipLink(
+        client,
+        contactDonorId,
+        Number(donorId),
+        actor,
+        "OTHER",
+        `Organization ${(input.contactType ?? "ADDITIONAL_CONTACT").replaceAll("_", " ").toLowerCase()}`
+      );
+    }
 
     await writeAuditLog({
       actorUserId: actor.userId,

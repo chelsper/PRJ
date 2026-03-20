@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
 
 import { DonorLookup, type DonorLookupOption } from "@/components/donors/donor-lookup";
@@ -105,6 +106,13 @@ export function OrganizationTab({
               setMainContactPhone(selection?.primaryPhone ?? "");
             }}
           />
+          {donor.organization_contact_donor_id ? (
+            <div className="full">
+              <Link href={`/donors/${donor.organization_contact_donor_id}`} className="inline-link">
+                Open linked contact record
+              </Link>
+            </div>
+          ) : null}
           <label className="toggle-row full">
             <input
               type="checkbox"
@@ -211,7 +219,17 @@ export function OrganizationTab({
               {contacts.map((contact: OrganizationContactRow) => (
                 <tr key={contact.id}>
                   <td>{contactTypeLabels[contact.contact_type] ?? contact.contact_type.replaceAll("_", " ")}</td>
-                  <td>{contact.linked_display_name ?? ([contact.first_name, contact.middle_name, contact.last_name].filter(Boolean).join(" ") || "—")}</td>
+                  <td>
+                    {contact.contact_donor_id && contact.linked_display_name ? (
+                      <Link href={`/donors/${contact.contact_donor_id}`} className="table-link">
+                        {contact.linked_display_name}
+                      </Link>
+                    ) : (
+                      contact.linked_display_name ??
+                      ([contact.first_name, contact.middle_name, contact.last_name].filter(Boolean).join(" ") || "—")
+                    )}
+                    {contact.linked_donor_number ? <div className="muted">{contact.linked_donor_number}</div> : null}
+                  </td>
                   <td>{contact.email ?? "—"}</td>
                   <td>{contact.primary_phone ?? "—"}</td>
                   <td>
