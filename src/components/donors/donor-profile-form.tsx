@@ -272,26 +272,32 @@ export function DonorProfileForm({
             <>
           <div className="full form-section-heading">
             <p className="eyebrow">Relationships</p>
-            <p className="muted">Manage spouse and organization relationship context for this donor.</p>
+            <p className="muted">Manage spouse and employer relationships in separate sections.</p>
           </div>
           {donor.donor_type === "INDIVIDUAL" ? (
-            <div className="full conditional-block">
-              <label className="toggle-row">
-                <input
-                  type="checkbox"
-                  checked={hasSpouse}
-                  onChange={(event) => {
-                    const next = event.target.checked;
-                    setHasSpouse(next);
-                    if (!next) {
-                      setCreateSpouseDraft(false);
-                    }
-                  }}
-                />
-                <span>Has Spouse</span>
-              </label>
+            <section className="full relationship-panel">
+              <div className="relationship-panel-header">
+                <div>
+                  <p className="eyebrow">Spouse</p>
+                  <p className="muted">Link or create a spouse record, then navigate directly between spouse profiles.</p>
+                </div>
+                <label className="toggle-row">
+                  <input
+                    type="checkbox"
+                    checked={hasSpouse}
+                    onChange={(event) => {
+                      const next = event.target.checked;
+                      setHasSpouse(next);
+                      if (!next) {
+                        setCreateSpouseDraft(false);
+                      }
+                    }}
+                  />
+                  <span>Has Spouse</span>
+                </label>
+              </div>
               {hasSpouse ? (
-                <>
+                <div className="relationship-panel-body">
                   <DonorLookup
                     label="Spouse record"
                     name="spouseDonorId"
@@ -386,7 +392,7 @@ export function DonorProfileForm({
                       <input type="hidden" name="softCreditSpouseHistory" value="" />
                     </>
                   )}
-                </>
+                </div>
               ) : (
                 <>
                   <input type="hidden" name="spouseDonorId" value="" />
@@ -402,51 +408,59 @@ export function DonorProfileForm({
                   <input type="hidden" name="softCreditSpouseHistory" value="" />
                 </>
               )}
+            </section>
+          ) : (
+            <>
+              <input type="hidden" name="spouseDonorId" value={donor.spouse_donor_id ?? ""} />
+              <input type="hidden" name="spouseTitle" value={donor.spouse_title ?? ""} />
+              <input type="hidden" name="spouseGender" value={donor.spouse_gender ?? ""} />
+              <input type="hidden" name="spouseFirstName" value={donor.spouse_first_name ?? ""} />
+              <input type="hidden" name="spouseMiddleName" value={donor.spouse_middle_name ?? ""} />
+              <input type="hidden" name="spouseLastName" value={donor.spouse_last_name ?? ""} />
+              <input type="hidden" name="spousePreferredEmail" value={donor.spouse_preferred_email ?? ""} />
+              <input type="hidden" name="spouseAlternateEmail" value={donor.spouse_alternate_email ?? ""} />
+              <input type="hidden" name="spousePrimaryPhone" value={donor.spouse_primary_phone ?? ""} />
+              <input type="hidden" name="spouseSameAddress" value={donor.spouse_same_address ? "on" : ""} />
+              <input type="hidden" name="softCreditSpouseHistory" value="" />
+            </>
+          )}
+            </>
+          ) : (
+            <>
+              <input type="hidden" name="spouseDonorId" value={donor.spouse_donor_id ?? ""} />
+              <input type="hidden" name="spouseTitle" value={donor.spouse_title ?? ""} />
+              <input type="hidden" name="spouseGender" value={donor.spouse_gender ?? ""} />
+              <input type="hidden" name="spouseFirstName" value={donor.spouse_first_name ?? ""} />
+              <input type="hidden" name="spouseMiddleName" value={donor.spouse_middle_name ?? ""} />
+              <input type="hidden" name="spouseLastName" value={donor.spouse_last_name ?? ""} />
+              <input type="hidden" name="spousePreferredEmail" value={donor.spouse_preferred_email ?? ""} />
+              <input type="hidden" name="spouseAlternateEmail" value={donor.spouse_alternate_email ?? ""} />
+              <input type="hidden" name="spousePrimaryPhone" value={donor.spouse_primary_phone ?? ""} />
+              <input type="hidden" name="spouseSameAddress" value={donor.spouse_same_address ? "on" : ""} />
+              <input type="hidden" name="softCreditSpouseHistory" value="" />
+            </>
+          )}
+          <section className="full relationship-panel relationship-panel-secondary">
+            <div className="relationship-panel-header">
+              <div>
+                <p className="eyebrow">Employer</p>
+                <p className="muted">Track employer links, roles, and whether this donor is an organization contact.</p>
+              </div>
+              <label className="toggle-row">
+                <input
+                  type="checkbox"
+                  checked={hasOrganizationRelationship}
+                  onChange={(event) => setHasOrganizationRelationship(event.target.checked)}
+                />
+                <span>Has Employer Relationship</span>
+              </label>
             </div>
-          ) : (
-            <>
-              <input type="hidden" name="spouseDonorId" value={donor.spouse_donor_id ?? ""} />
-              <input type="hidden" name="spouseTitle" value={donor.spouse_title ?? ""} />
-              <input type="hidden" name="spouseGender" value={donor.spouse_gender ?? ""} />
-              <input type="hidden" name="spouseFirstName" value={donor.spouse_first_name ?? ""} />
-              <input type="hidden" name="spouseMiddleName" value={donor.spouse_middle_name ?? ""} />
-              <input type="hidden" name="spouseLastName" value={donor.spouse_last_name ?? ""} />
-              <input type="hidden" name="spousePreferredEmail" value={donor.spouse_preferred_email ?? ""} />
-              <input type="hidden" name="spouseAlternateEmail" value={donor.spouse_alternate_email ?? ""} />
-              <input type="hidden" name="spousePrimaryPhone" value={donor.spouse_primary_phone ?? ""} />
-              <input type="hidden" name="spouseSameAddress" value={donor.spouse_same_address ? "on" : ""} />
-              <input type="hidden" name="softCreditSpouseHistory" value="" />
-            </>
-          )}
-            </>
-          ) : (
-            <>
-              <input type="hidden" name="spouseDonorId" value={donor.spouse_donor_id ?? ""} />
-              <input type="hidden" name="spouseTitle" value={donor.spouse_title ?? ""} />
-              <input type="hidden" name="spouseGender" value={donor.spouse_gender ?? ""} />
-              <input type="hidden" name="spouseFirstName" value={donor.spouse_first_name ?? ""} />
-              <input type="hidden" name="spouseMiddleName" value={donor.spouse_middle_name ?? ""} />
-              <input type="hidden" name="spouseLastName" value={donor.spouse_last_name ?? ""} />
-              <input type="hidden" name="spousePreferredEmail" value={donor.spouse_preferred_email ?? ""} />
-              <input type="hidden" name="spouseAlternateEmail" value={donor.spouse_alternate_email ?? ""} />
-              <input type="hidden" name="spousePrimaryPhone" value={donor.spouse_primary_phone ?? ""} />
-              <input type="hidden" name="spouseSameAddress" value={donor.spouse_same_address ? "on" : ""} />
-              <input type="hidden" name="softCreditSpouseHistory" value="" />
-            </>
-          )}
-          <div className="full conditional-block">
-            <label className="toggle-row">
-              <input
-                type="checkbox"
-                checked={hasOrganizationRelationship}
-                onChange={(event) => setHasOrganizationRelationship(event.target.checked)}
-              />
-              <span>Has Employer Relationship</span>
-            </label>
             {hasOrganizationRelationship ? (
-              <p className="muted">Use the employer section below to link an organization, store the person&apos;s role, and mark whether they are an organization contact.</p>
+              <div className="relationship-panel-body">
+                <p className="muted">Use the employer section below to link an organization, store the person&apos;s role, and mark whether they are an organization contact.</p>
+              </div>
             ) : null}
-          </div>
+          </section>
           <div className="full button-row">
             <button type="submit">Save profile</button>
             <Link href={`/donors/${donorId}/addresses`} className="inline-link">
