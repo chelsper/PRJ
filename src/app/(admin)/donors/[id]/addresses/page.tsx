@@ -5,7 +5,7 @@ import { requireCapability } from "@/server/auth/permissions";
 import { listConfigOptions } from "@/server/data/configurations";
 import { getDonorProfile, listDonorAddresses, type DonorAddressRow } from "@/server/data/donors";
 
-import { addDonorAddressAction } from "../../actions";
+import { addDonorAddressAction, setPrimaryDonorAddressAction } from "../../actions";
 
 export default async function DonorAddressesPage({
   params
@@ -25,6 +25,25 @@ export default async function DonorAddressesPage({
     listConfigOptions("address_types"),
     listConfigOptions("states")
   ]);
+  const effectiveAddresses = [...addresses];
+
+  if (
+    donor.street1 &&
+    donor.city &&
+    !effectiveAddresses.some((address) => address.is_primary)
+  ) {
+    effectiveAddresses.unshift({
+      id: "profile-primary",
+      address_type: donor.address_type ?? "PRIMARY",
+      street1: donor.street1,
+      street2: donor.street2,
+      city: donor.city,
+      state_region: donor.state_region,
+      postal_code: donor.postal_code,
+      country: donor.country ?? "United States",
+      is_primary: true
+    });
+  }
 
   return (
     <div className="grid">
@@ -49,10 +68,11 @@ export default async function DonorAddressesPage({
                 <th>Type</th>
                 <th>Address</th>
                 <th>Primary</th>
+                <th></th>
               </tr>
             </thead>
             <tbody>
-              {addresses.map((address: DonorAddressRow) => (
+              {effectiveAddresses.map((address: DonorAddressRow) => (
                 <tr key={address.id}>
                   <td>{address.address_type}</td>
                   <td>
@@ -60,7 +80,23 @@ export default async function DonorAddressesPage({
                       .filter(Boolean)
                       .join(", ")}
                   </td>
-                  <td>{address.is_primary ? "Yes" : "No"}</td>
+                  <td>
+                    <label className="checkbox-line">
+                      <input type="checkbox" checked={address.is_primary} readOnly aria-label={address.is_primary ? "Primary address" : "Not primary"} />
+                      <span>{address.is_primary ? "Primary" : "Not primary"}</span>
+                    </label>
+                  </td>
+                  <td>
+                    {!address.is_primary && address.id !== "profile-primary" ? (
+                      <form action={setPrimaryDonorAddressAction}>
+                        <input type="hidden" name="donorId" value={donor.id} />
+                        <input type="hidden" name="addressId" value={address.id} />
+                        <button type="submit" className="secondary button-compact">
+                          Make primary
+                        </button>
+                      </form>
+                    ) : null}
+                  </td>
                 </tr>
               ))}
             </tbody>

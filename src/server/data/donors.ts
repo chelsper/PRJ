@@ -2281,6 +2281,46 @@ export async function addDonorAddress(
   });
 }
 
+export async function setPrimaryDonorAddress(addressId: string, donorId: string, actor: Actor) {
+  await transaction(async (client) => {
+    const before = await donorAuditSnapshot(client, Number(donorId));
+
+    await client.query(
+      `update public.donor_addresses
+       set is_primary = false,
+           updated_by = $2
+       where donor_id = $1`,
+      [Number(donorId), actor.userId]
+    );
+
+    await client.query(
+      `update public.donor_addresses
+       set is_primary = true,
+           updated_by = $3
+       where id = $1
+         and donor_id = $2`,
+      [Number(addressId), Number(donorId), actor.userId]
+    );
+
+    const after = await donorAuditSnapshot(client, Number(donorId));
+
+    await client.query(
+      `insert into public.audit_log (actor_user_id, action, entity_type, entity_id, status, ip_address, metadata)
+       values ($1, 'donor.address.primary', 'donor', $2, 'success', $3, $4::jsonb)`,
+      [
+        actor.userId,
+        Number(donorId),
+        actor.ipAddress ?? null,
+        JSON.stringify({
+          addressId,
+          before,
+          after
+        })
+      ]
+    );
+  });
+}
+
 export async function softDeleteDonor(donorId: string, actor: Actor) {
   const before = await query<{ snapshot: Record<string, unknown> | null }>(
     `select jsonb_build_object(

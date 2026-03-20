@@ -17,6 +17,7 @@ import {
   findPotentialDuplicateDonors,
   promoteOrganizationRelationshipToDonor,
   promoteSpouseToDonor,
+  setPrimaryDonorAddress,
   softDeleteDonor,
   updateOrganizationDetails,
   updateDonorProfile
@@ -145,6 +146,20 @@ export async function addDonorAddressAction(formData: FormData) {
     },
     { userId: session.userId, ipAddress }
   );
+
+  revalidatePath(`/donors/${donorId}/addresses`);
+  revalidatePath(`/donors/${donorId}`);
+}
+
+export async function setPrimaryDonorAddressAction(formData: FormData) {
+  await assertSameOrigin();
+  const session = await requireCapability("donors:write");
+  const donorId = String(formData.get("donorId"));
+  const addressId = String(formData.get("addressId"));
+  const requestHeaders = await headers();
+  const ipAddress = requestHeaders.get("x-forwarded-for")?.split(",")[0]?.trim() ?? null;
+
+  await setPrimaryDonorAddress(addressId, donorId, { userId: session.userId, ipAddress });
 
   revalidatePath(`/donors/${donorId}/addresses`);
   revalidatePath(`/donors/${donorId}`);
