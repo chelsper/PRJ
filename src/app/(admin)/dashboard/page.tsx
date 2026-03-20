@@ -1,5 +1,6 @@
 import Link from "next/link";
 
+import { DonorPageSearch } from "@/components/donors/donor-page-search";
 import { requireCapability } from "@/server/auth/permissions";
 import { dashboardTotals, givingLevelSnapshot, type GivingLevelSnapshotRow } from "@/server/data/reports";
 
@@ -29,6 +30,7 @@ export default async function DashboardPage() {
         <p className="muted">
           Quickly find donors, add gifts, send receipts, and track your impact.
         </p>
+        <DonorPageSearch />
         <div className="button-row">
           <Link href="/donors" className="button-link">
             Find Donors
