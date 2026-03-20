@@ -447,10 +447,6 @@ export function DonorProfileForm({
               <p className="muted">Use the employer section below to link an organization, store the person&apos;s role, and mark whether they are an organization contact.</p>
             ) : null}
           </div>
-          <label className="full">
-            General donor notes
-            <textarea name="notes" rows={5} defaultValue={donor.notes ?? ""} />
-          </label>
           <div className="full button-row">
             <button type="submit">Save profile</button>
             <Link href={`/donors/${donorId}/addresses`} className="inline-link">
@@ -557,6 +553,10 @@ export function DonorProfileForm({
               allowedTypes={["ORGANIZATION"]}
               placeholder="Search organization by name or donor ID"
             />
+            <label>
+              Role
+              <input name="role" placeholder={relationshipType === "EMPLOYER" ? "Job title or role" : "Relationship role"} />
+            </label>
             <label className="toggle-row full">
               <input
                 type="checkbox"
@@ -573,10 +573,6 @@ export function DonorProfileForm({
                 <label className="full">
                   Organization name
                   <input name="organizationName" />
-                </label>
-                <label>
-                  Role
-                  <input name="role" placeholder={relationshipType === "EMPLOYER" ? "Job title or role" : "Relationship role"} />
                 </label>
                 <label>
                   Contact name
@@ -689,6 +685,62 @@ export function DonorProfileForm({
           </form>
         </section>
       ) : null}
+      <section className="card">
+        <form action={updateAction} className="form-grid">
+          <input type="hidden" name="donorId" value={donor.id} />
+          <input type="hidden" name="donorType" value={donor.donor_type} />
+          <input type="hidden" name="title" value={donor.title ?? ""} />
+          <input type="hidden" name="gender" value={donor.gender ?? ""} />
+          <input type="hidden" name="firstName" value={donor.first_name ?? ""} />
+          <input type="hidden" name="middleName" value={donor.middle_name ?? ""} />
+          <input type="hidden" name="lastName" value={donor.last_name ?? ""} />
+          <input type="hidden" name="preferredName" value={donor.preferred_name ?? ""} />
+          <input type="hidden" name="organizationName" value={donor.organization_name ?? ""} />
+          <input type="hidden" name="organizationWebsite" value={donor.organization_website ?? ""} />
+          <input type="hidden" name="organizationEmail" value={donor.organization_email ?? ""} />
+          <input type="hidden" name="organizationContactDonorId" value={donor.organization_contact_donor_id ?? ""} />
+          <input type="hidden" name="organizationContactTitle" value={donor.organization_contact_title ?? ""} />
+          <input type="hidden" name="organizationContactFirstName" value={donor.organization_contact_first_name ?? ""} />
+          <input type="hidden" name="organizationContactMiddleName" value={donor.organization_contact_middle_name ?? ""} />
+          <input type="hidden" name="organizationContactLastName" value={donor.organization_contact_last_name ?? ""} />
+          <input type="hidden" name="organizationContactName" value={donor.organization_contact_name ?? ""} />
+          <input type="hidden" name="organizationContactEmail" value={donor.organization_contact_email ?? ""} />
+          <input type="hidden" name="organizationContactPhone" value={donor.organization_contact_phone ?? ""} />
+          <input type="hidden" name="primaryEmail" value={donor.primary_email ?? ""} />
+          <input type="hidden" name="primaryEmailType" value={donor.primary_email_type ?? ""} />
+          <input type="hidden" name="alternateEmail" value={donor.alternate_email ?? ""} />
+          <input type="hidden" name="alternateEmailType" value={donor.alternate_email_type ?? ""} />
+          <input type="hidden" name="primaryPhone" value={donor.primary_phone ?? ""} />
+          <input type="hidden" name="spouseDonorId" value={donor.spouse_donor_id ?? ""} />
+          <input type="hidden" name="spouseGender" value={donor.spouse_gender ?? ""} />
+          <input type="hidden" name="spouseTitle" value={donor.spouse_title ?? ""} />
+          <input type="hidden" name="spouseFirstName" value={donor.spouse_first_name ?? ""} />
+          <input type="hidden" name="spouseMiddleName" value={donor.spouse_middle_name ?? ""} />
+          <input type="hidden" name="spouseLastName" value={donor.spouse_last_name ?? ""} />
+          <input type="hidden" name="spousePreferredEmail" value={donor.spouse_preferred_email ?? ""} />
+          <input type="hidden" name="spouseAlternateEmail" value={donor.spouse_alternate_email ?? ""} />
+          <input type="hidden" name="spousePrimaryPhone" value={donor.spouse_primary_phone ?? ""} />
+          <input type="hidden" name="spouseSameAddress" value={donor.spouse_same_address ? "on" : ""} />
+          <input type="hidden" name="addressType" value={donor.address_type ?? ""} />
+          <input type="hidden" name="street1" value={donor.street1 ?? ""} />
+          <input type="hidden" name="street2" value={donor.street2 ?? ""} />
+          <input type="hidden" name="city" value={donor.city ?? ""} />
+          <input type="hidden" name="stateRegion" value={donor.state_region ?? ""} />
+          <input type="hidden" name="postalCode" value={donor.postal_code ?? ""} />
+          <input type="hidden" name="country" value={donor.country ?? "United States"} />
+          <div className="full form-section-heading">
+            <p className="eyebrow">Notes</p>
+            <p className="muted">General donor notes for this constituent record.</p>
+          </div>
+          <label className="full">
+            General donor notes
+            <textarea name="notes" rows={5} defaultValue={donor.notes ?? ""} />
+          </label>
+          <div className="full button-row">
+            <button type="submit">Save notes</button>
+          </div>
+        </form>
+      </section>
     </div>
   );
 }
