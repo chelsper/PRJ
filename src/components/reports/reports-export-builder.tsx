@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useState } from "react";
 
 type ExportColumn = {
   key: string;
@@ -16,16 +16,12 @@ export function ReportsExportBuilder({
 }) {
   const [selectedColumns, setSelectedColumns] = useState<string[]>(columns.map((column) => column.key));
 
-  const downloadHref = useMemo(() => {
-    const params = new URLSearchParams({ report });
-
-    selectedColumns.forEach((column) => params.append("columns", column));
-
-    return `/api/exports/donors?${params.toString()}`;
-  }, [report, selectedColumns]);
-
   return (
-    <div className="grid">
+    <form className="grid" action="/api/exports/donors" method="post">
+      <input type="hidden" name="report" value={report} />
+      {selectedColumns.map((column) => (
+        <input key={column} type="hidden" name="columns" value={column} />
+      ))}
       <div className="card">
         <p className="eyebrow">Export Fields</p>
         <div className="grid">
@@ -46,10 +42,10 @@ export function ReportsExportBuilder({
         </div>
       </div>
       <div className="button-row">
-        <a href={downloadHref} className="button-link">
+        <button type="submit" className="button-link">
           Download CSV
-        </a>
+        </button>
       </div>
-    </div>
+    </form>
   );
 }
