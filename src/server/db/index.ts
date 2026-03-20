@@ -7,11 +7,27 @@ declare global {
   var __crmPool: Pool | undefined;
 }
 
+function normalizeDatabaseUrl(databaseUrl: string) {
+  try {
+    const parsed = new URL(databaseUrl);
+    const sslmode = parsed.searchParams.get("sslmode");
+
+    if (sslmode === "require" || sslmode === "prefer" || sslmode === "verify-ca") {
+      parsed.searchParams.set("sslmode", "verify-full");
+    }
+
+    return parsed.toString();
+  } catch {
+    return databaseUrl.replace(/sslmode=(require|prefer|verify-ca)/g, "sslmode=verify-full");
+  }
+}
+
+const normalizedDatabaseUrl = normalizeDatabaseUrl(env.DATABASE_URL);
+
 const pool =
   global.__crmPool ??
   new Pool({
-    connectionString: env.DATABASE_URL,
-    ssl: env.DATABASE_URL.includes("sslmode=require") ? { rejectUnauthorized: false } : undefined
+    connectionString: normalizedDatabaseUrl
   });
 
 if (process.env.NODE_ENV !== "production") {
