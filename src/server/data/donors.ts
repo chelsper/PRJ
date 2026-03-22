@@ -36,6 +36,165 @@ async function allocateDonorNumber(client: PoolClient) {
   }
 }
 
+type ParsedDonorInput = ReturnType<typeof donorInputSchema.parse>;
+
+async function insertDonorRecord(
+  client: PoolClient,
+  values: ParsedDonorInput,
+  actor: Actor,
+  donorNumberOverride?: string | null
+) {
+  const donorNumber = donorNumberOverride?.trim() || (await allocateDonorNumber(client));
+
+  if (donorNumberOverride?.trim()) {
+    const existing = await client.query<{ id: string }>(
+      `select id::text
+       from public.donors
+       where donor_number = $1
+       limit 1`,
+      [donorNumber]
+    );
+
+    if (existing.rows[0]) {
+      throw new Error(`A constituent with ID ${donorNumber} already exists.`);
+    }
+  }
+
+  const inserted = await client.query<{ id: string }>(
+    `insert into public.donors (
+      donor_number,
+      donor_type,
+      title,
+      gender,
+      first_name,
+      middle_name,
+      last_name,
+      preferred_name,
+      organization_name,
+      organization_website,
+      organization_email,
+      organization_contact_donor_id,
+      organization_contact_title,
+      organization_contact_first_name,
+      organization_contact_middle_name,
+      organization_contact_last_name,
+      organization_contact_name,
+      organization_contact_email,
+      organization_contact_phone,
+      primary_email,
+      primary_email_type,
+      alternate_email,
+      alternate_email_type,
+      primary_phone,
+      spouse_donor_id,
+      spouse_gender,
+      spouse_title,
+      spouse_first_name,
+      spouse_middle_name,
+      spouse_last_name,
+      spouse_preferred_email,
+      spouse_alternate_email,
+      spouse_primary_phone,
+      spouse_same_address,
+      notes,
+      created_by,
+      updated_by
+    ) values (
+      $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19,
+      $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31, $32, $33, $34, $35, $36, $36
+    )
+    returning id::text`,
+    [
+      donorNumber,
+      values.donorType,
+      values.title ?? null,
+      values.gender ?? null,
+      values.firstName ?? null,
+      values.middleName ?? null,
+      values.lastName ?? null,
+      values.preferredName ?? null,
+      values.organizationName ?? null,
+      values.organizationWebsite ?? null,
+      values.organizationEmail ?? null,
+      values.organizationContactDonorId ?? null,
+      values.organizationContactTitle ?? null,
+      values.organizationContactFirstName ?? null,
+      values.organizationContactMiddleName ?? null,
+      values.organizationContactLastName ?? null,
+      values.organizationContactName ?? null,
+      values.organizationContactEmail ?? null,
+      values.organizationContactPhone ?? null,
+      values.primaryEmail ?? null,
+      values.primaryEmailType ?? null,
+      values.alternateEmail ?? null,
+      values.alternateEmailType ?? null,
+      values.primaryPhone ?? null,
+      values.spouseDonorId ?? null,
+      values.spouseGender ?? null,
+      values.spouseTitle ?? null,
+      values.spouseFirstName ?? null,
+      values.spouseMiddleName ?? null,
+      values.spouseLastName ?? null,
+      values.spousePreferredEmail ?? null,
+      values.spouseAlternateEmail ?? null,
+      values.spousePrimaryPhone ?? null,
+      values.spouseSameAddress ?? false,
+      values.notes ?? null,
+      actor.userId
+    ]
+  );
+
+  const donorId = inserted.rows[0].id;
+
+  if (values.street1 && values.city) {
+    await client.query(
+      `insert into public.donor_addresses (
+        donor_id,
+        address_type,
+        street1,
+        street2,
+        city,
+        state_region,
+        postal_code,
+        country,
+        is_primary,
+        created_by,
+        updated_by
+      ) values ($1, $2, $3, $4, $5, $6, $7, $8, true, $9, $9)`,
+      [
+        donorId,
+        values.addressType ?? "Primary",
+        values.street1,
+        values.street2 ?? null,
+        values.city,
+        values.stateRegion ?? null,
+        values.postalCode ?? null,
+        values.country ?? "United States",
+        actor.userId
+      ]
+    );
+  }
+
+  const after = await donorAuditSnapshot(client, Number(donorId));
+
+  await client.query(
+    `insert into public.audit_log (actor_user_id, action, entity_type, entity_id, status, ip_address, metadata)
+     values ($1, 'donor.create', 'donor', $2, 'success', $3, $4::jsonb)`,
+    [
+      actor.userId,
+      donorId,
+      actor.ipAddress ?? null,
+      JSON.stringify({
+        donorType: values.donorType,
+        before: null,
+        after
+      })
+    ]
+  );
+
+  return donorId;
+}
+
 async function ensureOrganizationRelationshipLink(
   client: PoolClient,
   donorId: number,
@@ -1023,142 +1182,116 @@ export async function getDonorLatestGift(donorId: string): Promise<DonorLatestGi
 export async function createDonor(input: unknown, actor: Actor) {
   const values = donorInputSchema.parse(input);
 
-  return transaction(async (client) => {
-    const donorNumber = await allocateDonorNumber(client);
-    const inserted = await client.query<{ id: string }>(
-      `insert into public.donors (
-        donor_number,
-        donor_type,
-        title,
-        gender,
-        first_name,
-        middle_name,
-        last_name,
-        preferred_name,
-        organization_name,
-        organization_website,
-        organization_email,
-        organization_contact_donor_id,
-        organization_contact_title,
-        organization_contact_first_name,
-        organization_contact_middle_name,
-        organization_contact_last_name,
-        organization_contact_name,
-        organization_contact_email,
-        organization_contact_phone,
-        primary_email,
-        primary_email_type,
-        alternate_email,
-        alternate_email_type,
-        primary_phone,
-        spouse_donor_id,
-        spouse_gender,
-        spouse_title,
-        spouse_first_name,
-        spouse_middle_name,
-        spouse_last_name,
-        spouse_preferred_email,
-        spouse_alternate_email,
-        spouse_primary_phone,
-        spouse_same_address,
-        notes,
-        created_by,
-        updated_by
-      ) values (
-        $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19,
-        $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31, $32, $33, $34, $35, $36, $36
-      )
-      returning id::text`,
-      [
-        donorNumber,
-        values.donorType,
-        values.title ?? null,
-        values.gender ?? null,
-        values.firstName ?? null,
-        values.middleName ?? null,
-        values.lastName ?? null,
-        values.preferredName ?? null,
-        values.organizationName ?? null,
-        values.organizationWebsite ?? null,
-        values.organizationEmail ?? null,
-        values.organizationContactDonorId ?? null,
-        values.organizationContactTitle ?? null,
-        values.organizationContactFirstName ?? null,
-        values.organizationContactMiddleName ?? null,
-        values.organizationContactLastName ?? null,
-        values.organizationContactName ?? null,
-        values.organizationContactEmail ?? null,
-        values.organizationContactPhone ?? null,
-        values.primaryEmail ?? null,
-        values.primaryEmailType ?? null,
-        values.alternateEmail ?? null,
-        values.alternateEmailType ?? null,
-        values.primaryPhone ?? null,
-        values.spouseDonorId ?? null,
-        values.spouseGender ?? null,
-        values.spouseTitle ?? null,
-        values.spouseFirstName ?? null,
-        values.spouseMiddleName ?? null,
-        values.spouseLastName ?? null,
-        values.spousePreferredEmail ?? null,
-        values.spouseAlternateEmail ?? null,
-        values.spousePrimaryPhone ?? null,
-        values.spouseSameAddress ?? false,
-        values.notes ?? null,
-        actor.userId
-      ]
-    );
+  return transaction(async (client) => insertDonorRecord(client, values, actor));
+}
 
-    const donorId = inserted.rows[0].id;
+export async function importConstituentRecords(
+  rows: Array<Record<string, string>>,
+  mapping: Record<string, string>,
+  actor: Actor
+) {
+  function normalizedValue(row: Record<string, string>, targetField: string) {
+    const sourceHeader = Object.entries(mapping).find(([, mappedField]) => mappedField === targetField)?.[0];
+    return sourceHeader ? row[sourceHeader]?.trim() ?? "" : "";
+  }
 
-    if (values.street1 && values.city) {
-      await client.query(
-        `insert into public.donor_addresses (
-          donor_id,
-          address_type,
-          street1,
-          street2,
-          city,
-          state_region,
-          postal_code,
-          country,
-          is_primary,
-          created_by,
-          updated_by
-        ) values ($1, $2, $3, $4, $5, $6, $7, $8, true, $9, $9)`,
-        [
-          donorId,
-          values.addressType ?? "Primary",
-          values.street1,
-          values.street2 ?? null,
-          values.city,
-          values.stateRegion ?? null,
-          values.postalCode ?? null,
-          values.country ?? "United States",
-          actor.userId
-        ]
-      );
+  function normalizedDonorType(rawValue: string, organizationName: string) {
+    const normalized = rawValue.trim().toLowerCase();
+
+    if (["organization", "org", "business", "company", "foundation"].includes(normalized)) {
+      return "ORGANIZATION" as const;
     }
 
-    const after = await donorAuditSnapshot(client, Number(donorId));
+    if (["individual", "person", "people", "constituent"].includes(normalized)) {
+      return "INDIVIDUAL" as const;
+    }
 
-    await client.query(
-      `insert into public.audit_log (actor_user_id, action, entity_type, entity_id, status, ip_address, metadata)
-       values ($1, 'donor.create', 'donor', $2, 'success', $3, $4::jsonb)`,
-      [
-        actor.userId,
-        donorId,
-        actor.ipAddress ?? null,
-        JSON.stringify({
-          donorType: values.donorType,
-          before: null,
-          after
-        })
-      ]
-    );
+    return organizationName ? ("ORGANIZATION" as const) : ("INDIVIDUAL" as const);
+  }
 
-    return donorId;
-  });
+  const results: string[] = [];
+  let createdCount = 0;
+  let skippedCount = 0;
+
+  for (let index = 0; index < rows.length; index += 1) {
+    const row = rows[index];
+    const donorNumber = normalizedValue(row, "donor_number");
+    const organizationName = normalizedValue(row, "organization_name");
+    const donorType = normalizedDonorType(normalizedValue(row, "donor_type"), organizationName);
+
+    const input = {
+      donorType,
+      title: normalizedValue(row, "title") || undefined,
+      gender: normalizedValue(row, "gender") || undefined,
+      firstName: normalizedValue(row, "first_name") || undefined,
+      middleName: normalizedValue(row, "middle_name") || undefined,
+      lastName: normalizedValue(row, "last_name") || undefined,
+      preferredName: normalizedValue(row, "preferred_name") || undefined,
+      organizationName: organizationName || undefined,
+      primaryEmail: normalizedValue(row, "primary_email") || undefined,
+      primaryEmailType: normalizedValue(row, "primary_email_type") || undefined,
+      alternateEmail: normalizedValue(row, "alternate_email") || undefined,
+      alternateEmailType: normalizedValue(row, "alternate_email_type") || undefined,
+      primaryPhone: normalizedValue(row, "primary_phone") || undefined,
+      addressType: normalizedValue(row, "address_type") || undefined,
+      street1: normalizedValue(row, "street1") || undefined,
+      street2: normalizedValue(row, "street2") || undefined,
+      city: normalizedValue(row, "city") || undefined,
+      stateRegion: normalizedValue(row, "state_region") || undefined,
+      postalCode: normalizedValue(row, "postal_code") || undefined,
+      country: normalizedValue(row, "country") || undefined,
+      notes: normalizedValue(row, "notes") || undefined
+    };
+
+    try {
+      if (donorNumber) {
+        const existingByNumber = await query<{ id: string }>(
+          `select id::text
+           from public.donors
+           where donor_number = $1
+           limit 1`,
+          [donorNumber]
+        );
+
+        if (existingByNumber.rows[0]) {
+          skippedCount += 1;
+          results.push(`Row ${index + 1}: skipped because constituent ID ${donorNumber} already exists.`);
+          continue;
+        }
+      }
+
+      const duplicates = await findPotentialDuplicateDonors(input);
+
+      if (duplicates.length > 0) {
+        skippedCount += 1;
+        results.push(
+          `Row ${index + 1}: skipped as a possible duplicate of ${duplicates[0].full_name} (${duplicates[0].matched_fields.join(", ")}).`
+        );
+        continue;
+      }
+
+      await transaction(async (client) => {
+        const parsed = donorInputSchema.parse(input);
+        await insertDonorRecord(client, parsed, actor, donorNumber || null);
+      });
+
+      createdCount += 1;
+    } catch (error) {
+      skippedCount += 1;
+      results.push(`Row ${index + 1}: ${(error as Error).message}`);
+    }
+  }
+
+  return {
+    success: createdCount > 0,
+    message:
+      createdCount > 0
+        ? `Constituent import completed. ${createdCount} record${createdCount === 1 ? "" : "s"} created.`
+        : "No constituent records were created.",
+    createdCount,
+    skippedCount,
+    errors: results
+  };
 }
 
 export async function updateDonorProfile(donorId: string, input: unknown, actor: Actor) {

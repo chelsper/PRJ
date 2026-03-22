@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, type ChangeEvent } from "react";
+import { useMemo, useState, useTransition, type ChangeEvent } from "react";
 
 import { normalizeImportHeader, parseImportCsv } from "@/components/imports/import-workbench-utils";
 
@@ -17,6 +17,19 @@ type CsvImportWorkbenchProps<TField extends string> = {
   footerNote: string;
   targetFieldOptions: Array<TargetFieldOption<TField>>;
   headerGuessMap: Record<string, TField>;
+  submitLabel?: string;
+  submitDescription?: string;
+  submitAction?: (payload: {
+    fileName: string;
+    rows: Array<Record<string, string>>;
+    mapping: Record<string, TField | "">;
+  }) => Promise<{
+    success: boolean;
+    message: string;
+    createdCount?: number;
+    skippedCount?: number;
+    errors?: string[];
+  }>;
 };
 
 export function CsvImportWorkbench<TField extends string>({
@@ -26,12 +39,23 @@ export function CsvImportWorkbench<TField extends string>({
   previewDescription,
   footerNote,
   targetFieldOptions,
-  headerGuessMap
+  headerGuessMap,
+  submitLabel,
+  submitDescription,
+  submitAction
 }: CsvImportWorkbenchProps<TField>) {
   const [fileName, setFileName] = useState("");
   const [headers, setHeaders] = useState<string[]>([]);
   const [rows, setRows] = useState<Array<Record<string, string>>>([]);
   const [mapping, setMapping] = useState<Record<string, TField | "">>({});
+  const [importResult, setImportResult] = useState<{
+    success: boolean;
+    message: string;
+    createdCount?: number;
+    skippedCount?: number;
+    errors?: string[];
+  } | null>(null);
+  const [isPending, startTransition] = useTransition();
 
   const mappedFields = useMemo(
     () => targetFieldOptions.filter((field) => Object.values(mapping).includes(field.value)),
@@ -56,6 +80,7 @@ export function CsvImportWorkbench<TField extends string>({
       setHeaders([]);
       setRows([]);
       setMapping({});
+      setImportResult(null);
       return;
     }
 
@@ -65,6 +90,7 @@ export function CsvImportWorkbench<TField extends string>({
     setFileName(file.name);
     setHeaders(parsed.headers);
     setRows(parsed.rows);
+    setImportResult(null);
     setMapping(
       parsed.headers.reduce<Record<string, TField | "">>((accumulator, header) => {
         accumulator[header] = headerGuessMap[normalizeImportHeader(header)] ?? "";
@@ -154,6 +180,46 @@ export function CsvImportWorkbench<TField extends string>({
               </table>
             </div>
             <p className="muted top-gap">{footerNote}</p>
+            {submitAction ? (
+              <div className="top-gap">
+                {submitDescription ? <p className="muted">{submitDescription}</p> : null}
+                <div className="button-row top-gap">
+                  <button
+                    type="button"
+                    disabled={isPending || rows.length === 0 || mappedFields.length === 0}
+                    onClick={() =>
+                      startTransition(async () => {
+                        const result = await submitAction({
+                          fileName,
+                          rows,
+                          mapping
+                        });
+                        setImportResult(result);
+                      })
+                    }
+                  >
+                    {isPending ? "Importing..." : submitLabel ?? "Import records"}
+                  </button>
+                </div>
+                {importResult ? (
+                  <div className="conditional-block top-gap">
+                    <strong>{importResult.message}</strong>
+                    {typeof importResult.createdCount === "number" || typeof importResult.skippedCount === "number" ? (
+                      <p className="muted">
+                        Created: {importResult.createdCount ?? 0} · Skipped: {importResult.skippedCount ?? 0}
+                      </p>
+                    ) : null}
+                    {importResult.errors && importResult.errors.length > 0 ? (
+                      <ul>
+                        {importResult.errors.slice(0, 10).map((error) => (
+                          <li key={error}>{error}</li>
+                        ))}
+                      </ul>
+                    ) : null}
+                  </div>
+                ) : null}
+              </div>
+            ) : null}
           </section>
         </>
       ) : null}

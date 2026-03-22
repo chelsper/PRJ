@@ -1,5 +1,6 @@
 "use client";
 
+import { runConstituentImportAction } from "@/app/(admin)/imports/actions";
 import { CsvImportWorkbench } from "@/components/imports/csv-import-workbench";
 
 type ConstituentImportTargetField =
@@ -101,9 +102,12 @@ export function ConstituentImportWorkbench() {
       description="Upload a constituent file, review the detected columns, and map them to Pink Ribbon CRM constituent fields before moving into import validation."
       mappingDescription="Map each incoming CSV column to a CRM constituent field, or leave it ignored."
       previewDescription="Preview how the first rows line up after mapping before duplicate checks and constituent creation."
-      footerNote="This prepares the mapping only. Duplicate management, constituent matching, and record creation can be layered onto this workflow next."
+      footerNote="Review the preview carefully before creating records. Rows that already match existing constituents will be skipped."
       targetFieldOptions={targetFieldOptions}
       headerGuessMap={headerGuessMap}
+      submitLabel="Create constituent records"
+      submitDescription="Create constituent records from the mapped rows below."
+      submitAction={runConstituentImportAction}
     />
   );
 }
