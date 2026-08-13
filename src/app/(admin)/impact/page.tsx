@@ -1,9 +1,9 @@
 import Link from "next/link";
 
+import { DonorLookup } from "@/components/donors/donor-lookup";
 import { requireCapability, getSessionWithCapability } from "@/server/auth/permissions";
 import {
   listImpactCases,
-  listImpactProviders,
   listImpactServices,
   listImpactServiceTypes
 } from "@/server/data/impact";
@@ -17,15 +17,23 @@ function formatMoney(cents: number) {
 export default async function ImpactPage({
   searchParams
 }: {
-  searchParams: Promise<{ created?: string }>;
+  searchParams: Promise<{
+    created?: string;
+    caseQuery?: string;
+    programYear?: string;
+    ageBand?: string;
+    county?: string;
+    zipCode?: string;
+    serviceStatus?: "HAS_SERVICE" | "NO_SERVICE";
+  }>;
 }) {
   await requireCapability("impact:read");
   const writableSession = await getSessionWithCapability("impact:write");
-  const { created } = await searchParams;
-  const [cases, services, providers, serviceTypes] = await Promise.all([
-    listImpactCases(),
+  const { created, caseQuery, programYear, ageBand, county, zipCode, serviceStatus } = await searchParams;
+  const caseFilters = { query: caseQuery, programYear, ageBand, county, zipCode, serviceStatus };
+  const [cases, services, serviceTypes] = await Promise.all([
+    listImpactCases(caseFilters),
     listImpactServices(),
-    listImpactProviders(),
     listImpactServiceTypes()
   ]);
   const currentYear = new Date().getFullYear();
@@ -41,7 +49,7 @@ export default async function ImpactPage({
         <div className="stats impact-summary-stats">
           <article className="stat"><span className="muted">Patient cases</span><strong>{cases.length}</strong></article>
           <article className="stat"><span className="muted">Service records</span><strong>{services.length}</strong></article>
-          <article className="stat"><span className="muted">Provider organizations</span><strong>{providers.length}</strong></article>
+          <article className="stat"><span className="muted">Provider organizations</span><strong>{new Set(services.map((service) => service.provider_name)).size}</strong></article>
         </div>
       </section>
 
@@ -79,7 +87,13 @@ export default async function ImpactPage({
             <p className="muted">Providers are existing organization constituent records. Add a provider in Donors first if it is not listed.</p>
             <form action={createServiceRecordAction} className="form-grid">
               <label>Patient case<select name="patientCaseId" required><option value="">Select case</option>{cases.map((patientCase) => <option key={patientCase.id} value={patientCase.id}>{patientCase.case_number} · {patientCase.program_year}</option>)}</select></label>
-              <label>Provider<select name="providerDonorId" required><option value="">Select provider</option>{providers.map((provider) => <option key={provider.id} value={provider.id}>{provider.name}</option>)}</select></label>
+              <DonorLookup
+                label="Provider"
+                name="providerDonorId"
+                required
+                allowedTypes={["ORGANIZATION"]}
+                placeholder="Search provider by organization name or constituent ID"
+              />
               <label>Service type<select name="serviceTypeId" required><option value="">Select service</option>{serviceTypes.map((type) => <option key={type.id} value={type.id}>{type.name}</option>)}</select></label>
               <label>Service date<input name="serviceDate" type="date" required /></label>
               <label>Invoice date<input name="invoiceDate" type="date" /></label>
@@ -98,6 +112,15 @@ export default async function ImpactPage({
       <section className="grid grid-2 impact-record-grid">
         <article className="table-shell">
           <div className="section-header"><div><p className="eyebrow">Patient Cases</p><h2>Recent cases</h2></div><span className="muted">No names or contact details</span></div>
+          <form action="/impact" className="impact-query-form">
+            <label className="impact-query-search">Find patient case<input name="caseQuery" defaultValue={caseQuery ?? ""} placeholder="Case number or external reference" /></label>
+            <label>Year<input name="programYear" type="number" min="2000" max="2100" defaultValue={programYear ?? ""} /></label>
+            <label>Age band<select name="ageBand" defaultValue={ageBand ?? ""}><option value="">All ages</option><option>Under 40</option><option>40-49</option><option>50-64</option><option>65+</option></select></label>
+            <label>County<input name="county" defaultValue={county ?? ""} /></label>
+            <label>ZIP code<input name="zipCode" defaultValue={zipCode ?? ""} /></label>
+            <label>Service status<select name="serviceStatus" defaultValue={serviceStatus ?? ""}><option value="">All cases</option><option value="HAS_SERVICE">Has services</option><option value="NO_SERVICE">No services yet</option></select></label>
+            <div className="impact-query-actions"><button type="submit">Search cases</button><Link href="/impact" className="button-link secondary-link">Clear</Link></div>
+          </form>
           <table><thead><tr><th>Case</th><th>Year</th><th>Age</th><th>Location</th><th>Services</th></tr></thead><tbody>
             {cases.length ? cases.map((patientCase) => <tr key={patientCase.id}><td>{patientCase.case_number}</td><td>{patientCase.program_year}</td><td>{patientCase.age_at_intake ?? patientCase.age_band ?? "-"}</td><td>{[patientCase.county, patientCase.zip_code].filter(Boolean).join(" · ") || "-"}</td><td>{patientCase.service_count}</td></tr>) : <tr><td colSpan={5} className="muted">No patient cases yet.</td></tr>}
           </tbody></table>

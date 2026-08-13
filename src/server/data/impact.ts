@@ -29,7 +29,22 @@ export type ImpactServiceRow = {
 export type ImpactProviderRow = { id: string; name: string };
 export type ImpactServiceTypeRow = { id: string; name: string };
 
-export async function listImpactCases(): Promise<ImpactCaseRow[]> {
+export type ImpactCaseFilters = {
+  query?: string;
+  programYear?: string;
+  ageBand?: string;
+  county?: string;
+  zipCode?: string;
+  serviceStatus?: "HAS_SERVICE" | "NO_SERVICE";
+};
+
+export async function listImpactCases(filters: ImpactCaseFilters = {}): Promise<ImpactCaseRow[]> {
+  const search = filters.query?.trim() || null;
+  const programYear = filters.programYear && /^\d{4}$/.test(filters.programYear) ? Number(filters.programYear) : null;
+  const ageBand = filters.ageBand?.trim() || null;
+  const county = filters.county?.trim() || null;
+  const zipCode = filters.zipCode?.trim() || null;
+  const serviceStatus = filters.serviceStatus ?? null;
   const result = await query<ImpactCaseRow>(
     `select
        pc.id::text,
@@ -44,9 +59,24 @@ export async function listImpactCases(): Promise<ImpactCaseRow[]> {
        count(sr.id)::int as service_count
      from public.patient_cases pc
      left join public.service_records sr on sr.patient_case_id = pc.id
+     where (
+       $1::text is null
+       or pc.case_number ilike '%' || $1 || '%'
+       or pc.external_patient_ref ilike '%' || $1 || '%'
+     )
+       and ($2::smallint is null or pc.program_year = $2)
+       and ($3::text is null or pc.age_band = $3)
+       and ($4::text is null or pc.county ilike '%' || $4 || '%')
+       and ($5::text is null or pc.zip_code ilike '%' || $5 || '%')
+       and (
+         $6::text is null
+         or ($6 = 'HAS_SERVICE' and exists (select 1 from public.service_records service_filter where service_filter.patient_case_id = pc.id))
+         or ($6 = 'NO_SERVICE' and not exists (select 1 from public.service_records service_filter where service_filter.patient_case_id = pc.id))
+       )
      group by pc.id
      order by pc.created_at desc
-     limit 50`
+     limit 100`,
+    [search, programYear, ageBand, county, zipCode, serviceStatus]
   );
 
   return result.rows;

@@ -514,6 +514,31 @@ button:focus-visible,
   align-items: start;
 }
 
+.impact-query-form {
+  display: grid;
+  grid-template-columns: minmax(200px, 1.45fr) repeat(5, minmax(110px, 0.8fr));
+  gap: var(--space-2);
+  align-items: end;
+  margin: 0 0 var(--space-4);
+  padding: var(--space-3);
+  background: var(--entry-surface);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+}
+
+.impact-query-actions {
+  display: flex;
+  gap: var(--space-2);
+  align-items: center;
+}
+
+.impact-query-actions button,
+.impact-query-actions .button-link {
+  min-height: 44px;
+  padding: 10px 13px;
+  white-space: nowrap;
+}
+
 .impact-entry-grid .card h2,
 .impact-record-grid h2 {
   margin: 0 0 var(--space-1);
