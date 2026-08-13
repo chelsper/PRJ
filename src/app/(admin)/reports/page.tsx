@@ -105,18 +105,20 @@ export default async function ReportsPage({
             </Link>
           ) : null}
         </div>
-        <table>
+        <div className="table-workspace-summary"><span>{donorsThisYear.length} {donorsThisYear.length === 1 ? "donor" : "donors"} shown</span><span>Calendar year {new Date().getFullYear()}</span></div>
+        <div className="table-scroll"><table>
           <thead>
             <tr>
               <th>Donor Name</th>
               <th>Soft Credit Donor</th>
               <th>Total Amount Received</th>
               <th>Total Amount Pledged</th>
+              <th><span className="sr-only">Open</span></th>
             </tr>
           </thead>
           <tbody>
-            {donorsThisYear.map((row: DonorsThisYearRow) => (
-              <tr key={row.donor_id}>
+            {donorsThisYear.length ? donorsThisYear.map((row: DonorsThisYearRow) => (
+              <tr key={row.donor_id} className="table-row-actionable">
                 <td>
                   <Link href={`/donors/${row.donor_id}`} className="table-link">
                     {row.donor_name}
@@ -125,34 +127,33 @@ export default async function ReportsPage({
                 <td>{row.soft_credit_donors ?? "—"}</td>
                 <td>${(row.total_received_cents / 100).toLocaleString()}</td>
                 <td>${(row.total_pledged_cents / 100).toLocaleString()}</td>
+                <td><Link href={`/donors/${row.donor_id}`} className="table-open-link">Open</Link></td>
               </tr>
-            ))}
+            )) : <tr><td colSpan={5} className="table-empty-state">No donors have qualifying gifts this calendar year.</td></tr>}
           </tbody>
-        </table>
+        </table></div>
       </section>
 
       <section className="table-shell">
-        <p className="eyebrow">Donor Recognition Totals</p>
-        {selectedGivingLevelLabel ? (
-          <p className="muted">
-            Showing donors in current-year giving level: <strong>{selectedGivingLevelLabel}</strong>.{" "}
-            <Link href="/reports" className="inline-link">
-              Clear filter
-            </Link>
-          </p>
-        ) : null}
-        <table>
+        <div className="section-header"><div><p className="eyebrow">Donor Recognition Totals</p><h2>{donorTotals.length} {donorTotals.length === 1 ? "donor" : "donors"}</h2></div></div>
+        <form action="/reports" className="table-workspace-toolbar report-filter-toolbar">
+          <label className="table-workspace-search">Current-year giving level<select name="givingLevel" defaultValue={givingLevel ?? ""}><option value="">All giving levels</option>{levelSnapshot.map((level) => <option key={level.giving_level_internal} value={level.giving_level_internal}>{level.giving_level_display}</option>)}</select></label>
+          <div className="table-workspace-actions"><button type="submit">Apply filter</button><Link href="/reports" className="button-link secondary-link">Clear</Link></div>
+        </form>
+        {selectedGivingLevelLabel ? <p className="active-filter-note">Showing current-year giving level: <strong>{selectedGivingLevelLabel}</strong></p> : null}
+        <div className="table-scroll"><table>
           <thead>
             <tr>
               <th>Donor</th>
               <th>Recognition total</th>
               <th>Hard-credit lifetime</th>
               <th>Soft-credit lifetime</th>
+              <th><span className="sr-only">Open</span></th>
             </tr>
           </thead>
           <tbody>
-            {donorTotals.map((row: DonorRecognitionRow) => (
-              <tr key={row.donor_id}>
+            {donorTotals.length ? donorTotals.map((row: DonorRecognitionRow) => (
+              <tr key={row.donor_id} className="table-row-actionable">
                 <td>
                   <Link href={`/donors/${row.donor_id}`} className="table-link">
                     {row.donor_name}
@@ -161,10 +162,11 @@ export default async function ReportsPage({
                 <td>${(row.donor_recognition_cents / 100).toLocaleString()}</td>
                 <td>${(row.donor_hard_credit_cents / 100).toLocaleString()}</td>
                 <td>${(row.donor_soft_credit_cents / 100).toLocaleString()}</td>
+                <td><Link href={`/donors/${row.donor_id}`} className="table-open-link">Open</Link></td>
               </tr>
-            ))}
+            )) : <tr><td colSpan={5} className="table-empty-state">No donors match this giving-level filter.</td></tr>}
           </tbody>
-        </table>
+        </table></div>
       </section>
 
       <section className="grid grid-2">

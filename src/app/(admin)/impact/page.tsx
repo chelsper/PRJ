@@ -111,25 +111,25 @@ export default async function ImpactPage({
 
       <section className="grid grid-2 impact-record-grid">
         <article className="table-shell">
-          <div className="section-header"><div><p className="eyebrow">Patient Cases</p><h2>Recent cases</h2></div><span className="muted">No names or contact details</span></div>
-          <form action="/impact" className="impact-query-form">
+          <div className="section-header"><div><p className="eyebrow">Patient Cases</p><h2>{cases.length} {cases.length === 1 ? "case" : "cases"}</h2></div><span className="muted">No names or contact details</span></div>
+          <form action="/impact" className="table-workspace-toolbar impact-query-form">
             <label className="impact-query-search">Find patient case<input name="caseQuery" defaultValue={caseQuery ?? ""} placeholder="Case number or external reference" /></label>
             <label>Year<input name="programYear" type="number" min="2000" max="2100" defaultValue={programYear ?? ""} /></label>
             <label>Age band<select name="ageBand" defaultValue={ageBand ?? ""}><option value="">All ages</option><option>Under 40</option><option>40-49</option><option>50-64</option><option>65+</option></select></label>
             <label>County<input name="county" defaultValue={county ?? ""} /></label>
             <label>ZIP code<input name="zipCode" defaultValue={zipCode ?? ""} /></label>
             <label>Service status<select name="serviceStatus" defaultValue={serviceStatus ?? ""}><option value="">All cases</option><option value="HAS_SERVICE">Has services</option><option value="NO_SERVICE">No services yet</option></select></label>
-            <div className="impact-query-actions"><button type="submit">Search cases</button><Link href="/impact" className="button-link secondary-link">Clear</Link></div>
+            <div className="table-workspace-actions"><button type="submit">Search</button><Link href="/impact" className="button-link secondary-link">Clear</Link></div>
           </form>
-          <table><thead><tr><th>Case</th><th>Year</th><th>Age</th><th>Location</th><th>Services</th></tr></thead><tbody>
-            {cases.length ? cases.map((patientCase) => <tr key={patientCase.id}><td>{patientCase.case_number}</td><td>{patientCase.program_year}</td><td>{patientCase.age_at_intake ?? patientCase.age_band ?? "-"}</td><td>{[patientCase.county, patientCase.zip_code].filter(Boolean).join(" · ") || "-"}</td><td>{patientCase.service_count}</td></tr>) : <tr><td colSpan={5} className="muted">No patient cases yet.</td></tr>}
-          </tbody></table>
+          <div className="table-scroll"><table><thead><tr><th>Case</th><th>Year</th><th>Age</th><th>Location</th><th>Services</th></tr></thead><tbody>
+            {cases.length ? cases.map((patientCase) => <tr key={patientCase.id} className="table-row-actionable"><td>{patientCase.case_number}</td><td>{patientCase.program_year}</td><td>{patientCase.age_at_intake ?? patientCase.age_band ?? "-"}</td><td>{[patientCase.county, patientCase.zip_code].filter(Boolean).join(" · ") || "-"}</td><td>{patientCase.service_count}</td></tr>) : <tr><td colSpan={5} className="table-empty-state">No patient cases match these filters.</td></tr>}
+          </tbody></table></div>
         </article>
         <article className="table-shell">
-          <div className="section-header"><div><p className="eyebrow">Service Records</p><h2>Recent services</h2></div><Link className="inline-link" href="/donors">Manage providers</Link></div>
-          <table><thead><tr><th>Date</th><th>Case</th><th>Provider</th><th>Service</th><th>Paid</th></tr></thead><tbody>
-            {services.length ? services.map((service) => <tr key={service.id}><td>{service.service_date}</td><td>{service.case_number}</td><td>{service.provider_name}</td><td>{service.service_type_name}</td><td>{formatMoney(service.amount_paid_cents)}</td></tr>) : <tr><td colSpan={5} className="muted">No service records yet.</td></tr>}
-          </tbody></table>
+          <div className="section-header"><div><p className="eyebrow">Service Records</p><h2>{services.length} {services.length === 1 ? "service" : "services"}</h2></div><Link className="inline-link" href="/donors">Manage providers</Link></div>
+          <div className="table-scroll"><table><thead><tr><th>Date</th><th>Case</th><th>Provider</th><th>Service</th><th>Paid</th></tr></thead><tbody>
+            {services.length ? services.map((service) => <tr key={service.id} className="table-row-actionable"><td>{service.service_date}</td><td>{service.case_number}</td><td>{service.provider_name}</td><td>{service.service_type_name}</td><td>{formatMoney(service.amount_paid_cents)}</td></tr>) : <tr><td colSpan={5} className="table-empty-state">No service records have been entered yet.</td></tr>}
+          </tbody></table></div>
         </article>
       </section>
     </div>
