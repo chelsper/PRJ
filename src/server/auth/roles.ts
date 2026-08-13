@@ -9,12 +9,14 @@ export type Capability =
   | "gifts:read"
   | "reports:read"
   | "exports:run"
-  | "audit:read";
+  | "audit:read"
+  | "impact:read"
+  | "impact:write";
 
 export const roleCapabilities: Record<Role, readonly Capability[]> = {
-  admin: ["users:manage", "donors:write", "donors:read", "gifts:write", "gifts:read", "reports:read", "exports:run", "audit:read"],
-  staff: ["donors:write", "donors:read", "gifts:write", "gifts:read", "reports:read"],
-  read_only: ["donors:read", "gifts:read", "reports:read"]
+  admin: ["users:manage", "donors:write", "donors:read", "gifts:write", "gifts:read", "reports:read", "exports:run", "audit:read", "impact:read", "impact:write"],
+  staff: ["donors:write", "donors:read", "gifts:write", "gifts:read", "reports:read", "impact:read", "impact:write"],
+  read_only: ["donors:read", "gifts:read", "reports:read", "impact:read"]
 };
 
 export function roleHasCapability(role: Role, capability: Capability) {

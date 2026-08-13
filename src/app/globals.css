@@ -491,6 +491,44 @@ button:focus-visible,
     0 12px 24px rgba(138, 38, 84, 0.1);
 }
 
+.impact-page {
+  gap: var(--space-page);
+}
+
+.impact-hero h1 {
+  margin: 0 0 var(--space-2);
+}
+
+.impact-hero > .muted {
+  max-width: 850px;
+  margin: 0;
+}
+
+.impact-summary-stats {
+  margin-top: var(--space-4);
+  grid-template-columns: repeat(3, minmax(0, 180px));
+}
+
+.impact-entry-grid,
+.impact-record-grid {
+  align-items: start;
+}
+
+.impact-entry-grid .card h2,
+.impact-record-grid h2 {
+  margin: 0 0 var(--space-1);
+}
+
+.success-callout {
+  margin: 0;
+  padding: var(--space-3) var(--space-4);
+  background: #f4fff8;
+  border: 1px solid #9bc7af;
+  border-radius: 14px;
+  color: #174b2c;
+  font-weight: 700;
+}
+
 .donor-page-grid {
   gap: var(--space-section);
 }

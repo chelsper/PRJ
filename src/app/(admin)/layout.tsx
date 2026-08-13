@@ -23,6 +23,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
             { href: "/dashboard", label: "Dashboard" },
             { href: "/donors", label: "Donors" },
             { href: "/gifts", label: "Gifts" },
+            { href: "/impact", label: "Impact" },
             { href: "/reports", label: "Reports" },
             { href: "/imports", label: "Imports" },
             ...(session && (roleHasCapability(session.role, "users:manage") || roleHasCapability(session.role, "audit:read"))
