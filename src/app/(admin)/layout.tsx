@@ -3,6 +3,7 @@ import Link from "next/link";
 import { TopNavLinks } from "@/components/ui/top-nav-links";
 import { logoutAction } from "@/app/login/actions";
 import { ViewModeToggle } from "@/components/ui/view-mode-toggle";
+import { GlobalSearch } from "@/components/ui/global-search";
 import { getCurrentSession } from "@/server/auth/session-store";
 import { roleHasCapability } from "@/server/auth/roles";
 
@@ -31,6 +32,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
               : [])
           ]}
         />
+        <GlobalSearch />
         <div className="topbar-actions">
           <ViewModeToggle />
           <form action={logoutAction}>
