@@ -429,7 +429,16 @@ async function syncSoftCredits(
   }
 }
 
-export async function listRecentGifts(): Promise<RecentGiftRow[]> {
+export type GiftListFilters = {
+  query?: string;
+  giftType?: string;
+  fundId?: string;
+};
+
+export async function listRecentGifts(filters: GiftListFilters = {}): Promise<RecentGiftRow[]> {
+  const search = filters.query?.trim() || null;
+  const giftType = filters.giftType?.trim() || null;
+  const fundId = filters.fundId && /^\d+$/.test(filters.fundId) ? Number(filters.fundId) : null;
   const result = await query<RecentGiftRow>(
     `select
       g.id::text,
@@ -448,8 +457,16 @@ export async function listRecentGifts(): Promise<RecentGiftRow[]> {
     left join public.campaigns c on c.id = g.campaign_id
     left join public.appeals a on a.id = g.appeal_id
     where g.deleted_at is null
+      and (
+        $1::text is null
+        or g.gift_number ilike '%' || $1 || '%'
+        or coalesce(d.organization_name, concat_ws(' ', d.first_name, d.last_name)) ilike '%' || $1 || '%'
+      )
+      and ($2::text is null or g.gift_type = $2)
+      and ($3::bigint is null or g.fund_id = $3)
     order by g.gift_date desc, g.created_at desc
-    limit 100`
+    limit 100`,
+    [search, giftType, fundId]
   );
 
   return result.rows;

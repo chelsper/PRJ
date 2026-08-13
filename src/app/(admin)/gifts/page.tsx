@@ -36,12 +36,12 @@ function formatGiftTypeLabel(
 export default async function GiftsPage({
   searchParams
 }: {
-  searchParams: Promise<{ donorId?: string; giftType?: string }>;
+  searchParams: Promise<{ donorId?: string; giftType?: string; q?: string; fundId?: string; giftTypeFilter?: string }>;
 }) {
   await requireCapability("gifts:read");
-  const { donorId, giftType } = await searchParams;
+  const { donorId, giftType, q, fundId, giftTypeFilter } = await searchParams;
   const [gifts, funds, campaigns, appeals, pledges, lookupDonors] = await Promise.all([
-    listRecentGifts(),
+    listRecentGifts({ query: q, giftType: giftTypeFilter, fundId }),
     listFunds(),
     listCampaigns(),
     listAppeals(),
@@ -188,8 +188,14 @@ export default async function GiftsPage({
       </section>
 
       <section className="table-shell">
-        <p className="eyebrow">Recent Gifts</p>
-        <table>
+        <div className="section-header"><div><p className="eyebrow">Gift Management</p><h2>{gifts.length} {gifts.length === 1 ? "gift" : "gifts"}</h2></div></div>
+        <form action="/gifts" className="table-workspace-toolbar">
+          <label className="table-workspace-search">Search gifts<input name="q" defaultValue={q ?? ""} placeholder="Gift number or donor name" /></label>
+          <label>Gift type<select name="giftTypeFilter" defaultValue={giftTypeFilter ?? ""}><option value="">All gift types</option><option value="CASH">Cash</option><option value="PLEDGE">Pledge</option><option value="PLEDGE_PAYMENT">Pledge Payment</option><option value="STOCK_PROPERTY">Stock/Property</option><option value="GIFT_IN_KIND">Gift-in-Kind</option><option value="MATCHING_GIFT_PLEDGE">Matching Gift Pledge</option><option value="MATCHING_GIFT_PAYMENT">Matching Gift Payment</option></select></label>
+          <label>Fund<select name="fundId" defaultValue={fundId ?? ""}><option value="">All funds</option>{funds.map((fund) => <option key={fund.id} value={fund.id}>{fund.name}</option>)}</select></label>
+          <div className="table-workspace-actions"><button type="submit">Search</button><Link href="/gifts" className="button-link secondary-link">Clear</Link></div>
+        </form>
+        <div className="table-scroll"><table>
           <thead>
             <tr>
               <th>Date</th>
@@ -197,11 +203,12 @@ export default async function GiftsPage({
               <th>Gift type</th>
               <th>Fund</th>
               <th>Amount</th>
+              <th><span className="sr-only">Open</span></th>
             </tr>
           </thead>
           <tbody>
-            {gifts.map((gift: RecentGiftRow) => (
-              <tr key={gift.id}>
+            {gifts.length ? gifts.map((gift: RecentGiftRow) => (
+              <tr key={gift.id} className="table-row-actionable">
                 <td>{gift.gift_date}</td>
                 <td>
                   {gift.donor_id ? (
@@ -215,10 +222,11 @@ export default async function GiftsPage({
                 <td>{formatGiftTypeLabel(gift.gift_type)}</td>
                 <td>{gift.fund_name}</td>
                 <td>${(gift.amount_cents / 100).toLocaleString()}</td>
+                <td><Link href={`/gifts/${gift.id}/edit`} className="table-open-link">Open</Link></td>
               </tr>
-            ))}
+            )) : <tr><td colSpan={6} className="table-empty-state">No gifts match these filters.</td></tr>}
           </tbody>
-        </table>
+        </table></div>
       </section>
     </div>
   );

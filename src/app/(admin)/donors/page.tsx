@@ -2,7 +2,7 @@ import Link from "next/link";
 
 import { DonorPageSearch } from "@/components/donors/donor-page-search";
 import { requireCapability } from "@/server/auth/permissions";
-import { getDonorLookupRowsByIds, listRecentlyAccessedDonors, type DonorListRow } from "@/server/data/donors";
+import { getDonorLookupRowsByIds, listDonors, listRecentlyAccessedDonors, type DonorListRow } from "@/server/data/donors";
 
 import { createDonorAction } from "./actions";
 
@@ -12,6 +12,7 @@ export default async function DonorsPage({
   searchParams: Promise<{
     q?: string;
     donorType?: string;
+    donorTypeFilter?: string;
     firstName?: string;
     lastName?: string;
     organizationName?: string;
@@ -27,7 +28,10 @@ export default async function DonorsPage({
     .split(",")
     .map((value) => value.trim())
     .filter(Boolean);
-  const donors = await listRecentlyAccessedDonors();
+  const tableSearch = params.q?.trim() ?? "";
+  const donorTypeFilter = params.donorTypeFilter === "INDIVIDUAL" || params.donorTypeFilter === "ORGANIZATION" ? params.donorTypeFilter : "";
+  const donorRows = tableSearch ? await listDonors(tableSearch) : await listRecentlyAccessedDonors();
+  const donors = donorTypeFilter ? donorRows.filter((donor) => donor.donor_type === donorTypeFilter) : donorRows;
   const possibleMatches = duplicateIds.length > 0 ? await getDonorLookupRowsByIds(duplicateIds) : [];
 
   return (
@@ -113,32 +117,41 @@ export default async function DonorsPage({
         </article>
 
         <article className="table-shell">
-          <p className="eyebrow">Recently Accessed Donors</p>
-          <table>
+          <div className="section-header"><div><p className="eyebrow">{tableSearch || donorTypeFilter ? "Constituent Search" : "Recently Accessed Donors"}</p><h2>{donors.length} {donors.length === 1 ? "record" : "records"}</h2></div></div>
+          <form action="/donors" className="table-workspace-toolbar">
+            <label className="table-workspace-search">Search constituents<input name="q" defaultValue={tableSearch} placeholder="Name, constituent ID, email, or organization" /></label>
+            <label>Type<select name="donorTypeFilter" defaultValue={donorTypeFilter}><option value="">All types</option><option value="INDIVIDUAL">Individuals</option><option value="ORGANIZATION">Organizations</option></select></label>
+            <div className="table-workspace-actions"><button type="submit">Search</button><Link href="/donors" className="button-link secondary-link">Clear</Link></div>
+          </form>
+          <div className="table-scroll"><table>
             <thead>
               <tr>
                 <th>Donor</th>
+                <th>Type</th>
                 <th>Email</th>
                 <th>Recognition Total</th>
+                <th><span className="sr-only">Open</span></th>
               </tr>
             </thead>
             <tbody>
-              {donors.map((donor: DonorListRow) => {
+              {donors.length ? donors.map((donor: DonorListRow) => {
                 return (
-                  <tr key={donor.id}>
+                  <tr key={donor.id} className="table-row-actionable">
                     <td>
                       <Link href={`/donors/${donor.id}`} className="table-link">
                         {donor.full_name || "Unnamed donor"}
                       </Link>
                       <div className="muted">{donor.donor_number ?? "Pending donor number"}</div>
                     </td>
+                    <td>{donor.donor_type === "ORGANIZATION" ? "Organization" : "Individual"}</td>
                     <td>{donor.primary_email ?? "—"}</td>
                     <td>${(Number(donor.donor_recognition_cents) / 100).toLocaleString()}</td>
+                    <td><Link href={`/donors/${donor.id}`} className="table-open-link">Open</Link></td>
                   </tr>
                 );
-              })}
+              }) : <tr><td colSpan={5} className="table-empty-state">No constituent records match these filters.</td></tr>}
             </tbody>
-          </table>
+          </table></div>
         </article>
       </section>
     </div>
