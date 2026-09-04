@@ -52,6 +52,7 @@ body {
   font-family: Aptos, "Aptos Display", "Segoe UI Variable", "Segoe UI", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
   font-size: 15px;
   line-height: 1.45;
+  overflow-x: clip;
 }
 
 a {
@@ -86,19 +87,37 @@ body.app-view-web .shell {
 }
 
 .topbar {
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
   gap: var(--space-3);
-  justify-content: space-between;
   align-items: center;
   padding: var(--space-3) var(--space-4);
   margin-bottom: var(--space-page);
   backdrop-filter: blur(8px);
 }
 
+.topbar > *,
+.grid > *,
+.form-grid > * {
+  min-width: 0;
+}
+
+.topbar-brand {
+  grid-column: 1;
+  grid-row: 1;
+  min-width: 0;
+}
+
+.topbar-brand .muted {
+  overflow-wrap: anywhere;
+}
+
 .navlinks {
   display: flex;
   gap: var(--space-3);
   flex-wrap: wrap;
+  grid-column: 1;
+  grid-row: 2;
 }
 
 .topnav-link {
@@ -152,12 +171,19 @@ body.app-view-web .shell {
   align-items: center;
   gap: var(--space-3);
   flex-wrap: wrap;
+  grid-column: 2;
+  grid-row: 1;
+  justify-self: end;
 }
 
 .global-search {
   position: relative;
-  flex: 1 1 280px;
+  grid-column: 2;
+  grid-row: 2;
+  width: min(420px, 100%);
   max-width: 420px;
+  min-width: 0;
+  justify-self: end;
   z-index: 5;
 }
 
@@ -801,7 +827,7 @@ button:focus-visible,
 
 .table-workspace-toolbar {
   display: grid;
-  grid-template-columns: minmax(220px, 1.5fr) repeat(2, minmax(140px, 0.75fr)) auto;
+  grid-template-columns: minmax(180px, 1.4fr) repeat(2, minmax(130px, 0.8fr));
   gap: var(--space-2);
   align-items: end;
   margin: 0 0 var(--space-3);
@@ -819,6 +845,9 @@ button:focus-visible,
   display: flex;
   gap: var(--space-2);
   align-items: center;
+  grid-column: 1 / -1;
+  justify-content: flex-end;
+  min-width: 0;
 }
 
 .table-workspace-actions button,
@@ -845,6 +874,7 @@ button:focus-visible,
   background: #fff;
   font-size: 0.82rem;
   font-weight: 700;
+  white-space: nowrap;
   transition: background-color 140ms ease, border-color 140ms ease, transform 140ms ease;
 }
 
@@ -1049,7 +1079,14 @@ table {
 
 .table-scroll {
   width: 100%;
+  max-width: 100%;
   overflow-x: auto;
+  overscroll-behavior-inline: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+.table-scroll table {
+  min-width: 640px;
 }
 
 th,
@@ -1058,8 +1095,17 @@ td {
   padding: var(--space-field-y) 8px;
   border-bottom: 1px solid var(--line);
   vertical-align: top;
-  overflow-wrap: anywhere;
-  word-break: break-word;
+  overflow-wrap: break-word;
+  word-break: normal;
+}
+
+th {
+  white-space: nowrap;
+}
+
+.table-number-cell {
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
 }
 
 h1,
@@ -1398,7 +1444,7 @@ h2 {
 }
 
 body.app-view-web .form-grid {
-  grid-template-columns: repeat(2, minmax(300px, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: var(--space-3) var(--space-4);
 }
 
@@ -1421,10 +1467,6 @@ body.app-view-web .dashboard-hero h1 {
 body.app-view-web .donor-page-grid .stats,
 body.app-view-web .hero .stats.donor-summary-stats {
   grid-template-columns: repeat(12, minmax(0, 1fr));
-}
-
-body.app-view-web .table-scroll {
-  overflow-x: visible;
 }
 
 body.app-view-web .hero h1 {
@@ -1476,11 +1518,45 @@ body.app-view-mobile .table-scroll table {
   min-width: 720px;
 }
 
+@media (max-width: 1600px) {
+  body.app-view-web .gifts-workspace-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 1100px) {
+  .topbar {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .navlinks {
+    grid-column: 1 / -1;
+  }
+
+  .global-search {
+    grid-column: 1 / -1;
+    grid-row: 3;
+    width: 100%;
+    max-width: none;
+    justify-self: stretch;
+  }
+
+  .impact-query-form {
+    grid-template-columns: repeat(auto-fit, minmax(min(170px, 100%), 1fr));
+  }
+}
+
 @media (max-width: 900px) {
   .auth-grid,
   .grid-2,
   .stats,
   .form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  body.app-view-web .grid-2,
+  body.app-view-web .stats,
+  body.app-view-web .form-grid {
     grid-template-columns: 1fr;
   }
 
@@ -1506,7 +1582,6 @@ body.app-view-mobile .table-scroll table {
 
   .topbar {
     align-items: flex-start;
-    flex-direction: column;
   }
 
   .topbar-actions {
@@ -1539,5 +1614,64 @@ body.app-view-mobile .table-scroll table {
 
   .view-mode-toolbar {
     justify-content: flex-start;
+  }
+}
+
+@media (max-width: 620px) {
+  body.app-view-web .shell,
+  .shell {
+    width: min(100%, calc(100% - 16px));
+  }
+
+  .topbar {
+    grid-template-columns: 1fr;
+  }
+
+  .topbar-brand,
+  .topbar-actions,
+  .navlinks,
+  .global-search {
+    grid-column: 1;
+    justify-self: stretch;
+  }
+
+  .topbar-brand {
+    grid-row: 1;
+  }
+
+  .topbar-actions {
+    grid-row: 2;
+    justify-content: space-between;
+  }
+
+  .navlinks {
+    grid-row: 3;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    padding-bottom: 4px;
+  }
+
+  .global-search {
+    grid-row: 4;
+  }
+
+  .table-workspace-toolbar,
+  .report-filter-toolbar,
+  .impact-query-form {
+    grid-template-columns: 1fr;
+  }
+
+  .table-workspace-actions,
+  .impact-query-actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .table-workspace-actions button,
+  .table-workspace-actions .button-link,
+  .impact-query-actions button,
+  .impact-query-actions .button-link {
+    width: 100%;
+    justify-content: center;
   }
 }

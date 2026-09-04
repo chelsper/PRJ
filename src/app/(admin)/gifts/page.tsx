@@ -64,7 +64,7 @@ export default async function GiftsPage({
       : "CASH";
 
   return (
-    <div className="grid grid-2">
+    <div className="grid grid-2 gifts-workspace-grid">
       <section className="card">
         <p className="eyebrow">Gift Entry</p>
         <form action={createGiftAction} className="form-grid">
@@ -221,7 +221,7 @@ export default async function GiftsPage({
                 </td>
                 <td>{formatGiftTypeLabel(gift.gift_type)}</td>
                 <td>{gift.fund_name}</td>
-                <td>${(gift.amount_cents / 100).toLocaleString()}</td>
+                <td className="table-number-cell">${(gift.amount_cents / 100).toLocaleString()}</td>
                 <td><Link href={`/gifts/${gift.id}/edit`} className="table-open-link">Open</Link></td>
               </tr>
             )) : <tr><td colSpan={6} className="table-empty-state">No gifts match these filters.</td></tr>}

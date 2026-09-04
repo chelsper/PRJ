@@ -13,7 +13,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   return (
     <main className="shell">
       <header className="topbar">
-        <div>
+        <div className="topbar-brand">
           <strong>Nonprofit CRM</strong>
           <div className="muted">
             {session?.email} · {session?.role}
