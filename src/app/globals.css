@@ -259,6 +259,57 @@ body.app-view-web .shell {
   background: #ddf3ee;
 }
 
+.sms-workspace {
+  grid-template-columns: minmax(0, 1.15fr) minmax(320px, 0.85fr);
+}
+
+.sms-workspace .full {
+  grid-column: 1 / -1;
+}
+
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 30px;
+  padding: 5px 10px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--info-surface);
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.sms-status-opted_in {
+  color: #246153;
+  border-color: #a7d8ca;
+  background: #e9f7f2;
+}
+
+.sms-status-opted_out {
+  color: var(--danger);
+  border-color: #efb7c7;
+  background: #fff0f4;
+}
+
+.sms-message-body {
+  min-width: 260px;
+  max-width: 520px;
+  white-space: normal;
+}
+
+.sms-error-detail {
+  display: block;
+  margin-top: 4px;
+  font-size: 0.78rem;
+}
+
+@media (max-width: 900px) {
+  .sms-workspace {
+    grid-template-columns: 1fr;
+  }
+}
+
 .global-search-empty {
   margin: 4px 6px;
   padding: 8px;

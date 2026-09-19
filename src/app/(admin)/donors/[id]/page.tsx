@@ -6,6 +6,7 @@ import { DonorProfileForm } from "@/components/donors/donor-profile-form";
 import { DeleteDonorForm } from "@/components/donors/delete-donor-form";
 import { OrganizationTab } from "@/components/donors/organization-tab";
 import { SendReceiptButton } from "@/components/gifts/send-receipt-button";
+import { SmsPanel } from "@/components/communications/sms-panel";
 import { writeAuditLog } from "@/server/audit";
 import { getSessionWithCapability, requireCapability } from "@/server/auth/permissions";
 import { listConfigOptionsBySet } from "@/server/data/configurations";
@@ -23,6 +24,8 @@ import {
   type DonorGiftRow
 } from "@/server/data/donors";
 import type { DonorNoteRow, DonorSoftCreditRow } from "@/server/data/donors";
+import { getSmsPreference, listDonorSmsMessages } from "@/server/data/sms";
+import { isTwilioConfigured } from "@/server/messaging/twilio";
 
 import {
   addDonorNoteAction,
@@ -132,6 +135,9 @@ export default async function DonorProfilePage({
   ]);
   const activeTab =
     tab === "giving" || tab === "communications" || tab === "notes" || tab === "organization" ? tab : "profile";
+  const [smsPreference, smsMessages] = activeTab === "communications"
+    ? await Promise.all([getSmsPreference(id), listDonorSmsMessages(id)])
+    : [null, []];
   const noteCategoryLabels = Object.fromEntries(optionSets.note_categories.map((option) => [option.value, option.label]));
   const derivedOrganizationContactName = [
     donor.organization_contact_first_name,
@@ -360,7 +366,17 @@ export default async function DonorProfilePage({
           </section>
         </div>
       ) : activeTab === "communications" ? (
-        <div className="grid grid-2">
+        <div className="grid">
+          <SmsPanel
+            donorId={donor.id}
+            donorName={donor.full_name}
+            defaultPhone={donor.primary_phone}
+            preference={smsPreference}
+            messages={smsMessages}
+            canWrite={Boolean(donorWriteSession)}
+            twilioConfigured={isTwilioConfigured()}
+          />
+          <div className="grid grid-2">
           <section className="card">
             <p className="eyebrow">Communication Summary</p>
             <div className="stats donor-summary-stats">
@@ -437,6 +453,7 @@ export default async function DonorProfilePage({
             </table>
             </div>
           </section>
+          </div>
         </div>
       ) : activeTab === "organization" && donor.donor_type === "ORGANIZATION" ? (
         <OrganizationTab

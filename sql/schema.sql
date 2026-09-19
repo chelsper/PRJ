@@ -326,6 +326,46 @@ create table if not exists donor_organization_contacts (
   updated_by bigint references users(id)
 );
 
+create table if not exists donor_sms_preferences (
+  donor_id bigint primary key references donors(id) on delete restrict,
+  phone varchar(20) not null,
+  consent_status varchar(20) not null default 'UNKNOWN'
+    check (consent_status in ('UNKNOWN', 'OPTED_IN', 'OPTED_OUT')),
+  consent_source varchar(50),
+  consent_note text,
+  consent_at timestamptz,
+  opted_out_at timestamptz,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  updated_by bigint references users(id),
+  constraint donor_sms_preferences_phone_e164 check (phone ~ '^\+[1-9][0-9]{7,14}$')
+);
+
+create table if not exists sms_messages (
+  id bigint generated always as identity primary key,
+  donor_id bigint not null references donors(id) on delete restrict,
+  direction varchar(10) not null check (direction in ('OUTBOUND', 'INBOUND')),
+  category varchar(40) not null default 'GENERAL',
+  to_phone varchar(20),
+  from_phone varchar(20),
+  body text not null,
+  status varchar(20) not null
+    check (status in ('QUEUED', 'SCHEDULED', 'SENDING', 'SENT', 'DELIVERED', 'RECEIVED', 'FAILED', 'CANCELED', 'SUPPRESSED')),
+  provider_message_sid varchar(80) unique,
+  scheduled_for timestamptz,
+  sent_at timestamptz,
+  delivered_at timestamptz,
+  failed_at timestamptz,
+  error_code varchar(30),
+  error_message text,
+  created_by bigint references users(id),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  constraint sms_messages_outbound_phone check (
+    direction <> 'OUTBOUND' or to_phone ~ '^\+[1-9][0-9]{7,14}$'
+  )
+);
+
 create table if not exists audit_log (
   id bigint generated always as identity primary key,
   actor_user_id bigint references users(id),
@@ -359,6 +399,8 @@ create index if not exists gifts_fund_idx on gifts (fund_id) where deleted_at is
 create index if not exists pledge_installments_pledge_idx on pledge_installments (pledge_gift_id, installment_number);
 create index if not exists donor_org_relationships_donor_idx on donor_organization_relationships (donor_id, relationship_type);
 create index if not exists donor_org_contacts_donor_idx on donor_organization_contacts (donor_id, contact_type, id);
+create index if not exists sms_messages_donor_created_idx on sms_messages (donor_id, created_at desc);
+create index if not exists sms_messages_scheduled_idx on sms_messages (scheduled_for) where status = 'SCHEDULED';
 create index if not exists audit_log_occurred_at_idx on audit_log (occurred_at desc);
 create index if not exists audit_log_action_idx on audit_log (action, occurred_at desc);
 create index if not exists rate_limit_events_lookup_idx on rate_limit_events (limiter_key, action, created_at desc);
@@ -397,6 +439,10 @@ drop trigger if exists donor_organization_relationships_set_updated_at on donor_
 create trigger donor_organization_relationships_set_updated_at before update on donor_organization_relationships for each row execute function set_updated_at();
 drop trigger if exists donor_organization_contacts_set_updated_at on donor_organization_contacts;
 create trigger donor_organization_contacts_set_updated_at before update on donor_organization_contacts for each row execute function set_updated_at();
+drop trigger if exists donor_sms_preferences_set_updated_at on donor_sms_preferences;
+create trigger donor_sms_preferences_set_updated_at before update on donor_sms_preferences for each row execute function set_updated_at();
+drop trigger if exists sms_messages_set_updated_at on sms_messages;
+create trigger sms_messages_set_updated_at before update on sms_messages for each row execute function set_updated_at();
 
 create or replace view donor_giving_totals as
 select
