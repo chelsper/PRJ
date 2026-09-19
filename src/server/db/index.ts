@@ -32,9 +32,7 @@ const pool =
     connectionString: normalizedDatabaseUrl,
     max: 10,
     connectionTimeoutMillis: 10000,
-    idleTimeoutMillis: 30000,
-    statement_timeout: 30000,
-    options: "-c lock_timeout=5000 -c idle_in_transaction_session_timeout=15000"
+    idleTimeoutMillis: 30000
   });
 
 if (process.env.NODE_ENV !== "production") {
@@ -44,7 +42,7 @@ if (process.env.NODE_ENV !== "production") {
 export type QueryParam = string | number | boolean | Date | null;
 
 export async function query<T extends QueryResultRow>(text: string, params: QueryParam[] = []) {
-  return pool.query<T>(text, params);
+  return transaction((client) => client.query<T>(text, params));
 }
 
 export async function transaction<T>(fn: (client: PoolClient) => Promise<T>) {
@@ -52,6 +50,10 @@ export async function transaction<T>(fn: (client: PoolClient) => Promise<T>) {
 
   try {
     await client.query("begin");
+    // Transaction-local settings work with Neon's transaction pooler.
+    await client.query("set local statement_timeout = '30s'");
+    await client.query("set local lock_timeout = '5s'");
+    await client.query("set local idle_in_transaction_session_timeout = '15s'");
     const result = await fn(client);
     await client.query("commit");
     return result;
