@@ -18,8 +18,8 @@
   --action-surface: #f1f3f6;
   --entry-surface: #ffffff;
   --info-surface: #f7f8fa;
-  --shadow-soft: 0 10px 24px rgba(16, 24, 40, 0.06);
-  --shadow-card: 0 12px 32px rgba(16, 24, 40, 0.07);
+  --shadow-soft: 0 2px 6px rgba(16, 24, 40, 0.04);
+  --shadow-card: 0 3px 12px rgba(16, 24, 40, 0.04);
   --focus-ring: 0 0 0 4px rgba(189, 61, 112, 0.14);
   --space-1: 6px;
   --space-2: 10px;
@@ -52,7 +52,7 @@ body {
   font-family: Aptos, "Aptos Display", "Segoe UI Variable", "Segoe UI", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
   font-size: 15px;
   line-height: 1.45;
-  overflow-x: clip;
+  overflow-wrap: anywhere;
 }
 
 a {
@@ -122,6 +122,8 @@ body.app-view-web .shell {
 
 .topnav-link {
   display: inline-flex;
+  flex-shrink: 0;
+  white-space: nowrap;
   align-items: center;
   justify-content: center;
   min-height: 42px;
@@ -260,7 +262,12 @@ body.app-view-web .shell {
 }
 
 .sms-workspace {
+  align-items: start;
   grid-template-columns: minmax(0, 1.15fr) minmax(320px, 0.85fr);
+}
+
+.sms-workspace .sms-compose-card .form-grid {
+  grid-template-columns: minmax(0, 1fr);
 }
 
 .sms-workspace .full {
@@ -367,7 +374,7 @@ body.app-view-web .table-shell {
 }
 
 .grid-2 {
-  grid-template-columns: 1.2fr 0.8fr;
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 0.8fr);
 }
 
 body.app-view-web .grid-2 {
@@ -431,6 +438,7 @@ body.app-view-web .stat {
 
 .form-grid {
   display: grid;
+  align-items: start;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: var(--space-3);
 }
@@ -463,6 +471,8 @@ body.app-view-web .stat {
 
 label {
   display: grid;
+  align-content: start;
+  min-width: 0;
   gap: var(--space-label);
   font-size: 0.95rem;
   font-weight: 600;
@@ -480,6 +490,8 @@ input,
 select,
 textarea {
   width: 100%;
+  min-width: 0;
+  max-width: 100%;
   border: 1px solid var(--line-strong);
   border-radius: 8px;
   padding: var(--space-field-y) var(--space-field-x);
@@ -625,6 +637,7 @@ button:focus-visible,
 
 .section-header {
   display: flex;
+  flex-wrap: wrap;
   justify-content: space-between;
   align-items: flex-start;
   gap: var(--space-3);
@@ -787,25 +800,25 @@ button:focus-visible,
 
 .donor-summary-stats {
   gap: var(--space-3);
-  grid-template-columns: repeat(12, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(220px, 100%), 1fr));
 }
 
 .donor-summary-stats .stat {
-  min-height: 116px;
+  min-height: 96px;
   padding: var(--space-card);
-  grid-column: span 3;
+  grid-column: auto;
 }
 
 .donor-stat-card-compact {
-  grid-column: span 2;
+  grid-column: auto;
 }
 
 .donor-stat-card-wide {
-  grid-column: span 4;
+  grid-column: auto;
 }
 
 .donor-stat-card-email {
-  grid-column: span 4;
+  grid-column: auto;
 }
 
 .donor-stat-card .muted {
@@ -822,9 +835,9 @@ button:focus-visible,
 }
 
 .donor-stat-card-email .stat-value {
-  font-size: clamp(1rem, 1.28vw, 1.52rem);
-  line-height: 1.04;
-  overflow-wrap: normal;
+  font-size: 1rem;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
   word-break: normal;
 }
 
@@ -894,8 +907,8 @@ button:focus-visible,
 }
 
 .table-workspace-toolbar {
-  display: grid;
-  grid-template-columns: minmax(180px, 1.4fr) repeat(2, minmax(130px, 0.8fr));
+  display: flex;
+  flex-wrap: wrap;
   gap: var(--space-2);
   align-items: end;
   margin: 0 0 var(--space-3);
@@ -903,6 +916,14 @@ button:focus-visible,
   border: 1px solid var(--line);
   border-radius: 16px;
   background: var(--entry-surface);
+}
+
+.table-workspace-toolbar > label {
+  flex: 1 1 200px;
+}
+
+.table-workspace-toolbar > .table-workspace-actions {
+  flex-basis: 100%;
 }
 
 .table-workspace-search {
@@ -1192,7 +1213,7 @@ h1 {
   font-size: clamp(2rem, 4vw, 3.3rem);
   font-weight: 700;
   letter-spacing: -0.035em;
-  max-width: 12ch;
+  max-width: 100%;
   overflow-wrap: anywhere;
   word-break: break-word;
 }
@@ -1529,16 +1550,16 @@ body.app-view-web .dashboard-hero {
 }
 
 body.app-view-web .dashboard-hero h1 {
-  max-width: 14ch;
+  max-width: 100%;
 }
 
 body.app-view-web .donor-page-grid .stats,
 body.app-view-web .hero .stats.donor-summary-stats {
-  grid-template-columns: repeat(12, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(220px, 100%), 1fr));
 }
 
 body.app-view-web .hero h1 {
-  max-width: 15ch;
+  max-width: 100%;
 }
 
 body.app-view-mobile .hero h1 {
@@ -1547,7 +1568,9 @@ body.app-view-mobile .hero h1 {
 }
 
 body.app-view-mobile .stats,
-body.app-view-mobile .grid-2 {
+body.app-view-mobile .grid-2,
+body.app-view-mobile .form-grid,
+body.app-view-mobile .sms-workspace {
   grid-template-columns: 1fr;
 }
 
@@ -1578,7 +1601,7 @@ body.app-view-mobile .button-row {
 
 body.app-view-mobile .button-link,
 body.app-view-mobile button {
-  width: 100%;
+  max-width: 100%;
   justify-content: center;
 }
 

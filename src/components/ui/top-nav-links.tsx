@@ -19,7 +19,7 @@ export function TopNavLinks({ items }: { items: NavItem[] }) {
           (item.href !== "/dashboard" && pathname.startsWith(`${item.href}/`));
 
         return (
-          <Link key={item.href} href={item.href} className={active ? "topnav-link active" : "topnav-link"}>
+          <Link key={item.href} href={item.href} aria-current={active ? "page" : undefined} className={active ? "topnav-link active" : "topnav-link"}>
             {item.label}
           </Link>
         );

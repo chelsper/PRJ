@@ -30,7 +30,7 @@ export function ViewModeToggle() {
   return (
     <div className="topbar-view-mode">
       <span className="view-mode-label">View</span>
-      <div className="view-mode-toggle" role="tablist" aria-label="App layout">
+      <div className="view-mode-toggle" role="group" aria-label="App layout">
         <button
           type="button"
           className={viewMode === "web" ? "view-mode-button active" : "view-mode-button"}
