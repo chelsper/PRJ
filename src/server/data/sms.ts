@@ -70,9 +70,9 @@ export async function saveSmsPreference(input: {
        donor_id, phone, consent_status, consent_source, consent_note,
        consent_at, opted_out_at, updated_by
      ) values (
-       $1, $2, $3, $4, $5,
-       case when $3 = 'OPTED_IN' then now() else null end,
-       case when $3 = 'OPTED_OUT' then now() else null end,
+       $1, $2, $3::varchar(20), $4, $5,
+       case when $3::varchar(20) = 'OPTED_IN' then now() else null end,
+       case when $3::varchar(20) = 'OPTED_OUT' then now() else null end,
        $6
      )
      on conflict (donor_id) do update set

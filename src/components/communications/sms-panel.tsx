@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 
 import type { SmsMessage, SmsPreference, SmsConsentStatus } from "@/server/data/sms";
+import { submitSmsRequest } from "./sms-request";
 
 const statusLabels: Record<SmsConsentStatus, string> = {
   UNKNOWN: "Not documented",
@@ -41,6 +42,11 @@ export function SmsPanel({
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [sending, setSending] = useState(false);
+  const [preferenceNotice, setPreferenceNotice] = useState<string | null>(null);
+  const [preferenceError, setPreferenceError] = useState<string | null>(null);
+  const [saved, setSaved] = useState(false);
+  const [savedPreference, setSavedPreference] = useState({ phone: preference?.phone ?? defaultPhone ?? "", consentStatus: preference?.consent_status ?? "UNKNOWN", consentSource: preference?.consent_source ?? "", consentNote: preference?.consent_note ?? "" });
+  const preferenceDirty = normalizePhone(phone) !== normalizePhone(savedPreference.phone) || consentStatus !== savedPreference.consentStatus || consentSource !== savedPreference.consentSource || consentNote !== savedPreference.consentNote;
 
   function normalizePhone(value: string) {
     const trimmed = value.trim();
@@ -53,23 +59,23 @@ export function SmsPanel({
   }
 
   async function savePreference() {
+    if (saving) return;
     setSaving(true);
-    setNotice(null);
-    setError(null);
+    setSaved(false);
+    setPreferenceNotice(null);
+    setPreferenceError(null);
     const normalizedPhone = normalizePhone(phone);
-    const response = await fetch(`/api/donors/${donorId}/sms/preference`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      credentials: "same-origin",
-      body: JSON.stringify({ phone: normalizedPhone, consentStatus, consentSource, consentNote })
-    });
-    const payload = (await response.json()) as { error?: string };
-    setSaving(false);
-    if (!response.ok) return setError(payload.error ?? "Consent details could not be saved.");
-    setPhone(normalizedPhone);
-    setSavedConsentStatus(consentStatus);
-    setNotice("Texting preference saved.");
-    router.refresh();
+    try {
+      await submitSmsRequest(`/api/donors/${donorId}/sms/preference`, { phone: normalizedPhone, consentStatus, consentSource, consentNote });
+      setPhone(normalizedPhone);
+      setSavedConsentStatus(consentStatus);
+      setSavedPreference({ phone: normalizedPhone, consentStatus, consentSource, consentNote });
+      setSaved(true);
+      setPreferenceNotice("Texting preference saved.");
+      router.refresh();
+    } catch (error) {
+      setPreferenceError(error instanceof Error ? error.message : "Save could not be confirmed. Refresh and check before retrying.");
+    } finally { setSaving(false); }
   }
 
   async function sendMessage() {
@@ -80,20 +86,16 @@ export function SmsPanel({
     setSending(true);
     setNotice(null);
     setError(null);
-    const scheduledFor = scheduleLocal ? new Date(scheduleLocal).toISOString() : null;
-    const response = await fetch(`/api/donors/${donorId}/sms/send`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      credentials: "same-origin",
-      body: JSON.stringify({ body, category, scheduledFor })
-    });
-    const payload = (await response.json()) as { error?: string; scheduled?: boolean };
-    setSending(false);
-    if (!response.ok) return setError(payload.error ?? "The text message could not be sent.");
-    setBody("");
-    setScheduleLocal("");
-    setNotice(payload.scheduled ? "Text scheduled with Twilio." : "Text accepted by Twilio for delivery.");
-    router.refresh();
+    try {
+      const scheduledFor = scheduleLocal ? new Date(scheduleLocal).toISOString() : null;
+      const payload = await submitSmsRequest(`/api/donors/${donorId}/sms/send`, { body, category, scheduledFor });
+      setBody("");
+      setScheduleLocal("");
+      setNotice(payload.scheduled ? "Text scheduled with Twilio." : "Text accepted by Twilio for delivery.");
+      router.refresh();
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "Submission could not be confirmed. Check message history before retrying.");
+    } finally { setSending(false); }
   }
 
   return (
@@ -102,10 +104,10 @@ export function SmsPanel({
         <div className="section-header">
           <div>
             <p className="eyebrow">Texting Permission</p>
-            <h2>{statusLabels[consentStatus]}</h2>
+            <h2>{statusLabels[savedConsentStatus]}</h2>
             <p className="muted">Document permission before sending any text to {donorName}.</p>
           </div>
-          <span className={`status-badge sms-status-${consentStatus.toLowerCase()}`}>{statusLabels[consentStatus]}</span>
+          <span className={`status-badge sms-status-${savedConsentStatus.toLowerCase()}`}>{statusLabels[savedConsentStatus]}</span>
         </div>
         <div className="form-grid grid-2">
           <label>
@@ -115,16 +117,16 @@ export function SmsPanel({
               value={phone}
               onChange={(event) => setPhone(event.target.value)}
               placeholder="+19045550100"
-              disabled={!canWrite}
+              disabled={!canWrite || saving || sending}
             />
-            <span className="muted">Use international E.164 format.</span>
+            <span className="muted">US numbers are formatted automatically. For other countries, include + and the country code.</span>
           </label>
           <label>
             Consent status
             <select
               value={consentStatus}
               onChange={(event) => setConsentStatus(event.target.value as SmsConsentStatus)}
-              disabled={!canWrite}
+              disabled={!canWrite || saving || sending}
             >
               <option value="UNKNOWN">Not documented</option>
               <option value="OPTED_IN">Opted in</option>
@@ -133,7 +135,7 @@ export function SmsPanel({
           </label>
           <label>
             Consent source
-            <select value={consentSource} onChange={(event) => setConsentSource(event.target.value)} disabled={!canWrite}>
+            <select value={consentSource} onChange={(event) => setConsentSource(event.target.value)} disabled={!canWrite || saving || sending}>
               <option value="">Select source</option>
               <option value="Written form">Written form</option>
               <option value="Online form">Online form</option>
@@ -148,17 +150,20 @@ export function SmsPanel({
               value={consentNote}
               onChange={(event) => setConsentNote(event.target.value)}
               placeholder="Where and when permission was obtained"
-              disabled={!canWrite}
+              disabled={!canWrite || saving || sending}
             />
           </label>
         </div>
         {canWrite ? (
           <div className="button-row">
-            <button type="button" onClick={savePreference} disabled={saving}>
-              {saving ? "Saving..." : "Save Texting Preference"}
+            <button type="button" onClick={savePreference} disabled={saving || sending}>
+              {saving ? "Saving..." : saved && !preferenceDirty ? "Saved" : "Save Texting Preference"}
             </button>
           </div>
         ) : null}
+        {preferenceDirty && !saving ? <p className="muted">Unsaved texting-permission changes. Save before sending a text.</p> : null}
+        {preferenceError ? <p className="danger" role="alert">{preferenceError}</p> : null}
+        {preferenceNotice && !preferenceDirty ? <p className="success" role="status">{preferenceNotice}</p> : null}
       </section>
 
       <section className="card sms-compose-card">
@@ -205,13 +210,13 @@ export function SmsPanel({
             <span className="muted">Uses your current time zone. Schedule 16 minutes to 35 days ahead.</span>
           </label>
         </div>
-        {error ? <p className="danger">{error}</p> : null}
-        {notice ? <p className="success">{notice}</p> : null}
+        {error ? <p className="danger" role="alert">{error}</p> : null}
+        {notice ? <p className="success" role="status">{notice}</p> : null}
         {canWrite ? (
           <button
             type="button"
             onClick={sendMessage}
-            disabled={sending || !twilioConfigured || savedConsentStatus !== "OPTED_IN" || !body.trim()}
+            disabled={sending || saving || preferenceDirty || !!preferenceError || !twilioConfigured || savedConsentStatus !== "OPTED_IN" || !body.trim()}
             title={savedConsentStatus !== "OPTED_IN" ? "Document and save texting consent first." : undefined}
           >
             {sending ? "Submitting..." : scheduleLocal ? "Schedule Text" : "Send Text"}

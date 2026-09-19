@@ -27,12 +27,17 @@ export async function POST(request: Request, context: { params: Promise<{ donorI
   const requestHeaders = await headers();
   const ipAddress = requestHeaders.get("x-forwarded-for")?.split(",")[0]?.trim() ?? null;
 
-  await saveSmsPreference({
+  try {
+    await saveSmsPreference({
     donorId,
     ...parsed.data,
     actorUserId: session.userId,
     ipAddress
-  });
+    });
+  } catch (error) {
+    console.error("sms.preference.save_failed", { code: (error as { code?: string })?.code ?? "unknown" });
+    return NextResponse.json({ error: "The save could not be confirmed. Refresh and check the saved texting preference before retrying." }, { status: 500 });
+  }
 
   return NextResponse.json({ ok: true });
 }
