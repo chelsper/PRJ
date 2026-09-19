@@ -1,8 +1,11 @@
 import Link from "next/link";
 
-export function AdminSectionNav({ active }: { active: "configurations" | "users" | "audit-log" }) {
+export function AdminSectionNav({ active }: { active: "configurations" | "users" | "audit-log" | "data-quality" }) {
   return (
     <nav className="tab-row">
+      <Link href="/admin/data-quality" className={active === "data-quality" ? "tab-link active" : "tab-link"}>
+        Data Quality
+      </Link>
       <Link href="/admin/configurations" className={active === "configurations" ? "tab-link active" : "tab-link"}>
         Configurations
       </Link>
