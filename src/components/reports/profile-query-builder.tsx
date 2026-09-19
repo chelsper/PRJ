@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { profileQuerySchema, queryFields, queryOperators, type ProfileQuery } from "@/lib/profile-query";
 import type { QueryOptions } from "@/server/data/profile-query-options";
 import { previewProfileQuery } from "@/app/(admin)/reports/queries/actions";
+import { AudienceReview } from "./audience-review";
 
 const initial: ProfileQuery = { mode: "all", credit: "hard", period: "year", sameGift: true, requireGift: true, rules: [{ field: "total", operator: "gte", value: "500" }] };
 type Saved = { name: string; query: ProfileQuery };
@@ -66,5 +67,6 @@ export function ProfileQueryBuilder({ userId, options }: { userId: string; optio
     {result?.rows && <section className="table-shell"><h2>{result.count} Matching Profiles</h2><p>Showing up to 200 profiles, once each. Matching is not permission to text. Credit labels summarize the selected period. If duplicate soft credits exist for one gift/profile, only the largest is counted; hard credit takes priority.</p>
       {!result.rows.length ? <p>No matches. Try removing a condition.</p> : <div className="table-scroll"><table><thead><tr><th>Profile</th><th>Recognition</th><th>Credit in period</th><th>Why matched</th></tr></thead><tbody>{result.rows.map(row => <tr key={row.id}><td><Link href={`/donors/${row.id}`}>{row.name}</Link><br />{row.number}</td><td>${row.total}</td><td>{row.credit}</td><td>{row.reasons.join("; ")}</td></tr>)}</tbody></table></div>}
     </section>}
+    {result?.rows && result.rows.length > 0 && <AudienceReview key={JSON.stringify(value)} query={value} />}
   </div>;
 }

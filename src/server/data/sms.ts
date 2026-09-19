@@ -25,6 +25,8 @@ export type SmsMessage = {
   sent_at: string | null;
   delivered_at: string | null;
   error_message: string | null;
+  error_code: string | null;
+  provider_message_sid: string | null;
   created_at: string;
   created_by_email: string | null;
 };
@@ -44,7 +46,7 @@ export async function listDonorSmsMessages(donorId: string) {
   const result = await query<SmsMessage>(
     `select m.id::text, m.direction, m.category, m.to_phone, m.from_phone, m.body,
             m.status, m.scheduled_for::text, m.sent_at::text, m.delivered_at::text,
-            m.error_message, m.created_at::text, u.email as created_by_email
+            m.error_message, m.error_code, m.provider_message_sid, m.created_at::text, u.email as created_by_email
      from public.sms_messages m
      left join public.users u on u.id = m.created_by
      where m.donor_id = $1

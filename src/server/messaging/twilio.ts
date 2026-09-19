@@ -42,6 +42,7 @@ export async function sendQueuedSmsMessage(messageId: string) {
   }
 
   let acceptedSid: string | null = null;
+  let rejectionCode: string | null = null;
   try {
     const config = twilioConfig();
     const form = new URLSearchParams({
@@ -70,7 +71,7 @@ export async function sendQueuedSmsMessage(messageId: string) {
 
     if (!response.ok || !payload.sid) {
       const errorMessage = payload.message ?? "Twilio rejected the message.";
-      await markSmsFailed(messageId, payload.code?.toString() ?? null, errorMessage);
+      rejectionCode = payload.code?.toString() ?? null;
       throw new Error(errorMessage);
     }
 
@@ -82,7 +83,7 @@ export async function sendQueuedSmsMessage(messageId: string) {
       throw new Error(`Twilio accepted this message, but the CRM could not save its status. Do not resend. Check Twilio message ${acceptedSid}.`);
     }
     const messageText = error instanceof Error ? error.message : "Text delivery failed.";
-    await markSmsFailed(messageId, null, messageText);
+    await markSmsFailed(messageId, rejectionCode, messageText);
     throw error;
   }
 }

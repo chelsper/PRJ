@@ -79,6 +79,7 @@ export function SmsPanel({
   }
 
   async function sendMessage() {
+    if (sending || saving || preferenceDirty) return;
     const actionLabel = scheduleLocal ? "schedule" : "send";
     const timing = scheduleLocal ? ` for ${new Date(scheduleLocal).toLocaleString()}` : " now";
     if (!window.confirm(`Confirm you want to ${actionLabel} this text to ${phone}${timing}.`)) return;
@@ -168,6 +169,16 @@ export function SmsPanel({
 
       <section className="card sms-compose-card">
         <p className="eyebrow">Send or Schedule Text</p>
+        <details>
+          <summary>Before your first text: setup checklist</summary>
+          <ul>
+            <li>{twilioConfigured ? "Twilio credentials are configured. This does not verify sender readiness." : "Configure Twilio credentials in Vercel."}</li>
+            <li>Add your SMS-capable number to the existing Messaging Service sender pool.</li>
+            <li>Confirm the applicable sender registration or verification is approved in Twilio.</li>
+            <li>Save documented consent, then test with your own opted-in number before contacting a group.</li>
+            <li>Check for Delivered in history. Scheduled or accepted does not mean delivered.</li>
+          </ul>
+        </details>
         {!twilioConfigured ? (
           <p className="danger">Twilio is not connected in Vercel yet. Add the required environment variables before sending.</p>
         ) : null}
@@ -179,7 +190,7 @@ export function SmsPanel({
         <div className="form-grid">
           <label>
             Message category
-            <select value={category} onChange={(event) => setCategory(event.target.value)} disabled={!canWrite}>
+            <select value={category} onChange={(event) => setCategory(event.target.value)} disabled={!canWrite || sending}>
               <option value="GENERAL">General</option>
               <option value="THANK_YOU">Thank you</option>
               <option value="PLEDGE_REMINDER">Pledge reminder</option>
@@ -195,7 +206,7 @@ export function SmsPanel({
               maxLength={1000}
               rows={5}
               placeholder="Pink Ribbon Jax: Type your message here. Reply STOP to opt out."
-              disabled={!canWrite}
+              disabled={!canWrite || sending}
             />
             <span className="muted">{body.length}/1000 characters. Include Pink Ribbon Jax and opt-out instructions.</span>
           </label>
@@ -205,7 +216,7 @@ export function SmsPanel({
               type="datetime-local"
               value={scheduleLocal}
               onChange={(event) => setScheduleLocal(event.target.value)}
-              disabled={!canWrite}
+              disabled={!canWrite || sending}
             />
             <span className="muted">Uses your current time zone. Schedule 16 minutes to 35 days ahead.</span>
           </label>
@@ -229,7 +240,9 @@ export function SmsPanel({
           <div>
             <p className="eyebrow">Text Message History</p>
             <p className="muted">Outbound messages, replies, delivery status, and failures.</p>
+            <p className="muted">Accepted is not delivery confirmation. Check failed-message details before retrying.</p>
           </div>
+          <button type="button" className="secondary" onClick={() => router.refresh()}>Refresh status</button>
         </div>
         <div className="table-scroll">
           <table>
@@ -248,13 +261,19 @@ export function SmsPanel({
                 <tr><td colSpan={6} className="muted">No text messages recorded.</td></tr>
               ) : messages.map((message) => (
                 <tr key={message.id}>
-                  <td>{new Date(message.created_at).toLocaleString()}</td>
-                  <td>{message.direction === "OUTBOUND" ? "Sent" : "Received"}</td>
+                  <td>
+                    {new Date(message.created_at).toLocaleString()}
+                    {message.scheduled_for ? <p className="muted">Scheduled for {new Date(message.scheduled_for).toLocaleString()}</p> : null}
+                    {message.delivered_at ? <p className="muted">Delivered {new Date(message.delivered_at).toLocaleString()}</p> : null}
+                  </td>
+                  <td>{message.direction === "OUTBOUND" ? "Outgoing" : "Incoming"}</td>
                   <td>{message.category.replaceAll("_", " ")}</td>
                   <td className="sms-message-body">{message.body}</td>
                   <td>
-                    {message.status}
+                    <strong>{message.status === "SENT" ? "Accepted / sent (delivery unconfirmed)" : message.status.toLowerCase().replaceAll("_", " ")}</strong>
                     {message.error_message ? <span className="danger sms-error-detail">{message.error_message}</span> : null}
+                    {message.error_code ? <p><a href={`https://www.twilio.com/docs/api/errors/${encodeURIComponent(message.error_code)}`} target="_blank" rel="noreferrer">Twilio error {message.error_code}</a></p> : null}
+                    {message.provider_message_sid ? <details><summary>Tracking ID</summary><span style={{ overflowWrap: "anywhere" }}>{message.provider_message_sid}</span></details> : null}
                   </td>
                   <td>{message.created_by_email ?? "Twilio"}</td>
                 </tr>

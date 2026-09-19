@@ -13,6 +13,13 @@ beforeEach(() => {
 });
 afterEach(() => { vi.unstubAllGlobals(); vi.unstubAllEnvs(); vi.restoreAllMocks(); });
 describe("Twilio acceptance versus local persistence", () => {
+  it("preserves a provider rejection code without overwriting it", async () => {
+    vi.mocked(fetch).mockResolvedValue(Response.json({ code: 21606, message: "Sender unavailable" }, { status: 400 }));
+    await expect(sendQueuedSmsMessage("1")).rejects.toThrow("Sender unavailable");
+    expect(sms.markSmsFailed).toHaveBeenCalledTimes(1);
+    expect(sms.markSmsFailed).toHaveBeenCalledWith("1", "21606", "Sender unavailable");
+    expect(sms.markSmsSent).not.toHaveBeenCalled();
+  });
   it("records an accepted scheduled message", async () => {
     await sendQueuedSmsMessage("1");
     expect(sms.markSmsSent).toHaveBeenCalledWith("1", "SM_test", true);
