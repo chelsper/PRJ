@@ -13,6 +13,16 @@ beforeEach(() => {
 });
 afterEach(() => { vi.unstubAllGlobals(); vi.unstubAllEnvs(); vi.restoreAllMocks(); });
 describe("Twilio acceptance versus local persistence", () => {
+  it("does not classify uncertain network submissions as safe failures to retry", async () => {
+    vi.mocked(fetch).mockRejectedValue(new Error("Connection reset"));
+    await expect(sendQueuedSmsMessage("1")).rejects.toThrow("Do not resend");
+    expect(sms.markSmsFailed).not.toHaveBeenCalled();
+  });
+  it("does not resubmit a message already accepted by Twilio", async () => {
+    sms.getQueuedSmsMessage.mockResolvedValue({ provider_message_sid: "SM_existing" });
+    await sendQueuedSmsMessage("1");
+    expect(fetch).not.toHaveBeenCalled();
+  });
   it("preserves a provider rejection code without overwriting it", async () => {
     vi.mocked(fetch).mockResolvedValue(Response.json({ code: 21606, message: "Sender unavailable" }, { status: 400 }));
     await expect(sendQueuedSmsMessage("1")).rejects.toThrow("Sender unavailable");

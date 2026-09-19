@@ -5,7 +5,7 @@ import { roles, type Role } from "@/server/auth/roles";
 import { listInvitations, listUsers, type UserInvitationRow, type UserRow } from "@/server/data/users";
 import { env } from "@/server/env";
 
-import { createDirectUserAction, createInvitationAction, regenerateInvitationAction, updateUserAction } from "../../users/actions";
+import { createDirectUserAction, createInvitationAction, regenerateInvitationAction, updateUserAction, revokeUserSessionsAction } from "../../users/actions";
 
 export default async function AdminUsersPage({
   searchParams
@@ -17,6 +17,7 @@ export default async function AdminUsersPage({
     created_email?: string;
     created_role?: string;
     error?: string;
+    revoked?: string;
   }>;
 }) {
   await requireCapability("users:manage");
@@ -33,6 +34,7 @@ export default async function AdminUsersPage({
       </section>
 
       <AdminSectionNav active="users" />
+      {params.revoked === "1" && <p role="status">Existing sessions revoked. The user must sign in again.</p>}
 
       <section className="card">
         <p className="eyebrow">Invite User</p>
@@ -90,11 +92,11 @@ export default async function AdminUsersPage({
           </label>
           <label>
             Temporary password
-            <input name="password" type="text" minLength={12} required />
+            <input name="password" type="password" autoComplete="new-password" minLength={12} maxLength={128} required />
           </label>
           <label>
             Confirm password
-            <input name="confirmPassword" type="text" minLength={12} required />
+            <input name="confirmPassword" type="password" autoComplete="new-password" minLength={12} maxLength={128} required />
           </label>
           <div className="full">
             <button type="submit">Create user</button>
@@ -151,6 +153,10 @@ export default async function AdminUsersPage({
                         <button type="submit" className="secondary">
                           Save
                         </button>
+                      </form>
+                      <form action={revokeUserSessionsAction}>
+                        <input type="hidden" name="userId" value={user.id} />
+                        <button type="submit" className="secondary">Sign out all sessions</button>
                       </form>
                     </td>
                   </tr>

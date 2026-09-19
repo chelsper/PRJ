@@ -7,9 +7,18 @@ import { requireCapability } from "@/server/auth/permissions";
 import { roles, type Role } from "@/server/auth/roles";
 import { createInvitation, createUserDirectly, regenerateInvitation, updateUserAccess } from "@/server/data/users";
 import { assertSameOrigin } from "@/server/security/csrf";
-import { assertRateLimit, recordRateLimitEvent } from "@/server/security/rate-limit";
+import { consumeRateLimit } from "@/server/security/rate-limit";
 import { env } from "@/server/env";
 import { writeAuditLog } from "@/server/audit";
+
+export async function revokeUserSessionsAction(formData: FormData) {
+  await assertSameOrigin();
+  const session = await requireCapability("users:manage");
+  const userId = String(formData.get("userId") ?? "");
+  if (!/^[1-9]\d*$/.test(userId)) throw new Error("Invalid user.");
+  await writeAuditLog({ actorUserId: session.userId, action: "auth.sessions.revoked", entityType: "user", entityId: userId, status: "success" });
+  redirect("/admin/users?revoked=1");
+}
 
 export async function createInvitationAction(formData: FormData) {
   await assertSameOrigin();
@@ -21,13 +30,12 @@ export async function createInvitationAction(formData: FormData) {
   const role = String(formData.get("role") ?? "") as Role;
   const key = `invite:${session.userId}`;
 
-  await assertRateLimit({
+  await consumeRateLimit({
     key,
     action: "user_invite",
     maxAttempts: env.RATE_LIMIT_MAX_INVITES,
     windowSeconds: env.RATE_LIMIT_WINDOW_SECONDS
   });
-  await recordRateLimitEvent({ key, action: "user_invite" });
 
   let invitation: Awaited<ReturnType<typeof createInvitation>>;
 
@@ -123,13 +131,12 @@ export async function regenerateInvitationAction(formData: FormData) {
   const invitationId = String(formData.get("invitationId") ?? "");
   const key = `invite:${session.userId}`;
 
-  await assertRateLimit({
+  await consumeRateLimit({
     key,
     action: "user_invite",
     maxAttempts: env.RATE_LIMIT_MAX_INVITES,
     windowSeconds: env.RATE_LIMIT_WINDOW_SECONDS
   });
-  await recordRateLimitEvent({ key, action: "user_invite" });
 
   let invitation: Awaited<ReturnType<typeof regenerateInvitation>>;
 

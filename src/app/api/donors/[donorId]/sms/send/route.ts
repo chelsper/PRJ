@@ -1,6 +1,7 @@
 import { headers } from "next/headers";
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import { consumeRateLimit, RateLimitError } from "@/server/security/rate-limit";
 
 import { getSessionWithCapability } from "@/server/auth/permissions";
 import { queueSmsMessage } from "@/server/data/sms";
@@ -31,6 +32,7 @@ export async function POST(request: Request, context: { params: Promise<{ donorI
   const ipAddress = requestHeaders.get("x-forwarded-for")?.split(",")[0]?.trim() ?? null;
 
   try {
+    await consumeRateLimit({ key: `sms:${session.userId}`, action: "sms_send", maxAttempts: 20, windowSeconds: 900 });
     const scheduledFor = parsed.data.scheduledFor ? new Date(parsed.data.scheduledFor) : null;
     if (scheduledFor) {
       const leadTime = scheduledFor.getTime() - Date.now();
@@ -58,7 +60,7 @@ export async function POST(request: Request, context: { params: Promise<{ donorI
   } catch (error) {
     return NextResponse.json(
       { error: error instanceof Error ? error.message : "The text message could not be sent." },
-      { status: 400 }
+      { status: error instanceof RateLimitError ? 429 : 400 }
     );
   }
 }

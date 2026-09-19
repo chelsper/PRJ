@@ -12,12 +12,14 @@ function normalizeDatabaseUrl(databaseUrl: string) {
     const parsed = new URL(databaseUrl);
     const sslmode = parsed.searchParams.get("sslmode");
 
-    if (sslmode === "require" || sslmode === "prefer" || sslmode === "verify-ca") {
+    if (process.env.NODE_ENV === "production" || sslmode === "require" || sslmode === "prefer" || sslmode === "verify-ca") {
       parsed.searchParams.set("sslmode", "verify-full");
+      parsed.searchParams.delete("uselibpqcompat");
     }
 
     return parsed.toString();
   } catch {
+    if (process.env.NODE_ENV === "production") throw new Error("Invalid database connection configuration.");
     return databaseUrl.replace(/sslmode=(require|prefer|verify-ca)/g, "sslmode=verify-full");
   }
 }
@@ -27,7 +29,12 @@ const normalizedDatabaseUrl = normalizeDatabaseUrl(env.DATABASE_URL);
 const pool =
   global.__crmPool ??
   new Pool({
-    connectionString: normalizedDatabaseUrl
+    connectionString: normalizedDatabaseUrl,
+    max: 10,
+    connectionTimeoutMillis: 10000,
+    idleTimeoutMillis: 30000,
+    statement_timeout: 30000,
+    options: "-c lock_timeout=5000 -c idle_in_transaction_session_timeout=15000"
   });
 
 if (process.env.NODE_ENV !== "production") {

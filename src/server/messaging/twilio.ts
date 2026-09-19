@@ -31,6 +31,8 @@ export function isTwilioConfigured() {
 export async function sendQueuedSmsMessage(messageId: string) {
   const message = await getQueuedSmsMessage(messageId);
   if (!message) throw new Error("Text message was not found.");
+  if (message.provider_message_sid) return;
+  if (message.status === "SENDING") throw new Error("A previous submission is still unconfirmed. Check Twilio and message history before retrying.");
 
   if (message.consent_status !== "OPTED_IN") {
     await markSmsFailed(messageId, "CONSENT_REQUIRED", "The constituent is not opted in.");
@@ -43,6 +45,8 @@ export async function sendQueuedSmsMessage(messageId: string) {
 
   let acceptedSid: string | null = null;
   let rejectionCode: string | null = null;
+  let requestStarted = false;
+  let rejectionConfirmed = false;
   try {
     const config = twilioConfig();
     const form = new URLSearchParams({
@@ -55,6 +59,7 @@ export async function sendQueuedSmsMessage(messageId: string) {
       form.set("ScheduleType", "fixed");
       form.set("SendAt", new Date(message.scheduled_for).toISOString());
     }
+    requestStarted = true;
     const response = await fetch(
       `https://api.twilio.com/2010-04-01/Accounts/${encodeURIComponent(config.accountSid)}/Messages.json`,
       {
@@ -70,6 +75,7 @@ export async function sendQueuedSmsMessage(messageId: string) {
     const payload = (await response.json()) as { sid?: string; code?: number; message?: string };
 
     if (!response.ok || !payload.sid) {
+      rejectionConfirmed = !response.ok;
       const errorMessage = payload.message ?? "Twilio rejected the message.";
       rejectionCode = payload.code?.toString() ?? null;
       throw new Error(errorMessage);
@@ -81,6 +87,9 @@ export async function sendQueuedSmsMessage(messageId: string) {
     if (acceptedSid) {
       console.error("sms.accepted_status_save_failed", { messageId, providerSid: acceptedSid });
       throw new Error(`Twilio accepted this message, but the CRM could not save its status. Do not resend. Check Twilio message ${acceptedSid}.`);
+    }
+    if (requestStarted && !rejectionConfirmed) {
+      throw new Error("Text submission could not be confirmed. Do not resend until you check Twilio and message history; the provider may have accepted it.");
     }
     const messageText = error instanceof Error ? error.message : "Text delivery failed.";
     await markSmsFailed(messageId, rejectionCode, messageText);

@@ -7,3 +7,9 @@
 *.db
 *.dump
 *.bak
+node_modules/
+.next/
+*.tsbuildinfo
+.vercel/
+.vercel
+.env*

@@ -1,4 +1,5 @@
 "use server";
+import { RecordConflictError } from "@/lib/record-version";
 
 import { headers } from "next/headers";
 import { revalidatePath } from "next/cache";
@@ -72,6 +73,7 @@ export async function updateDonorProfileAction(formData: FormData) {
   const requestHeaders = await headers();
   const ipAddress = requestHeaders.get("x-forwarded-for")?.split(",")[0]?.trim() ?? null;
 
+  try {
   await updateDonorProfile(
     donorId,
     {
@@ -118,8 +120,13 @@ export async function updateDonorProfileAction(formData: FormData) {
       country: formData.get("country"),
       notes: formData.get("notes")
     },
-    { userId: session.userId, ipAddress }
+    { userId: session.userId, ipAddress },
+    String(formData.get("recordVersion") ?? "")
   );
+  } catch (error) {
+    if (error instanceof RecordConflictError) return { error: error.message };
+    throw error;
+  }
 
   revalidatePath(`/donors/${donorId}`);
   revalidatePath("/donors");

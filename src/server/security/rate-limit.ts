@@ -1,22 +1,18 @@
-import { query } from "@/server/db";
+import { transaction } from "@/server/db";
 
-function isMissingRateLimitTable(error: unknown) {
-  return (
-    typeof error === "object" &&
-    error !== null &&
-    "code" in error &&
-    error.code === "42P01"
-  );
+export class RateLimitError extends Error {
+  constructor() { super("Too many requests. Please wait before trying again."); }
 }
 
-export async function assertRateLimit(input: {
+export async function consumeRateLimit(input: {
   key: string;
   action: string;
   maxAttempts: number;
   windowSeconds: number;
 }) {
-  try {
-    const result = await query<{ allowed: boolean }>(
+  await transaction(async client => {
+    await client.query("select pg_advisory_xact_lock(hashtextextended($1, 0))", [`rate:${input.action}:${input.key}`]);
+    const result = await client.query<{ allowed: boolean }>(
       `select count(*) < $3 as allowed
        from public.rate_limit_events
        where limiter_key = $1
@@ -26,29 +22,12 @@ export async function assertRateLimit(input: {
     );
 
     if (!result.rows[0]?.allowed) {
-      throw new Error("Rate limit exceeded.");
+      throw new RateLimitError();
     }
-  } catch (error) {
-    if (isMissingRateLimitTable(error)) {
-      return;
-    }
-
-    throw error;
-  }
-}
-
-export async function recordRateLimitEvent(input: { key: string; action: string }) {
-  try {
-    await query(
+    await client.query(
       `insert into public.rate_limit_events (limiter_key, action)
        values ($1, $2)`,
       [input.key, input.action]
     );
-  } catch (error) {
-    if (isMissingRateLimitTable(error)) {
-      return;
-    }
-
-    throw error;
-  }
+  });
 }

@@ -6,22 +6,21 @@ export async function assertSameOrigin() {
   const requestHeaders = await headers();
   const origin = requestHeaders.get("origin");
   const host = requestHeaders.get("x-forwarded-host") ?? requestHeaders.get("host");
-  const proto = requestHeaders.get("x-forwarded-proto") ?? "https";
 
   if (!origin || !host) {
-    return;
+    throw new Error("CSRF validation failed.");
   }
 
   const configuredAppUrl = new URL(env.APP_URL);
   const incoming = new URL(origin);
-  const forwardedUrl = new URL(`${proto}://${host}`);
-
   const allowedOrigins = new Set<string>([
-    configuredAppUrl.origin,
-    forwardedUrl.origin
+    configuredAppUrl.origin
   ]);
+  for (const hostname of [process.env.VERCEL_URL, process.env.VERCEL_PROJECT_PRODUCTION_URL]) {
+    if (hostname) allowedOrigins.add(new URL(`https://${hostname}`).origin);
+  }
 
-  if (!allowedOrigins.has(incoming.origin)) {
+  if (origin !== incoming.origin || !allowedOrigins.has(incoming.origin)) {
     throw new Error("CSRF validation failed.");
   }
 }

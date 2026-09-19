@@ -291,7 +291,7 @@ export async function acceptInvitation(
       `select id::text, email, role, expires_at::text, used_at::text
        from public.user_invitations
        where token_hash = $1
-       limit 1`,
+       limit 1 for update`,
       [tokenHash]
     );
 
@@ -348,6 +348,9 @@ export async function updateUserAccess(
   input: { role: Role; status: "active" | "disabled" },
   actor: Actor
 ) {
+  return transaction(async client => {
+  await client.query("select pg_advisory_xact_lock(hashtextextended('user-access', 0))");
+  const query = client.query.bind(client);
   const before = await query<{ role: Role; status: "active" | "disabled" }>(
     `select role, status
      from public.users
@@ -388,16 +391,14 @@ export async function updateUserAccess(
     [Number(userId), input.role, input.status]
   );
 
-  await writeAuditLog({
-    actorUserId: actor.userId,
-    action: "user.update",
-    entityType: "user",
-    entityId: userId,
-    status: "success",
-    ipAddress: actor.ipAddress,
-    metadata: {
-      before: previous,
-      after: input
-    }
+  await client.query(
+    `insert into public.audit_log(actor_user_id, action, entity_type, entity_id, status, ip_address, metadata)
+     values ($1, 'user.update', 'user', $2, 'success', $3, $4::jsonb)`,
+    [Number(actor.userId), userId, actor.ipAddress ?? null, JSON.stringify({ before: previous, after: input })]
+  );
+  await client.query(
+    `insert into public.audit_log(actor_user_id, action, entity_type, entity_id, status)
+     values ($1, 'auth.sessions.revoked', 'user', $2, 'success')`, [Number(actor.userId), userId]
+  );
   });
 }

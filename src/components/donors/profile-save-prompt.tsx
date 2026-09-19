@@ -21,9 +21,9 @@ export function ProfileSavePrompt({ formId, revision }: { formId: string; revisi
       cancelAnimationFrame(frame);
       frame = requestAnimationFrame(() => setDirty(snapshot(form) !== baseline));
     };
-    const reset = () => {
+    const reset = (event: Event) => {
       cancelAnimationFrame(frame);
-      frame = requestAnimationFrame(() => { baseline = snapshot(form); setDirty(false); });
+      frame = requestAnimationFrame(() => { if (!event.defaultPrevented) { baseline = snapshot(form); setDirty(false); } });
     };
     document.addEventListener("input", compare);
     document.addEventListener("change", compare);

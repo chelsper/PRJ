@@ -1,4 +1,5 @@
 import { query, transaction } from "@/server/db";
+import { assertRecordVersion } from "@/lib/record-version";
 import { writeAuditLog } from "@/server/audit";
 import { donorInputSchema } from "@/server/validation/donors";
 import type { PoolClient } from "pg";
@@ -298,6 +299,7 @@ export type DonorConnectionRow = {
 };
 
 export type DonorProfileRow = {
+  record_version: string;
   id: string;
   donor_number: string | null;
   donor_type: "INDIVIDUAL" | "ORGANIZATION";
@@ -899,6 +901,7 @@ export async function getDonorProfile(donorId: string): Promise<DonorProfileRow 
   const result = await query<DonorProfileRow>(
     `select
       d.id::text,
+      d.updated_at::text as record_version,
       d.donor_number,
       d.donor_type,
       d.title,
@@ -1278,7 +1281,7 @@ export async function importConstituentRecords(
       createdCount += 1;
     } catch (error) {
       skippedCount += 1;
-      results.push(`Row ${index + 1}: ${(error as Error).message}`);
+      results.push(`Row ${index + 1}: could not create this record. Check the mapped values and existing records before retrying.`);
     }
   }
 
@@ -1294,18 +1297,19 @@ export async function importConstituentRecords(
   };
 }
 
-export async function updateDonorProfile(donorId: string, input: unknown, actor: Actor) {
+export async function updateDonorProfile(donorId: string, input: unknown, actor: Actor, expectedVersion?: string) {
   const values = donorInputSchema.parse(input);
 
   await transaction(async (client) => {
     const currentDonorResult = await client.query<{
+      record_version: string;
       donor_type: "INDIVIDUAL" | "ORGANIZATION";
       spouse_donor_id: string | null;
     }>(
-      `select donor_type
+      `select donor_type, updated_at::text as record_version
               , spouse_donor_id::text
        from public.donors
-       where id = $1`,
+       where id = $1 for update`,
       [Number(donorId)]
     );
 
@@ -1314,6 +1318,8 @@ export async function updateDonorProfile(donorId: string, input: unknown, actor:
     if (!currentDonor) {
       throw new Error("Donor not found.");
     }
+
+    if (expectedVersion !== undefined) assertRecordVersion(currentDonor.record_version, expectedVersion);
 
     if (currentDonor.donor_type !== values.donorType) {
       throw new Error("Donor type cannot be changed on an existing profile.");

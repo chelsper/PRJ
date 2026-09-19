@@ -6,7 +6,7 @@ import { ZodError } from "zod";
 
 import { acceptInvitation } from "@/server/data/users";
 import { assertSameOrigin } from "@/server/security/csrf";
-import { assertRateLimit, recordRateLimitEvent } from "@/server/security/rate-limit";
+import { consumeRateLimit } from "@/server/security/rate-limit";
 import { env } from "@/server/env";
 import { writeAuditLog } from "@/server/audit";
 import { createSessionToken } from "@/server/auth/session";
@@ -32,13 +32,12 @@ export async function acceptInvitationAction(formData: FormData) {
   const token = String(formData.get("token") ?? "");
   const key = `invite_accept:${ipAddress || "unknown"}`;
 
-  await assertRateLimit({
+  await consumeRateLimit({
     key,
     action: "invite_accept",
     maxAttempts: env.RATE_LIMIT_MAX_AUTH_ATTEMPTS,
     windowSeconds: env.RATE_LIMIT_WINDOW_SECONDS
   });
-  await recordRateLimitEvent({ key, action: "invite_accept" });
 
   let user: Awaited<ReturnType<typeof acceptInvitation>>;
 

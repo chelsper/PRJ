@@ -84,6 +84,11 @@ export function CsvImportWorkbench<TField extends string>({
       return;
     }
 
+    if (file.size > 2_000_000) {
+      setRows([]); setHeaders([]); setMapping({}); setFileName("");
+      setImportResult({ success: false, message: "File is too large. Split it into CSV files smaller than 2 MB." });
+      return;
+    }
     const text = await file.text();
     const parsed = parseImportCsv(text);
 
@@ -110,6 +115,7 @@ export function CsvImportWorkbench<TField extends string>({
           <input type="file" accept=".csv,text/csv" onChange={handleFileChange} />
         </label>
         {fileName ? <p className="muted top-gap">Loaded file: {fileName} · {rows.length} data rows detected.</p> : null}
+        {importResult && !headers.length ? <p role="alert">{importResult.message}</p> : null}
       </section>
 
       {headers.length > 0 ? (
@@ -189,12 +195,16 @@ export function CsvImportWorkbench<TField extends string>({
                     disabled={isPending || rows.length === 0 || mappedFields.length === 0}
                     onClick={() =>
                       startTransition(async () => {
+                        try {
                         const result = await submitAction({
                           fileName,
                           rows,
                           mapping
                         });
                         setImportResult(result);
+                        } catch {
+                          setImportResult({ success: false, message: "Import completion could not be confirmed. Check import history and existing records before retrying; some rows may have been saved." });
+                        }
                       })
                     }
                   >

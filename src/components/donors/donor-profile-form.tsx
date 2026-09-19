@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useRef, useState } from "react";
 
 import { DonorLookup } from "@/components/donors/donor-lookup";
 import { ProfileSavePrompt } from "@/components/donors/profile-save-prompt";
@@ -39,7 +39,7 @@ export function DonorProfileForm({
   stateOptions: ConfigLookupOption[];
   relationshipTypeOptions: ConfigLookupOption[];
   organizationContactTypeOptions: ConfigLookupOption[];
-  updateAction: FormAction;
+  updateAction: (data: FormData) => Promise<void | { error: string }>;
   addRelationshipAction: FormAction;
   deleteRelationshipAction: FormAction;
   promoteSpouseAction: FormAction;
@@ -73,6 +73,8 @@ export function DonorProfileForm({
   const [createOrganizationDraft, setCreateOrganizationDraft] = useState(false);
   const [relationshipType, setRelationshipType] = useState("EMPLOYER");
   const [isOrganizationContact, setIsOrganizationContact] = useState(false);
+  const [saveError, setSaveError] = useState("");
+  const preserveUnsaved = useRef(false);
 
   const spouseSelection =
     donor.spouse_donor_id && donor.spouse_name
@@ -89,7 +91,9 @@ export function DonorProfileForm({
     <div className="grid donor-profile-sections">
       <section className="card donor-profile-card">
         <p className="eyebrow">Profile Details</p>
-        <form id={`profile-${donor.id}`} action={updateAction} className="form-grid donor-form-grid">
+        <form id={`profile-${donor.id}`} onReset={event => { if (preserveUnsaved.current) event.preventDefault(); }} action={async data => { preserveUnsaved.current = false; setSaveError(""); const result = await updateAction(data); if (result?.error) { preserveUnsaved.current = true; setSaveError(result.error); } }} className="form-grid donor-form-grid">
+          {saveError && <p role="alert" className="danger full">{saveError}</p>}
+          <input type="hidden" name="recordVersion" value={donor.record_version} />
           <input type="hidden" name="donorId" value={donor.id} />
           <input type="hidden" name="donorType" value={donor.donor_type} />
           <ProfileSavePrompt formId={`profile-${donor.id}`} revision={JSON.stringify(donor)} />

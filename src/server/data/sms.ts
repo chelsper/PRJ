@@ -144,6 +144,16 @@ export async function queueSmsMessage(input: {
     }
 
     const scheduled = Boolean(input.scheduledFor && input.scheduledFor.getTime() > Date.now() + 60_000);
+    const existing = await client.query<{ id: string; scheduled: boolean }>(
+      `select id::text, scheduled_for is not null as scheduled from public.sms_messages
+       where donor_id = $1 and direction = 'OUTBOUND' and body = $2 and category = $3
+         and to_phone = $4 and scheduled_for is not distinct from $5::timestamptz
+         and status in ('QUEUED', 'SCHEDULED', 'SENDING', 'SENT', 'DELIVERED')
+         and created_at >= now() - interval '15 minutes'
+       order by created_at desc limit 1`,
+      [Number(input.donorId), input.body, input.category, preference.phone, scheduled ? input.scheduledFor : null]
+    );
+    if (existing.rows[0]) return { messageId: existing.rows[0].id, scheduled: existing.rows[0].scheduled };
     const messageResult = await client.query<{ id: string }>(
       `insert into public.sms_messages (
          donor_id, direction, category, to_phone, body, status, scheduled_for, created_by
@@ -186,9 +196,10 @@ export async function getQueuedSmsMessage(messageId: string) {
     status: string;
     scheduled_for: string | null;
     consent_status: SmsConsentStatus;
+    provider_message_sid: string | null;
   }>(
     `select m.id::text, m.donor_id::text, m.to_phone, m.body, m.status,
-            m.scheduled_for::text, p.consent_status
+            m.scheduled_for::text, p.consent_status, m.provider_message_sid
      from public.sms_messages m
      join public.donor_sms_preferences p on p.donor_id = m.donor_id
      where m.id = $1`,
@@ -213,7 +224,7 @@ export async function markSmsSending(messageId: string) {
   const result = await query(
     `update public.sms_messages
      set status = 'SENDING'
-     where id = $1 and status in ('QUEUED', 'SCHEDULED')`,
+     where id = $1 and status in ('QUEUED', 'SCHEDULED') and provider_message_sid is null`,
     [Number(messageId)]
   );
   return result.rowCount === 1;

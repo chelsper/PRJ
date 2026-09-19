@@ -6,12 +6,12 @@ import { redirect } from "next/navigation";
 import { AUTH_COOKIE } from "@/server/auth/constants";
 import { createSessionToken } from "@/server/auth/session";
 import { env } from "@/server/env";
-import { query } from "@/server/db";
+import { query, transaction } from "@/server/db";
 import { getCurrentSession } from "@/server/auth/session-store";
 import { hashPassword, verifyPassword } from "@/server/auth/passwords";
 import { countUsers } from "@/server/data/users";
 import { assertSameOrigin } from "@/server/security/csrf";
-import { assertRateLimit, recordRateLimitEvent } from "@/server/security/rate-limit";
+import { consumeRateLimit } from "@/server/security/rate-limit";
 import { writeAuditLog } from "@/server/audit";
 import { signUpSchema } from "@/server/validation/auth";
 import type { Role } from "@/server/auth/roles";
@@ -37,13 +37,15 @@ export async function loginAction(formData: FormData) {
   const requestHeaders = await headers();
   const ipAddress = requestHeaders.get("x-forwarded-for")?.split(",")[0]?.trim() ?? null;
 
-  await assertRateLimit({
+  await consumeRateLimit({ key: `auth-ip:${ipAddress || "unknown"}`, action: "login", maxAttempts: 50, windowSeconds: env.RATE_LIMIT_WINDOW_SECONDS });
+  if (email.length > 255 || password.length > 128) redirect("/login?error=invalid");
+
+  await consumeRateLimit({
     key: `auth:${email || ipAddress || "unknown"}`,
     action: "login",
     maxAttempts: env.RATE_LIMIT_MAX_AUTH_ATTEMPTS,
     windowSeconds: env.RATE_LIMIT_WINDOW_SECONDS
   });
-  await recordRateLimitEvent({ key: `auth:${email || ipAddress || "unknown"}`, action: "login" });
 
   const result = await query<{
     id: string;
@@ -124,13 +126,12 @@ export async function signUpAction(formData: FormData) {
   const requestHeaders = await headers();
   const ipAddress = requestHeaders.get("x-forwarded-for")?.split(",")[0]?.trim() ?? null;
 
-  await assertRateLimit({
+  await consumeRateLimit({
     key: `signup:${values.email || ipAddress || "unknown"}`,
     action: "signup",
     maxAttempts: env.RATE_LIMIT_MAX_AUTH_ATTEMPTS,
     windowSeconds: env.RATE_LIMIT_WINDOW_SECONDS
   });
-  await recordRateLimitEvent({ key: `signup:${values.email || ipAddress || "unknown"}`, action: "signup" });
 
   const existingUserResult = await query<{ id: string }>(
     `select id::text
@@ -154,12 +155,19 @@ export async function signUpAction(formData: FormData) {
 
   const role: Role = "admin";
 
-  const inserted = await query<{ id: string }>(
+  const inserted = await transaction(async client => {
+    await client.query("select pg_advisory_xact_lock(hashtextextended('bootstrap-signup', 0))");
+    const existing = await client.query("select id from public.users limit 1");
+    if (existing.rows.length) return null;
+    return client.query<{ id: string }>(
     `insert into public.users (email, password_hash, role, status, last_login_at)
      values ($1, $2, $3, 'active', now())
      returning id::text`,
     [values.email, hashPassword(values.password), role]
   );
+  });
+
+  if (!inserted) redirect("/login?error=invite_required");
 
   const userId = inserted.rows[0].id;
 
@@ -183,11 +191,13 @@ export async function signUpAction(formData: FormData) {
 }
 
 export async function logoutAction() {
+  await assertSameOrigin();
   const session = await getCurrentSession();
   const requestHeaders = await headers();
   const ipAddress = requestHeaders.get("x-forwarded-for")?.split(",")[0]?.trim() ?? null;
 
   if (session) {
+    await writeAuditLog({ actorUserId: session.userId, action: "auth.session.revoked", entityType: "session", entityId: session.sessionId ?? null, status: "success", ipAddress });
     await writeAuditLog({
       actorUserId: session.userId,
       action: "auth.logout",

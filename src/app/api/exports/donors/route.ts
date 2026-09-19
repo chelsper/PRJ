@@ -1,4 +1,6 @@
 import { headers } from "next/headers";
+import { csvCell } from "@/lib/csv-security";
+import { assertSameOrigin } from "@/server/security/csrf";
 import { NextRequest, NextResponse } from "next/server";
 
 import { writeAuditLog } from "@/server/audit";
@@ -10,7 +12,7 @@ import {
 import { query } from "@/server/db";
 import { filterReportRows, buildReportPreview } from "@/server/data/report-view";
 import { env } from "@/server/env";
-import { assertRateLimit, recordRateLimitEvent } from "@/server/security/rate-limit";
+import { consumeRateLimit } from "@/server/security/rate-limit";
 
 type DonorsThisYearExportRow = {
   donor_number: string | null;
@@ -71,13 +73,12 @@ async function authorizeExport(ipAddress: string | null) {
 
   const key = `export:${session.userId}`;
 
-  await assertRateLimit({
+  await consumeRateLimit({
     key,
     action: "donor_export",
     maxAttempts: env.RATE_LIMIT_MAX_EXPORTS,
     windowSeconds: env.RATE_LIMIT_WINDOW_SECONDS
   });
-  await recordRateLimitEvent({ key, action: "donor_export" });
 
   return session;
 }
@@ -103,7 +104,7 @@ async function buildDonorsThisYearCsv(selectedColumns: string[], filters = { que
       donor_year_totals as (
         select
           g.donor_id,
-          nullif(
+          (select nullif(
             string_agg(
               distinct coalesce(sd.organization_name, concat_ws(' ', sd.first_name, sd.last_name)),
               ', '
@@ -112,7 +113,10 @@ async function buildDonorsThisYearCsv(selectedColumns: string[], filters = { que
                 and coalesce(sd.organization_name, concat_ws(' ', sd.first_name, sd.last_name)) <> ''
             ),
             ''
-          ) as soft_credit_donor,
+          ) from current_year_gifts sg
+            join public.soft_credits sc on sc.gift_id = sg.id
+            join public.donors sd on sd.id = sc.donor_id and sd.deleted_at is null
+            where sg.donor_id = g.donor_id) as soft_credit_donor,
           coalesce(sum(
             case
               when g.gift_type in ('CASH', 'STOCK_PROPERTY', 'GIFT_IN_KIND', 'PLEDGE_PAYMENT', 'MATCHING_GIFT_PAYMENT')
@@ -128,8 +132,6 @@ async function buildDonorsThisYearCsv(selectedColumns: string[], filters = { que
             end
           ), 0)::int as total_amount_pledged
         from current_year_gifts g
-        left join public.soft_credits sc on sc.gift_id = g.id
-        left join public.donors sd on sd.id = sc.donor_id
         group by g.donor_id
       )
       select
@@ -259,7 +261,7 @@ async function buildDonorsThisYearCsv(selectedColumns: string[], filters = { que
         t.total_amount_received,
         t.total_amount_pledged
       from donor_year_totals t
-      inner join public.donors d on d.id = t.donor_id
+      inner join public.donors d on d.id = t.donor_id and d.deleted_at is null
       left join public.donors sp on sp.id = d.spouse_donor_id
       left join public.donor_addresses a on a.donor_id = d.id and a.is_primary = true
       left join public.donor_current_year_giving_levels gl on gl.donor_id = d.id
@@ -271,7 +273,7 @@ async function buildDonorsThisYearCsv(selectedColumns: string[], filters = { que
   const csv = [
     columns
       .map((column) => donorsThisYearExportColumns.find((item) => item.key === column)?.label ?? column)
-      .map((value) => `"${String(value).replaceAll('"', '""')}"`)
+      .map(csvCell)
       .join(","),
     ...result.rows.map((row) =>
       columns
@@ -317,7 +319,7 @@ async function buildDonorsThisYearCsv(selectedColumns: string[], filters = { que
             total_amount_pledged: (row.total_amount_pledged / 100).toFixed(2)
           };
 
-          return `"${String(rowValues[column]).replaceAll('"', '""')}"`;
+          return csvCell(rowValues[column]);
         })
         .join(",")
     )
@@ -369,7 +371,7 @@ async function buildRecognitionCsv() {
         row.giving_level_display ?? "",
         row.giving_level_internal ?? ""
       ]
-        .map((value) => `"${String(value).replaceAll('"', '""')}"`)
+        .map(csvCell)
         .join(",")
     )
   ].join("\n");
@@ -441,6 +443,7 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
+  await assertSameOrigin();
   const requestHeaders = await headers();
   const ipAddress = requestHeaders.get("x-forwarded-for")?.split(",")[0]?.trim() ?? null;
   const session = await authorizeExport(ipAddress);

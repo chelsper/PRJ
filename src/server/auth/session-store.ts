@@ -26,8 +26,15 @@ export async function getCurrentSession(): Promise<SessionPayload | null> {
   }>(
     `select id::text, email, role, status
      from public.users
-     where id = $1`,
-    [Number(payload.userId)]
+     where id = $1 and not exists (
+       select 1 from public.audit_log a
+       where a.status = 'success' and (
+         (a.action = 'auth.session.revoked' and a.entity_id = $2)
+         or (a.action = 'auth.sessions.revoked' and a.entity_id = $3
+             and a.occurred_at >= to_timestamp($4))
+       )
+     )`,
+    [Number(payload.userId), payload.sessionId, payload.userId, payload.issuedAt]
   );
 
   const user = result.rows[0];
@@ -39,6 +46,7 @@ export async function getCurrentSession(): Promise<SessionPayload | null> {
   return {
     userId: user.id,
     email: user.email,
-    role: user.role
+    role: user.role,
+    sessionId: payload.sessionId
   };
 }
