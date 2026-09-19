@@ -304,6 +304,23 @@ body.app-view-web .shell {
   font-size: 0.78rem;
 }
 
+.sms-action-notice {
+  margin: var(--space-3) 0;
+  padding: 12px 14px;
+  border: 1px solid #e6c779;
+  border-radius: 10px;
+  background: #fff8df;
+  color: #684f12;
+}
+
+button:disabled,
+.button-link[aria-disabled="true"] {
+  cursor: not-allowed;
+  opacity: 0.5;
+  box-shadow: none;
+  transform: none;
+}
+
 @media (max-width: 900px) {
   .sms-workspace {
     grid-template-columns: 1fr;

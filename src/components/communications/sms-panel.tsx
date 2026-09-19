@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 
 import type { SmsMessage, SmsPreference, SmsConsentStatus } from "@/server/data/sms";
@@ -27,8 +28,10 @@ export function SmsPanel({
   canWrite: boolean;
   twilioConfigured: boolean;
 }) {
+  const router = useRouter();
   const [phone, setPhone] = useState(preference?.phone ?? defaultPhone ?? "");
   const [consentStatus, setConsentStatus] = useState<SmsConsentStatus>(preference?.consent_status ?? "UNKNOWN");
+  const [savedConsentStatus, setSavedConsentStatus] = useState<SmsConsentStatus>(preference?.consent_status ?? "UNKNOWN");
   const [consentSource, setConsentSource] = useState(preference?.consent_source ?? "");
   const [consentNote, setConsentNote] = useState(preference?.consent_note ?? "");
   const [body, setBody] = useState("");
@@ -39,24 +42,41 @@ export function SmsPanel({
   const [saving, setSaving] = useState(false);
   const [sending, setSending] = useState(false);
 
+  function normalizePhone(value: string) {
+    const trimmed = value.trim();
+    if (trimmed.startsWith("+")) return `+${trimmed.slice(1).replace(/\D/g, "")}`;
+
+    const digits = trimmed.replace(/\D/g, "");
+    if (digits.length === 10) return `+1${digits}`;
+    if (digits.length === 11 && digits.startsWith("1")) return `+${digits}`;
+    return trimmed;
+  }
+
   async function savePreference() {
     setSaving(true);
     setNotice(null);
     setError(null);
+    const normalizedPhone = normalizePhone(phone);
     const response = await fetch(`/api/donors/${donorId}/sms/preference`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       credentials: "same-origin",
-      body: JSON.stringify({ phone, consentStatus, consentSource, consentNote })
+      body: JSON.stringify({ phone: normalizedPhone, consentStatus, consentSource, consentNote })
     });
     const payload = (await response.json()) as { error?: string };
     setSaving(false);
     if (!response.ok) return setError(payload.error ?? "Consent details could not be saved.");
+    setPhone(normalizedPhone);
+    setSavedConsentStatus(consentStatus);
     setNotice("Texting preference saved.");
-    window.location.reload();
+    router.refresh();
   }
 
   async function sendMessage() {
+    const actionLabel = scheduleLocal ? "schedule" : "send";
+    const timing = scheduleLocal ? ` for ${new Date(scheduleLocal).toLocaleString()}` : " now";
+    if (!window.confirm(`Confirm you want to ${actionLabel} this text to ${phone}${timing}.`)) return;
+
     setSending(true);
     setNotice(null);
     setError(null);
@@ -72,8 +92,8 @@ export function SmsPanel({
     if (!response.ok) return setError(payload.error ?? "The text message could not be sent.");
     setBody("");
     setScheduleLocal("");
-    setNotice(payload.scheduled ? "Text scheduled with Twilio." : "Text sent to Twilio.");
-    window.location.reload();
+    setNotice(payload.scheduled ? "Text scheduled with Twilio." : "Text accepted by Twilio for delivery.");
+    router.refresh();
   }
 
   return (
@@ -146,6 +166,11 @@ export function SmsPanel({
         {!twilioConfigured ? (
           <p className="danger">Twilio is not connected in Vercel yet. Add the required environment variables before sending.</p>
         ) : null}
+        {savedConsentStatus !== "OPTED_IN" ? (
+          <div className="sms-action-notice" role="status">
+            Save this constituent as <strong>Opted in</strong> under Texting Permission before sending or scheduling a message.
+          </div>
+        ) : null}
         <div className="form-grid">
           <label>
             Message category
@@ -186,7 +211,8 @@ export function SmsPanel({
           <button
             type="button"
             onClick={sendMessage}
-            disabled={sending || !twilioConfigured || consentStatus !== "OPTED_IN" || !body.trim()}
+            disabled={sending || !twilioConfigured || savedConsentStatus !== "OPTED_IN" || !body.trim()}
+            title={savedConsentStatus !== "OPTED_IN" ? "Document and save texting consent first." : undefined}
           >
             {sending ? "Submitting..." : scheduleLocal ? "Schedule Text" : "Send Text"}
           </button>
