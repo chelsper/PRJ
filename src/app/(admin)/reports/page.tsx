@@ -55,6 +55,7 @@ export default async function ReportsPage({
       </section>
 
       <nav className="tab-row">
+        <Link href="/reports/queries" className="tab-link">Queries</Link>
         <Link href="/reports" className={activeTab === "overview" ? "tab-link active" : "tab-link"}>
           Overview
         </Link>
