@@ -26,6 +26,9 @@ describe("data quality review", () => {
     expect(findDuplicatePairs([empty, { ...empty, id: "2" }])).toEqual([]);
     expect(contactIssues(empty)).toEqual(["No email or phone"]);
   });
+  it("skips dismissed pairs before applying the result limit", () => {
+    expect(findDuplicatePairs([a, b, { ...b, id: "3" }], 1, new Set(["1:2"]))[0].right.id).toBe("3");
+  });
   it("flags format concerns but accepts optional missing fields", () => {
     expect(contactIssues({ ...a, primary_phone: null })).toEqual([]);
     expect(contactIssues({ ...a, primary_email: "broken", primary_phone: "12" })).toHaveLength(2);

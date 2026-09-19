@@ -30,7 +30,11 @@ export function duplicateReasons(a: QualityDonor, b: QualityDonor): string[] {
   return [sameName ? "Same full name" : "", sameEmail ? "Same email" : "", samePhone ? "Same phone" : ""].filter(Boolean);
 }
 
-export function findDuplicatePairs(donors: QualityDonor[], limit = 100) {
+export function duplicatePairKey(leftId: string, rightId: string) {
+  return [leftId, rightId].sort().join(":");
+}
+
+export function findDuplicatePairs(donors: QualityDonor[], limit = 100, dismissed = new Set<string>()) {
   const buckets = new Map<string, QualityDonor[]>();
   const pairs: { left: QualityDonor; right: QualityDonor; reasons: string[] }[] = [];
   for (const donor of donors) {
@@ -41,6 +45,7 @@ export function findDuplicatePairs(donors: QualityDonor[], limit = 100) {
       for (const other of buckets.get(key) ?? []) {
         if (seen.has(other.id)) continue;
         seen.add(other.id);
+        if (dismissed.has(duplicatePairKey(donor.id, other.id))) continue;
         const reasons = duplicateReasons(donor, other);
         if (reasons.length) {
           pairs.push({ left: other, right: donor, reasons });
