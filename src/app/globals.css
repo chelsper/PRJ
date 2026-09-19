@@ -1808,3 +1808,17 @@ body.app-view-mobile .table-scroll table {
     justify-content: center;
   }
 }
+/* Keep report controls compact and wide previews inside their panel. */
+.report-builder { min-width: 0; }
+.report-builder > .card { min-width: 0; }
+.report-builder .card > .button-row { margin-block: 12px; }
+.report-column-list { max-height: 420px; overflow-y: auto; margin-top: 12px; border: 1px solid #d5dbe4; border-radius: 8px; }
+.report-column-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 8px 12px; border-bottom: 1px solid #e5e7eb; }
+.report-column-row:last-child { border-bottom: 0; }
+.report-column-row .toggle-row { min-width: 0; margin: 0; }
+.report-column-row .button-row { flex-shrink: 0; gap: 6px; }
+.report-column-row button { padding: 6px 10px; font-size: .85rem; }
+.report-builder .table-scroll { max-width: 100%; overflow: auto; }
+.report-builder table { width: max-content; min-width: 100%; }
+.report-builder th, .report-builder td { min-width: 140px; max-width: 320px; overflow-wrap: break-word; }
+@media (max-width: 480px) { .report-column-row { flex-wrap: wrap; } }

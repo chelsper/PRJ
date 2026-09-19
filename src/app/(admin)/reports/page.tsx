@@ -29,7 +29,7 @@ export default async function ReportsPage({
 }: {
   searchParams: Promise<{ givingLevel?: string; tab?: string; report?: string }>;
 }) {
-  await requireCapability("reports:read");
+  const session = await requireCapability("reports:read");
   const { givingLevel, tab, report } = await searchParams;
   const exportSession = await getSessionWithCapability("exports:run");
   const activeTab = tab === "exports" ? "exports" : "overview";
@@ -77,6 +77,8 @@ export default async function ReportsPage({
             <ReportsExportBuilder
               report="donors_this_year"
               columns={[...donorsThisYearExportColumns]}
+              userId={session.userId}
+              givingLevels={levelSnapshot.map((level) => ({ value: level.giving_level_internal, label: level.giving_level_display }))}
             />
           </section>
         ) : null

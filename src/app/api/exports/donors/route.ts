@@ -8,6 +8,7 @@ import {
   type DonorsThisYearExportColumnKey
 } from "@/server/data/report-export-columns";
 import { query } from "@/server/db";
+import { filterReportRows, buildReportPreview } from "@/server/data/report-view";
 import { env } from "@/server/env";
 import { assertRateLimit, recordRateLimitEvent } from "@/server/security/rate-limit";
 
@@ -81,7 +82,7 @@ async function authorizeExport(ipAddress: string | null) {
   return session;
 }
 
-async function buildDonorsThisYearCsv(selectedColumns: string[]) {
+async function buildDonorsThisYearCsv(selectedColumns: string[], filters = { query: "", givingLevel: "" }) {
   const allowedColumns = new Set<string>(donorsThisYearExportColumns.map((column) => column.key));
   const columns =
     selectedColumns.length > 0
@@ -265,6 +266,8 @@ async function buildDonorsThisYearCsv(selectedColumns: string[]) {
       order by donor_name asc`
   );
 
+  result.rows = filterReportRows(result.rows, filters);
+  const preview = buildReportPreview(result.rows, columns);
   const csv = [
     columns
       .map((column) => donorsThisYearExportColumns.find((item) => item.key === column)?.label ?? column)
@@ -320,7 +323,7 @@ async function buildDonorsThisYearCsv(selectedColumns: string[]) {
     )
   ].join("\n");
 
-  return { csv, rowCount: result.rows.length, fileName: "donors-this-year.csv" };
+  return { csv, preview, rowCount: result.rows.length, fileName: "donors-this-year.csv" };
 }
 
 async function buildRecognitionCsv() {
@@ -377,20 +380,24 @@ async function buildRecognitionCsv() {
 async function buildExportResponse({
   report,
   selectedColumns,
+  filters = { query: "", givingLevel: "" },
+  preview = false,
   sessionUserId,
   ipAddress
 }: {
   report: string;
   selectedColumns: string[];
+  filters?: { query: string; givingLevel: string };
+  preview?: boolean;
   sessionUserId: string;
   ipAddress: string | null;
 }) {
   const exportResult =
-    report === "donors_this_year" ? await buildDonorsThisYearCsv(selectedColumns) : await buildRecognitionCsv();
+    report === "donors_this_year" ? await buildDonorsThisYearCsv(selectedColumns, filters) : await buildRecognitionCsv();
 
   await writeAuditLog({
     actorUserId: sessionUserId,
-    action: "export.donors",
+    action: preview ? "export.donors.preview" : "export.donors",
     entityType: "report",
     entityId: null,
     status: "success",
@@ -398,10 +405,15 @@ async function buildExportResponse({
     metadata: {
       report: "donor_recognition_totals",
       exportVariant: report,
+      filters,
+      columns: selectedColumns,
       rowCount: exportResult.rowCount
     }
   });
 
+  if (preview && "preview" in exportResult) {
+    return NextResponse.json({ rows: exportResult.preview, rowCount: exportResult.rowCount }, { headers: { "Cache-Control": "no-store" } });
+  }
   return new NextResponse(exportResult.csv, {
     headers: {
       "Content-Type": "text/csv; charset=utf-8",
@@ -442,6 +454,8 @@ export async function POST(request: NextRequest) {
   return buildExportResponse({
     report: String(formData.get("report") ?? "donor_recognition_totals"),
     selectedColumns: formData.getAll("columns").map((value) => String(value)),
+    filters: { query: String(formData.get("query") ?? "").trim().slice(0, 200), givingLevel: String(formData.get("givingLevel") ?? "").slice(0, 100) },
+    preview: formData.get("preview") === "true",
     sessionUserId: session.userId,
     ipAddress
   });
