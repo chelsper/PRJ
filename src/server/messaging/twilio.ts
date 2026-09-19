@@ -41,6 +41,7 @@ export async function sendQueuedSmsMessage(messageId: string) {
     return;
   }
 
+  let acceptedSid: string | null = null;
   try {
     const config = twilioConfig();
     const form = new URLSearchParams({
@@ -73,8 +74,13 @@ export async function sendQueuedSmsMessage(messageId: string) {
       throw new Error(errorMessage);
     }
 
+    acceptedSid = payload.sid;
     await markSmsSent(messageId, payload.sid, Boolean(message.scheduled_for));
   } catch (error) {
+    if (acceptedSid) {
+      console.error("sms.accepted_status_save_failed", { messageId, providerSid: acceptedSid });
+      throw new Error(`Twilio accepted this message, but the CRM could not save its status. Do not resend. Check Twilio message ${acceptedSid}.`);
+    }
     const messageText = error instanceof Error ? error.message : "Text delivery failed.";
     await markSmsFailed(messageId, null, messageText);
     throw error;

@@ -220,8 +220,8 @@ export async function markSmsSending(messageId: string) {
 export async function markSmsSent(messageId: string, providerSid: string, scheduled: boolean) {
   await query(
     `update public.sms_messages
-     set status = $3, provider_message_sid = $2,
-         sent_at = case when $3 = 'SENT' then now() else sent_at end,
+     set status = $3::varchar(20), provider_message_sid = $2,
+         sent_at = case when $3::varchar(20) = 'SENT' then now() else sent_at end,
          error_code = null, error_message = null
      where id = $1`,
     [Number(messageId), providerSid, scheduled ? "SCHEDULED" : "SENT"]
@@ -243,9 +243,9 @@ export async function updateSmsDelivery(providerSid: string, providerStatus: str
   const status = delivered ? "DELIVERED" : failed ? "FAILED" : "SENT";
   await query(
     `update public.sms_messages
-     set status = $2,
-         delivered_at = case when $2 = 'DELIVERED' then now() else delivered_at end,
-         failed_at = case when $2 = 'FAILED' then now() else failed_at end,
+     set status = $2::varchar(20),
+         delivered_at = case when $2::varchar(20) = 'DELIVERED' then now() else delivered_at end,
+         failed_at = case when $2::varchar(20) = 'FAILED' then now() else failed_at end,
          error_code = coalesce($3, error_code)
      where provider_message_sid = $1`,
     [providerSid, status, errorCode ?? null]
