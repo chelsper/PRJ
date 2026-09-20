@@ -16,8 +16,8 @@ import { writeAuditLog } from "@/server/audit";
 import { signUpSchema } from "@/server/validation/auth";
 import type { Role } from "@/server/auth/roles";
 
-async function establishSession(input: { userId: string; email: string; role: Role }) {
-  const token = await createSessionToken(input);
+async function establishSession(input: { userId: string; email: string; role: Role }, pendingPasskey = false) {
+  const token = await createSessionToken(input, pendingPasskey ? "5m" : "12h");
 
   const cookieStore = await cookies();
   cookieStore.set(AUTH_COOKIE, token, {
@@ -25,7 +25,7 @@ async function establishSession(input: { userId: string; email: string; role: Ro
     sameSite: "lax",
     secure: true,
     path: "/",
-    maxAge: 60 * 60 * 12
+    maxAge: pendingPasskey ? 300 : 60 * 60 * 12
   });
 }
 
@@ -74,11 +74,13 @@ export async function loginAction(formData: FormData) {
     redirect("/login?error=invalid");
   }
 
+  const passkeys = await query("select id from public.user_passkeys where user_id=$1 and active limit 1", [user.id]);
   await establishSession({
     userId: user.id,
     email: user.email,
     role: user.role
-  });
+  }, passkeys.rows.length > 0);
+  if (passkeys.rows.length) redirect("/login/passkey");
 
   await query(
     `update public.users

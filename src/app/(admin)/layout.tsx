@@ -34,6 +34,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
         />
         <GlobalSearch />
         <div className="topbar-actions">
+          <Link href="/account/security">Account security</Link>
           <ViewModeToggle />
           <form action={logoutAction}>
             <button type="submit" className="secondary">

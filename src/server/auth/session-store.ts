@@ -4,7 +4,8 @@ import { AUTH_COOKIE } from "@/server/auth/constants";
 import { verifySessionToken, type SessionPayload } from "@/server/auth/session";
 import { query } from "@/server/db";
 
-export async function getCurrentSession(): Promise<SessionPayload | null> {
+// Only the second-factor endpoints may accept this password-only session.
+export async function getPasswordSession(): Promise<SessionPayload | null> {
   const store = await cookies();
   const token = store.get(AUTH_COOKIE)?.value;
 
@@ -47,6 +48,15 @@ export async function getCurrentSession(): Promise<SessionPayload | null> {
     userId: user.id,
     email: user.email,
     role: user.role,
-    sessionId: payload.sessionId
+    sessionId: payload.sessionId,
+    passkeyVerified: payload.passkeyVerified
   };
+}
+
+export async function getCurrentSession(): Promise<SessionPayload | null> {
+  const session = await getPasswordSession();
+  if (!session) return null;
+  const result = await query("select id from public.user_passkeys where user_id=$1 and active limit 1", [session.userId]);
+  if (result.rows.length && !session.passkeyVerified) return null;
+  return session;
 }

@@ -13,24 +13,25 @@ export type SessionPayload = {
   email: string;
   role: Role;
   sessionId?: string;
+  passkeyVerified?: boolean;
 };
 
-export async function createSessionToken(payload: SessionPayload) {
+export async function createSessionToken(payload: SessionPayload, expiresIn = "12h") {
   return new SignJWT(payload)
     .setProtectedHeader({ alg: "HS256" })
     .setJti(randomUUID())
     .setIssuer("pink-ribbon-crm")
     .setAudience("crm-session")
     .setIssuedAt()
-    .setExpirationTime("12h")
+    .setExpirationTime(expiresIn)
     .sign(secret);
 }
 
 export async function verifySessionToken(token: string) {
   try {
     const { payload } = await jwtVerify(token, secret, { algorithms: ["HS256"], issuer: "pink-ribbon-crm", audience: "crm-session" });
-    const validated = z.object({ userId: z.string().regex(/^[1-9]\d*$/), email: z.string().email(), role: z.enum(["admin", "staff", "read_only"]), jti: z.string().uuid(), iat: z.number(), exp: z.number() }).parse(payload);
-    return { userId: validated.userId, email: validated.email, role: validated.role, sessionId: validated.jti, issuedAt: validated.iat };
+    const validated = z.object({ userId: z.string().regex(/^[1-9]\d*$/), email: z.string().email(), role: z.enum(["admin", "staff", "read_only"]), jti: z.string().uuid(), iat: z.number(), exp: z.number(), passkeyVerified: z.boolean().optional() }).parse(payload);
+    return { userId: validated.userId, email: validated.email, role: validated.role, sessionId: validated.jti, issuedAt: validated.iat, passkeyVerified: validated.passkeyVerified === true };
   } catch {
     return null;
   }

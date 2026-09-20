@@ -6,6 +6,7 @@ import { sendQueuedSmsMessage } from "@/server/messaging/twilio";
 
 beforeEach(() => {
   vi.resetAllMocks();
+  vi.stubEnv("VERCEL_ENV", "production");
   vi.stubEnv("TWILIO_ACCOUNT_SID", "AC_test"); vi.stubEnv("TWILIO_AUTH_TOKEN", "test"); vi.stubEnv("TWILIO_MESSAGING_SERVICE_SID", "MG_test");
   sms.getQueuedSmsMessage.mockResolvedValue({ id: "1", to_phone: "+15555550100", body: "Test", scheduled_for: "2026-09-20T12:00:00Z", consent_status: "OPTED_IN" });
   sms.markSmsSending.mockResolvedValue(true);
@@ -13,6 +14,12 @@ beforeEach(() => {
 });
 afterEach(() => { vi.unstubAllGlobals(); vi.unstubAllEnvs(); vi.restoreAllMocks(); });
 describe("Twilio acceptance versus local persistence", () => {
+  it("blocks previews before accessing the message or the provider", async () => {
+    vi.stubEnv("VERCEL_ENV", "preview");
+    await expect(sendQueuedSmsMessage("1")).rejects.toThrow("outside the production");
+    expect(sms.getQueuedSmsMessage).not.toHaveBeenCalled();
+    expect(fetch).not.toHaveBeenCalled();
+  });
   it("does not classify uncertain network submissions as safe failures to retry", async () => {
     vi.mocked(fetch).mockRejectedValue(new Error("Connection reset"));
     await expect(sendQueuedSmsMessage("1")).rejects.toThrow("Do not resend");

@@ -1,6 +1,7 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
 
 import { env } from "@/server/env";
+import { assertOutboundSmsAllowed } from "@/server/security/outbound-policy";
 import {
   getQueuedSmsMessage,
   markSmsFailed,
@@ -29,6 +30,7 @@ export function isTwilioConfigured() {
 }
 
 export async function sendQueuedSmsMessage(messageId: string) {
+  assertOutboundSmsAllowed();
   const message = await getQueuedSmsMessage(messageId);
   if (!message) throw new Error("Text message was not found.");
   if (message.provider_message_sid) return;
@@ -69,6 +71,7 @@ export async function sendQueuedSmsMessage(messageId: string) {
           "Content-Type": "application/x-www-form-urlencoded"
         },
         body: form.toString(),
+        signal: AbortSignal.timeout(15000),
         cache: "no-store"
       }
     );

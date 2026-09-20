@@ -2,6 +2,47 @@
 
 Updated 2026-09-19. This is not a certification or penetration-test report.
 
+## Follow-up security release
+
+- Created `crm_runtime` on an isolated restored Neon branch, verified access,
+  then created the same restricted role in production. Production DATABASE_URL
+  now uses it and is stored as a Production-only sensitive Vercel secret.
+- Removed owner PGUSER/PGPASSWORD environment entries. Production connection
+  and signing secrets are no longer shared with Preview/Development. Those
+  environments require their own isolated database and signing secret before
+  they can run. Historical deployments still contain their original settings;
+  rotate the database owner's credential in a controlled follow-up and review
+  access to historical deployments. The owner account itself was not disabled.
+- Runtime role owns no app tables, cannot create roles/databases, bypass RLS,
+  alter schema, reset numbering sequences, delete donors/gifts, or update/delete
+  audit history. Explicit DELETE grants remain for relationship/soft-credit/
+  installment/invitation replacement operations used by the application.
+- Added passkey setup at /account/security using SimpleWebAuthn. Users must
+  reconfirm their password, create a key, and authenticate with it before it
+  becomes active. Existing users are not automatically enrolled. Active accounts
+  require password plus passkey; challenges are five-minute, single-use, and
+  bound to the user and session, exact origin/RP, and device user verification.
+- Ten high-entropy one-time recovery codes are shown at first activation; only
+  hashes are stored. Codes still require password sign-in. Add a second key.
+  Removing a key requires password confirmation, retains at least one active
+  key, and revokes all sessions. Incomplete keys can be resumed or removed.
+- Passkey migration applied to local test DB, isolated recovery branch and
+  production. No real user was enrolled or passkey device prompt completed by
+  the agent. Device enrollment and real-device end-to-end validation remain
+  user steps. Global mandatory administrator enrollment is not yet enforced.
+- Outbound SMS is blocked unless VERCEL_ENV=production; OUTBOUND_SMS_DISABLED=true
+  is an emergency stop for new submissions. It does not cancel messages already
+  scheduled at Twilio. Provider requests time out after 15 seconds and uncertain
+  submissions remain protected from blind resending.
+- Manual snapshot and separate-branch restore completed. Aggregate record
+  counts and gift totals matched; production was not restored over. See
+  NEON-UPGRADE-REVIEW.md for evidence, retained branch and paid-plan decisions.
+- Local integration tests used only production schema and synthetic rows,
+  rolled back afterward. No live SMS or real imports were run.
+
+The sections below describe the first release and its original limitations;
+the dated follow-up above supersedes completed items, not outstanding ones.
+
 ## Implemented in this change
 
 - Next.js 15.5.25 and patched transitive dependencies; Vitest 4.1.11.
@@ -65,9 +106,9 @@ revoke the current owner or rotate credentials blindly.
 
 ## Still required
 
-- MFA: select a maintained identity provider or vetted WebAuthn/TOTP solution;
-  enroll administrators, issue recovery codes, test recovery, then enforce.
-  No MFA implementation or enrollment was added in this pass.
+- MFA: passkeys are implemented in the follow-up. Enroll administrators on their
+  own devices, securely retain recovery codes, and test recovery before
+  requiring enrollment globally. No user enrollment was performed by the agent.
 - Separate production/staging databases and provider credentials; no real SMS
   senders in previews. Use anonymized fixtures instead of live data for routine tests.
 - Patient/impact access is now admin-only. Define the staff access matrix before
