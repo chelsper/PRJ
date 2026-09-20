@@ -9,22 +9,13 @@ import { SendReceiptButton } from "@/components/gifts/send-receipt-button";
 import { SmsPanel } from "@/components/communications/sms-panel";
 import { writeAuditLog } from "@/server/audit";
 import { getSessionWithCapability, requireCapability } from "@/server/auth/permissions";
-import { listConfigOptionsBySet } from "@/server/data/configurations";
+import { loadDonorTab, resolveDonorTab } from "@/server/data/donor-tab";
 import {
   getDonorProfile,
   getDonorLatestGift,
-  listDonorConnections,
-  listDonorGiving,
-  listDonorNotes,
-  listOrganizationContacts,
-  listOrganizationRelationshipMembers,
-  listDonorOrganizationRelationships,
-  listDonorSoftCredits,
-  type DonorConnectionRow,
   type DonorGiftRow
 } from "@/server/data/donors";
 import type { DonorNoteRow, DonorSoftCreditRow } from "@/server/data/donors";
-import { getSmsPreference, listDonorSmsMessages } from "@/server/data/sms";
 import { isTwilioConfigured } from "@/server/messaging/twilio";
 
 import {
@@ -110,6 +101,7 @@ export default async function DonorProfilePage({
     notFound();
   }
 
+  const activeTab = resolveDonorTab(tab, donor.donor_type);
   await writeAuditLog({
     actorUserId: session.userId,
     action: "donor.view",
@@ -117,27 +109,16 @@ export default async function DonorProfilePage({
     entityId: donor.id,
     status: "success",
     ipAddress,
-    metadata: { tab: tab ?? "profile" }
+    metadata: { tab: activeTab }
   });
 
-  const [connections, giving, softCredits, giftWriteSession, latestGift, relationships, notes, donorWriteSession, organizationContacts, relationshipMembers, optionSets] = await Promise.all([
-    listDonorConnections(id),
-    listDonorGiving(id),
-    listDonorSoftCredits(id),
+  const [tabData, giftWriteSession, latestGift, donorWriteSession] = await Promise.all([
+    loadDonorTab(id, activeTab),
     getSessionWithCapability("gifts:write"),
     getDonorLatestGift(id),
-    listDonorOrganizationRelationships(id),
-    listDonorNotes(id),
-    getSessionWithCapability("donors:write"),
-    listOrganizationContacts(id),
-    listOrganizationRelationshipMembers(id),
-    listConfigOptionsBySet()
+    getSessionWithCapability("donors:write")
   ]);
-  const activeTab =
-    tab === "giving" || tab === "communications" || tab === "notes" || tab === "organization" ? tab : "profile";
-  const [smsPreference, smsMessages] = activeTab === "communications"
-    ? await Promise.all([getSmsPreference(id), listDonorSmsMessages(id)])
-    : [null, []];
+  const { connections, giving, softCredits, relationships, notes, organizationContacts, relationshipMembers, optionSets, smsPreference, smsMessages } = tabData;
   const noteCategoryLabels = Object.fromEntries(optionSets.note_categories.map((option) => [option.value, option.label]));
   const derivedOrganizationContactName = [
     donor.organization_contact_first_name,
