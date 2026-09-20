@@ -1,4 +1,5 @@
 "use client";
+import { fixedFieldOptions } from "@/lib/crm-fields";
 
 import { useEffect, useMemo, useState } from "react";
 
@@ -190,10 +191,7 @@ export function PledgeScheduleFields({
           }}
         >
           <option value="">None</option>
-          <option value="MONTHLY">Monthly</option>
-          <option value="QUARTERLY">Quarterly</option>
-          <option value="ANNUAL">Annual</option>
-          <option value="CUSTOM">Custom</option>
+          {fixedFieldOptions.frequencies.map(option => <option key={option.value} value={option.value}>{option.label}</option>)}
         </select>
       </label>
       <input type="hidden" name="installmentSchedule" value={scheduleJson} />

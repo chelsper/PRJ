@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useRef, useState } from "react";
+import { fieldLabel } from "@/lib/crm-fields";
 
 import { DonorLookup } from "@/components/donors/donor-lookup";
 import { ProfileSavePrompt } from "@/components/donors/profile-save-prompt";
@@ -108,7 +109,7 @@ export function DonorProfileForm({
           {!isOrganization ? (
             <>
               <label>
-                Title
+                {fieldLabel("donor", "title")}
                 <select name="title" defaultValue={donor.title ?? ""}>
                   <option value="">None</option>
                   {titleOptions.map((option) => (
@@ -119,7 +120,7 @@ export function DonorProfileForm({
                 </select>
               </label>
               <label>
-                Gender
+                {fieldLabel("donor", "gender")}
                 <select name="gender" defaultValue={donor.gender ?? ""}>
                   <option value="">None</option>
                   {genderOptions.map((option) => (
@@ -130,34 +131,34 @@ export function DonorProfileForm({
                 </select>
               </label>
               <label>
-                First name
+                {fieldLabel("donor", "first_name")}
                 <input name="firstName" defaultValue={donor.first_name ?? ""} />
               </label>
               <label>
-                Middle name
+                {fieldLabel("donor", "middle_name")}
                 <input name="middleName" defaultValue={donor.middle_name ?? ""} />
               </label>
               <label>
-                Last name
+                {fieldLabel("donor", "last_name")}
                 <input name="lastName" defaultValue={donor.last_name ?? ""} />
               </label>
               <label>
-                Preferred name
+                {fieldLabel("donor", "preferred_name")}
                 <input name="preferredName" defaultValue={donor.preferred_name ?? ""} />
               </label>
             </>
           ) : (
             <>
               <label className="full">
-                Organization name
+                {fieldLabel("donor", "organization_name")}
                 <input name="organizationName" defaultValue={donor.organization_name ?? ""} required />
               </label>
               <label>
-                Organization website
+                {fieldLabel("donor", "organization_website")}
                 <input name="organizationWebsite" type="url" defaultValue={donor.organization_website ?? ""} />
               </label>
               <label>
-                Organization email
+                {fieldLabel("donor", "organization_email")}
                 <input name="organizationEmail" type="email" defaultValue={donor.organization_email ?? ""} />
               </label>
               <input type="hidden" name="title" value={donor.title ?? ""} />
@@ -192,11 +193,11 @@ export function DonorProfileForm({
             </p>
           </div>
           <label>
-            Preferred email
+            {fieldLabel("donor", "primary_email")}
             <input name="primaryEmail" type="email" defaultValue={donor.primary_email ?? ""} />
           </label>
           <label>
-            Preferred email type
+            {fieldLabel("donor", "primary_email_type")}
             <select name="primaryEmailType" defaultValue={donor.primary_email_type ?? ""}>
               <option value="">None</option>
               {emailTypeOptions.map((option) => (
@@ -207,11 +208,11 @@ export function DonorProfileForm({
             </select>
           </label>
           <label>
-            Alternative email
+            {fieldLabel("donor", "alternate_email")}
             <input name="alternateEmail" type="email" defaultValue={donor.alternate_email ?? ""} />
           </label>
           <label>
-            Alternative email type
+            {fieldLabel("donor", "alternate_email_type")}
             <select name="alternateEmailType" defaultValue={donor.alternate_email_type ?? ""}>
               <option value="">None</option>
               {emailTypeOptions.map((option) => (
@@ -222,7 +223,7 @@ export function DonorProfileForm({
             </select>
           </label>
           <label>
-            Primary phone
+            {fieldLabel("donor", "primary_phone")}
             <input name="primaryPhone" defaultValue={donor.primary_phone ?? ""} />
           </label>
           <label>
@@ -234,7 +235,7 @@ export function DonorProfileForm({
             <p className="muted">Primary mailing address for this donor record.</p>
           </div>
           <label>
-            Address type
+            {fieldLabel("address", "address_type")}
             <select name="addressType" defaultValue={donor.address_type ?? addressTypeOptions[0]?.value ?? "Primary"}>
               {addressTypeOptions.map((option) => (
                 <option key={option.id} value={option.value}>
@@ -244,19 +245,19 @@ export function DonorProfileForm({
             </select>
           </label>
           <label>
-            Street 1
+            {fieldLabel("address", "street1")}
             <input name="street1" defaultValue={donor.street1 ?? ""} />
           </label>
           <label>
-            Street 2
+            {fieldLabel("address", "street2")}
             <input name="street2" defaultValue={donor.street2 ?? ""} />
           </label>
           <label>
-            City
+            {fieldLabel("address", "city")}
             <input name="city" defaultValue={donor.city ?? ""} />
           </label>
           <label>
-            State / Region
+            {fieldLabel("address", "state_region")}
             <select name="stateRegion" defaultValue={donor.state_region ?? ""}>
               <option value="">None</option>
               {stateOptions.map((option) => (
@@ -267,11 +268,11 @@ export function DonorProfileForm({
             </select>
           </label>
           <label>
-            Postal code
+            {fieldLabel("address", "postal_code")}
             <input name="postalCode" defaultValue={donor.postal_code ?? ""} />
           </label>
           <label>
-            Country
+            {fieldLabel("address", "country")}
             <input name="country" defaultValue={donor.country ?? "United States"} />
           </label>
           {donor.donor_type === "INDIVIDUAL" && donor.spouse_donor_id ? (
@@ -332,7 +333,7 @@ export function DonorProfileForm({
                   {createSpouseDraft ? (
                     <div className="form-grid full">
                       <label>
-                        Spouse title
+                        {fieldLabel("donor", "spouse_title")}
                         <select name="spouseTitle" defaultValue={donor.spouse_title ?? ""}>
                           <option value="">None</option>
                           {titleOptions.map((option) => (
@@ -343,7 +344,7 @@ export function DonorProfileForm({
                         </select>
                       </label>
                       <label>
-                        Spouse gender
+                        {fieldLabel("donor", "spouse_gender")}
                         <select name="spouseGender" defaultValue={donor.spouse_gender ?? ""}>
                           <option value="">None</option>
                           {genderOptions.map((option) => (
@@ -354,27 +355,27 @@ export function DonorProfileForm({
                         </select>
                       </label>
                       <label>
-                        Spouse first name
+                        {fieldLabel("donor", "spouse_first_name")}
                         <input name="spouseFirstName" defaultValue={donor.spouse_first_name ?? ""} />
                       </label>
                       <label>
-                        Spouse middle name
+                        {fieldLabel("donor", "spouse_middle_name")}
                         <input name="spouseMiddleName" defaultValue={donor.spouse_middle_name ?? ""} />
                       </label>
                       <label>
-                        Spouse last name
+                        {fieldLabel("donor", "spouse_last_name")}
                         <input name="spouseLastName" defaultValue={donor.spouse_last_name ?? ""} />
                       </label>
                       <label>
-                        Spouse preferred email
+                        {fieldLabel("donor", "spouse_preferred_email")}
                         <input name="spousePreferredEmail" type="email" defaultValue={donor.spouse_preferred_email ?? ""} />
                       </label>
                       <label>
-                        Spouse additional email
+                        {fieldLabel("donor", "spouse_alternate_email")}
                         <input name="spouseAlternateEmail" type="email" defaultValue={donor.spouse_alternate_email ?? ""} />
                       </label>
                       <label>
-                        Spouse primary phone
+                        {fieldLabel("donor", "spouse_primary_phone")}
                         <input name="spousePrimaryPhone" defaultValue={donor.spouse_primary_phone ?? ""} />
                       </label>
                       <label className="toggle-row full">

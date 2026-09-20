@@ -1,6 +1,7 @@
 import { query, transaction } from "@/server/db";
 import { assertRecordVersion } from "@/lib/record-version";
 import { importIdentityKeys, type ImportRowResult } from "@/lib/import-review";
+import { constituentImportFields } from "@/lib/crm-fields";
 import { writeAuditLog } from "@/server/audit";
 import { donorInputSchema } from "@/server/validation/donors";
 import type { PoolClient } from "pg";
@@ -1230,27 +1231,10 @@ export async function importConstituentRecords(
     const donorType = normalizedDonorType(normalizedValue(row, "donor_type"), organizationName);
 
     const input = {
+      ...Object.fromEntries(constituentImportFields
+        .filter(field => field.column !== "donor_type" && field.column !== "donor_number")
+        .map(field => [field.formName!, normalizedValue(row, field.column) || undefined])),
       donorType,
-      title: normalizedValue(row, "title") || undefined,
-      gender: normalizedValue(row, "gender") || undefined,
-      firstName: normalizedValue(row, "first_name") || undefined,
-      middleName: normalizedValue(row, "middle_name") || undefined,
-      lastName: normalizedValue(row, "last_name") || undefined,
-      preferredName: normalizedValue(row, "preferred_name") || undefined,
-      organizationName: organizationName || undefined,
-      primaryEmail: normalizedValue(row, "primary_email") || undefined,
-      primaryEmailType: normalizedValue(row, "primary_email_type") || undefined,
-      alternateEmail: normalizedValue(row, "alternate_email") || undefined,
-      alternateEmailType: normalizedValue(row, "alternate_email_type") || undefined,
-      primaryPhone: normalizedValue(row, "primary_phone") || undefined,
-      addressType: normalizedValue(row, "address_type") || undefined,
-      street1: normalizedValue(row, "street1") || undefined,
-      street2: normalizedValue(row, "street2") || undefined,
-      city: normalizedValue(row, "city") || undefined,
-      stateRegion: normalizedValue(row, "state_region") || undefined,
-      postalCode: normalizedValue(row, "postal_code") || undefined,
-      country: normalizedValue(row, "country") || undefined,
-      notes: normalizedValue(row, "notes") || undefined
     };
 
     try {

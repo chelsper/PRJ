@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { giftTypeValues, paymentMethodValues, installmentFrequencyValues } from "@/lib/crm-fields";
 
 const blankToUndefined = <T extends z.ZodTypeAny>(schema: T) =>
   z.preprocess((value) => {
@@ -40,15 +41,7 @@ export const giftInputSchema = z.object({
   appealId: blankToUndefined(z.coerce.number().int().positive()),
   softCreditDonorId: blankToUndefined(z.coerce.number().int().positive()),
   parentPledgeGiftId: blankToUndefined(z.coerce.number().int().positive()),
-  giftType: z.enum([
-    "PLEDGE",
-    "PLEDGE_PAYMENT",
-    "CASH",
-    "STOCK_PROPERTY",
-    "GIFT_IN_KIND",
-    "MATCHING_GIFT_PLEDGE",
-    "MATCHING_GIFT_PAYMENT"
-  ]),
+  giftType: z.enum(giftTypeValues),
   amount: z.coerce.number().positive(),
   receiptAmount: blankToUndefined(z.coerce.number().positive()),
   fairMarketValue: blankToUndefined(z.coerce.number().positive()),
@@ -56,9 +49,9 @@ export const giftInputSchema = z.object({
   pledgeStartDate: blankToUndefined(z.string().date()),
   expectedFulfillmentDate: blankToUndefined(z.string().date()),
   installmentCount: blankToUndefined(z.coerce.number().int().positive().max(120)),
-  installmentFrequency: blankToUndefined(z.enum(["MONTHLY", "QUARTERLY", "ANNUAL", "CUSTOM"])),
+  installmentFrequency: blankToUndefined(z.enum(installmentFrequencyValues)),
   installmentSchedule: installmentScheduleSchema,
-  paymentMethod: blankToUndefined(z.enum(["ACH", "CARD", "CHECK", "CASH", "WIRE", "OTHER"])),
+  paymentMethod: blankToUndefined(z.enum(paymentMethodValues)),
   checkDate: blankToUndefined(z.string().date()),
   referenceNumber: blankToUndefined(z.string().trim().max(100)),
   notes: blankToUndefined(z.string().trim().max(5000))

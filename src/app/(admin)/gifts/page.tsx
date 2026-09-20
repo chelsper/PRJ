@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { fixedFieldOptions, fieldLabel } from "@/lib/crm-fields";
 import type { DonorLookupOption } from "@/components/donors/donor-lookup";
 import { requireCapability } from "@/server/auth/permissions";
 import { DonorLookup } from "@/components/donors/donor-lookup";
@@ -128,15 +129,9 @@ export default async function GiftsPage({
             }))}
           />
           <label>
-            Gift type
+            {fieldLabel("gift", "gift_type")}
             <select id="gift-type" name="giftType" defaultValue={initialGiftType} required>
-              <option value="PLEDGE">Pledge</option>
-              <option value="PLEDGE_PAYMENT">Pledge Payment</option>
-              <option value="CASH">Cash</option>
-              <option value="STOCK_PROPERTY">Stock/Property</option>
-              <option value="GIFT_IN_KIND">Gift-in-Kind</option>
-              <option value="MATCHING_GIFT_PLEDGE">Matching Gift Pledge</option>
-              <option value="MATCHING_GIFT_PAYMENT">Matching Gift Payment</option>
+              {fixedFieldOptions.gift_types.map(option => <option key={option.value} value={option.value}>{option.label}</option>)}
             </select>
           </label>
           <label>
@@ -165,12 +160,7 @@ export default async function GiftsPage({
             Payment method
             <select id="gift-payment-method" name="paymentMethod" defaultValue="">
               <option value="">Not applicable</option>
-              <option value="ACH">ACH</option>
-              <option value="CARD">Card</option>
-              <option value="CHECK">Check</option>
-              <option value="CASH">Cash</option>
-              <option value="WIRE">Wire</option>
-              <option value="OTHER">Other</option>
+              {fixedFieldOptions.payment_methods.map(option => <option key={option.value} value={option.value}>{option.label}</option>)}
             </select>
           </label>
           <PaymentMethodFields paymentMethodFieldId="gift-payment-method" />
