@@ -1,6 +1,6 @@
 "use client";
 
-import { runConstituentImportAction } from "@/app/(admin)/imports/actions";
+import { reviewConstituentImportAction, runConstituentImportAction } from "@/app/(admin)/imports/actions";
 import { CsvImportWorkbench } from "@/components/imports/csv-import-workbench";
 
 type ConstituentImportTargetField =
@@ -99,15 +99,16 @@ export function ConstituentImportWorkbench() {
   return (
     <CsvImportWorkbench<ConstituentImportTargetField>
       eyebrow="Constituent Import"
-      description="Upload a constituent file, review the detected columns, and map them to Pink Ribbon CRM constituent fields before moving into import validation."
+      description="Upload, map fields, review matches, then confirm record creation. Uploading and reviewing do not save constituent records."
       mappingDescription="Map each incoming CSV column to a CRM constituent field, or leave it ignored."
       previewDescription="Preview how the first rows line up after mapping before duplicate checks and constituent creation."
-      footerNote="Review the preview carefully before creating records. Rows that already match existing constituents will be skipped."
+      footerNote="Create-only import: possible matches are skipped, never overwritten. Constituent ID means the existing CRM number, not a Givebutter or DonorPerfect source ID. Leave external source IDs ignored until source-specific matching is available."
       targetFieldOptions={targetFieldOptions}
       headerGuessMap={headerGuessMap}
       submitLabel="Create constituent records"
       submitDescription="Create constituent records from the mapped rows below."
       submitAction={runConstituentImportAction}
+      reviewAction={reviewConstituentImportAction}
     />
   );
 }

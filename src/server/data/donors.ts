@@ -1,5 +1,6 @@
 import { query, transaction } from "@/server/db";
 import { assertRecordVersion } from "@/lib/record-version";
+import { importIdentityKeys, type ImportRowResult } from "@/lib/import-review";
 import { writeAuditLog } from "@/server/audit";
 import { donorInputSchema } from "@/server/validation/donors";
 import type { PoolClient } from "pg";
@@ -1191,7 +1192,8 @@ export async function createDonor(input: unknown, actor: Actor) {
 export async function importConstituentRecords(
   rows: Array<Record<string, string>>,
   mapping: Record<string, string>,
-  actor: Actor
+  actor: Actor,
+  previewOnly = false
 ) {
   function normalizedValue(row: Record<string, string>, targetField: string) {
     const sourceHeader = Object.entries(mapping).find(([, mappedField]) => mappedField === targetField)?.[0];
@@ -1215,6 +1217,11 @@ export async function importConstituentRecords(
   const results: string[] = [];
   let createdCount = 0;
   let skippedCount = 0;
+  let readyCount = 0;
+  let duplicateCount = 0;
+  let errorCount = 0;
+  const rowResults: ImportRowResult[] = [];
+  const seen = new Map<string, number>();
 
   for (let index = 0; index < rows.length; index += 1) {
     const row = rows[index];
@@ -1247,6 +1254,26 @@ export async function importConstituentRecords(
     };
 
     try {
+      const parsed = donorInputSchema.safeParse(input);
+      if (!parsed.success) {
+        errorCount += 1;
+        skippedCount += 1;
+        const message = parsed.error.issues.map(issue => issue.message).join(" ");
+        rowResults.push({ row: index + 1, status: "error", message });
+        results.push(`Row ${index + 1}: ${message}`);
+        continue;
+      }
+      const keys = importIdentityKeys(parsed.data, donorNumber);
+      const earlierRow = keys.map(key => seen.get(key)).find(value => value !== undefined);
+      if (earlierRow !== undefined) {
+        duplicateCount += 1;
+        skippedCount += 1;
+        const message = `Possible duplicate of file row ${earlierRow}; skipped for review.`;
+        rowResults.push({ row: index + 1, status: "duplicate", message });
+        results.push(`Row ${index + 1}: ${message}`);
+        continue;
+      }
+      keys.forEach(key => seen.set(key, index + 1));
       if (donorNumber) {
         const existingByNumber = await query<{ id: string }>(
           `select id::text
@@ -1258,41 +1285,68 @@ export async function importConstituentRecords(
 
         if (existingByNumber.rows[0]) {
           skippedCount += 1;
+          duplicateCount += 1;
+          rowResults.push({ row: index + 1, status: "duplicate", message: `Constituent ID ${donorNumber} already exists; no changes will be made.` });
           results.push(`Row ${index + 1}: skipped because constituent ID ${donorNumber} already exists.`);
           continue;
         }
       }
 
-      const duplicates = await findPotentialDuplicateDonors(input);
+      // Import candidates must be filtered before LIMIT, not scored after a broad name search.
+      const duplicateResult = await query<{ full_name: string }>(
+        `select ${donorFullNameSql} as full_name from public.donors d
+         where d.deleted_at is null and (
+           ($1::text is not null and (lower(d.primary_email::text) = lower($1) or lower(d.alternate_email::text) = lower($1)))
+           or ($2::text = 'INDIVIDUAL' and d.donor_type = 'INDIVIDUAL' and lower(d.first_name) = lower($3::text) and lower(d.last_name) = lower($4::text))
+           or ($2::text = 'ORGANIZATION' and d.donor_type = 'ORGANIZATION' and lower(d.organization_name) = lower($5::text))
+         ) order by d.id limit 1`,
+        [parsed.data.primaryEmail ?? null, donorType, parsed.data.firstName ?? null, parsed.data.lastName ?? null, parsed.data.organizationName ?? null]
+      );
+      const duplicates = duplicateResult.rows;
 
       if (duplicates.length > 0) {
         skippedCount += 1;
+        duplicateCount += 1;
+        rowResults.push({ row: index + 1, status: "duplicate", message: `Possible match: ${duplicates[0].full_name} (email or name). Skipped; no existing record is changed.` });
         results.push(
-          `Row ${index + 1}: skipped as a possible duplicate of ${duplicates[0].full_name} (${duplicates[0].matched_fields.join(", ")}).`
+          `Row ${index + 1}: skipped as a possible duplicate of ${duplicates[0].full_name} (email or name).`
         );
         continue;
       }
 
+      if (previewOnly) {
+        readyCount += 1;
+        rowResults.push({ row: index + 1, status: "new", message: "Ready to create. Matches will be checked again when submitted." });
+        continue;
+      }
       await transaction(async (client) => {
         const parsed = donorInputSchema.parse(input);
         await insertDonorRecord(client, parsed, actor, donorNumber || null);
       });
 
       createdCount += 1;
+      rowResults.push({ row: index + 1, status: "created", message: "Constituent created." });
     } catch (error) {
+      if (previewOnly) throw error;
       skippedCount += 1;
+      errorCount += 1;
+      rowResults.push({ row: index + 1, status: "error", message: "Could not create this record. Check mapped values and existing records before retrying." });
       results.push(`Row ${index + 1}: could not create this record. Check the mapped values and existing records before retrying.`);
     }
   }
 
   return {
-    success: createdCount > 0,
+    success: previewOnly || createdCount > 0,
     message:
-      createdCount > 0
+      previewOnly ? "Review complete. No records have been changed." : createdCount > 0
         ? `Constituent import completed. ${createdCount} record${createdCount === 1 ? "" : "s"} created.`
         : "No constituent records were created.",
     createdCount,
     skippedCount,
+    readyCount,
+    duplicateCount,
+    errorCount,
+    rowResults,
     errors: results
   };
 }

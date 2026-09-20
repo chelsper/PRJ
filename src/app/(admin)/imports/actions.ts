@@ -12,6 +12,18 @@ import { constituentImportSchema } from "@/lib/import-validation";
 import { consumeRateLimit } from "@/server/security/rate-limit";
 import { importFingerprint, reserveImport } from "@/server/security/import-reservation";
 
+export async function reviewConstituentImportAction(payload: {
+  fileName: string; rows: Array<Record<string, string>>; mapping: Record<string, string>;
+}): Promise<import("@/lib/import-review").ImportReview> {
+  await assertSameOrigin();
+  const session = await requireCapability("imports:run");
+  const parsed = constituentImportSchema.safeParse(payload);
+  if (!parsed.success) return { success: false, message: parsed.error.issues[0]?.message ?? "Invalid import.", readyCount: 0, duplicateCount: 0, errorCount: 0, rowResults: [] };
+  await consumeRateLimit({ key: `import-review:${session.userId}`, action: "constituent_import_review", maxAttempts: 10, windowSeconds: 900 });
+  const result = await importConstituentRecords(parsed.data.rows, parsed.data.mapping, { userId: session.userId, ipAddress: null }, true);
+  return { success: result.success, message: result.message, readyCount: result.readyCount, duplicateCount: result.duplicateCount, errorCount: result.errorCount, rowResults: result.rowResults };
+}
+
 export async function runConstituentImportAction(payload: {
   fileName: string;
   rows: Array<Record<string, string>>;
