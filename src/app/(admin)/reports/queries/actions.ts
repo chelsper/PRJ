@@ -5,6 +5,27 @@ import { profileQuerySchema, ruleLabel } from "@/lib/profile-query";
 import { compileProfileQuery } from "@/server/data/profile-query";
 import { transaction } from "@/server/db";
 import { reviewSmsAudience } from "@/lib/sms-audience";
+import { queryResultsCsv } from "@/lib/query-export";
+import { writeAuditLog } from "@/server/audit";
+import { consumeRateLimit } from "@/server/security/rate-limit";
+import { headers } from "next/headers";
+
+export async function exportProfileQuery(raw: unknown, expectedCount: number) {
+  await assertSameOrigin();
+  const session = await requireCapability("exports:run");
+  await consumeRateLimit({ key: `query-export:${session.userId}`, action: "query_export", maxAttempts: 10, windowSeconds: 900 });
+  const result = await previewProfileQuery(raw);
+  if (!result.rows) return { error: result.error ?? "Run the query again." };
+  if (!Number.isInteger(expectedCount) || result.count !== expectedCount) return { error: "The matching count has changed. Run the query again and review the updated results before exporting." };
+  const ipAddress = (await headers()).get("x-forwarded-for")?.split(",")[0]?.trim() ?? null;
+  try {
+    const csv = queryResultsCsv(result.rows, result.count);
+    await writeAuditLog({ actorUserId: session.userId, action: "export.query", entityType: "report", entityId: "profile_query", status: "success", ipAddress, metadata: { rowCount: result.count } });
+    return { csv, count: result.count };
+  } catch (error) {
+    return { error: result.count > 200 ? "Narrow your query to 200 profiles or fewer; no partial export will be downloaded." : result.count === 0 ? "No profiles match." : "Export could not complete. Run the query again before retrying." };
+  }
+}
 
 export async function reviewProfileAudience(raw: unknown) {
   await assertSameOrigin();

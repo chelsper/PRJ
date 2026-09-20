@@ -3,14 +3,18 @@ import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { profileQuerySchema, queryFields, queryOperators, type ProfileQuery } from "@/lib/profile-query";
 import type { QueryOptions } from "@/server/data/profile-query-options";
-import { previewProfileQuery } from "@/app/(admin)/reports/queries/actions";
+import { exportProfileQuery, previewProfileQuery } from "@/app/(admin)/reports/queries/actions";
+import { queryPresets, readSavedQueries, saveQuery, describeQuery, type SavedQuery } from "@/lib/query-workspace";
 import { AudienceReview } from "./audience-review";
 
-const initial: ProfileQuery = { mode: "all", credit: "hard", period: "year", sameGift: true, requireGift: true, rules: [{ field: "total", operator: "gte", value: "500" }] };
-type Saved = { name: string; query: ProfileQuery };
-export function ProfileQueryBuilder({ userId, options }: { userId: string; options: QueryOptions }) {
-  const [value, setValue] = useState<ProfileQuery>(initial);
-  const [saved, setSaved] = useState<Saved[]>([]);
+export function ProfileQueryBuilder({ userId, options, canExport, canReviewAudience }: { userId: string; options: QueryOptions; canExport: boolean; canReviewAudience: boolean }) {
+  const [value, setValue] = useState<ProfileQuery>(queryPresets[0].query);
+  const [saved, setSaved] = useState<SavedQuery[]>([]);
+  const [presetId, setPresetId] = useState(queryPresets[0].id);
+  const [loadedName, setLoadedName] = useState("");
+  const [replaceConfirm, setReplaceConfirm] = useState(false);
+  const [deleteConfirm, setDeleteConfirm] = useState(false);
+  const [exporting, setExporting] = useState(false);
   const [name, setName] = useState("");
   const [notice, setNotice] = useState("");
   const [busy, setBusy] = useState(false);
@@ -19,27 +23,53 @@ export function ProfileQueryBuilder({ userId, options }: { userId: string; optio
   const key = `prj-profile-queries:${userId}:v1`;
   useEffect(() => { try {
     const stored: unknown = JSON.parse(localStorage.getItem(key) ?? "[]");
-    if (Array.isArray(stored)) setSaved(stored.filter(item => typeof item?.name === "string" && profileQuerySchema.safeParse(item.query).success).slice(0, 30));
+    setSaved(readSavedQueries(stored));
   } catch { setNotice("Saved queries could not be loaded from this browser."); } }, [key]);
-  function change(next: ProfileQuery) { request.current++; setValue(next); setResult(null); setBusy(false); setNotice(""); }
+  function change(next: ProfileQuery) { request.current++; setValue(next); setResult(null); setBusy(false); setExporting(false); setNotice(""); setReplaceConfirm(false); setDeleteConfirm(false); setPresetId(""); }
   function edit(index: number, patch: Partial<ProfileQuery["rules"][number]>) { change({ ...value, rules: value.rules.map((rule, i) => i === index ? { ...rule, ...patch } : rule) }); }
+  function persist() {
+    try {
+      const next = saveQuery(saved, name, value);
+      localStorage.setItem(key, JSON.stringify(next)); setSaved(next); setValue(next[next.length - 1].query); setName(name.trim()); setLoadedName(name.trim()); setReplaceConfirm(false); setNotice("Filters saved in this browser. Results are not stored; run the query for current matches.");
+    } catch { setNotice("Could not save. Check the name and conditions, the 30-query limit, and browser storage availability."); }
+  }
+  const summary = describeQuery(value, options);
+  const loaded = saved.find(item => item.name === loadedName);
   return <div className="grid">
+    <section className="card"><h2>Start with a common query</h2>
+      <label>Preset<select value={presetId} onChange={event => {
+        const preset = queryPresets.find(item => item.id === event.target.value);
+        if (!preset) return;
+        change(structuredClone(preset.query)); setPresetId(preset.id); setLoadedName(""); setName(preset.name);
+      }}><option value="">Custom filters</option>{queryPresets.map(preset => <option key={preset.id} value={preset.id}>{preset.name}</option>)}</select></label>
+      <p className="muted">{queryPresets.find(preset => preset.id === presetId)?.description ?? "Adjust the conditions below, then show matching profiles."}</p>
+      <p>Presets change filters only. They do not export records or send messages.</p>
+    </section>
     <section className="card"><h2>Saved Queries</h2><p>Saved in this browser for your account. Only filters are saved, not result records.</p>
-      <div className="form-grid"><label>Load query<select value="" onChange={event => { const selected = saved[Number(event.target.value)]; if (selected) { change(selected.query); setName(selected.name); } }}><option value="">Choose a saved query</option>{saved.map((item, i) => <option key={item.name} value={i}>{item.name}</option>)}</select></label>
-        <label>Query name<input maxLength={80} value={name} onChange={event => setName(event.target.value)} /></label></div>
+      <div className="form-grid"><label>Load query<select value={loadedName} onChange={event => { const selected = saved.find(item => item.name === event.target.value); if (selected) { change(structuredClone(selected.query)); setName(selected.name); setLoadedName(selected.name); } }}><option value="">Choose a saved query</option>{saved.map(item => <option key={item.name} value={item.name}>{item.name}</option>)}</select></label>
+        <label>Query name<input maxLength={80} value={name} onChange={event => { setName(event.target.value); setReplaceConfirm(false); }} /></label></div>
+      {loaded && JSON.stringify(loaded.query) !== JSON.stringify(value) ? <p>Unsaved filter changes. Saving will require confirmation before replacing a query.</p> : null}
+      <div className="button-row">
       <button type="button" onClick={() => { if (!name.trim() || !profileQuerySchema.safeParse(value).success) { setNotice("Enter a name and valid conditions first."); return; }
-        const next = [...saved.filter(item => item.name !== name.trim()), { name: name.trim(), query: value }];
-        if (next.length > 30) { setNotice("Up to 30 queries can be saved. Reuse an existing name to update one."); return; }
-        try { localStorage.setItem(key, JSON.stringify(next)); setSaved(next); setNotice("Query saved. Reusing the name updates it."); } catch { setNotice("This browser could not save the query."); }
+        if (saved.some(item => item.name.toLowerCase() === name.trim().toLowerCase())) { setReplaceConfirm(true); return; }
+        persist();
       }}>Save query</button>
+      {loaded && <button type="button" className="secondary" onClick={() => setDeleteConfirm(true)}>Delete saved query</button>}
+      </div>
+      {replaceConfirm && <div className="conditional-block"><p>Replace the saved filters for "{name.trim()}"?</p><div className="button-row"><button type="button" onClick={persist}>Replace saved filters</button><button type="button" className="secondary" onClick={() => setReplaceConfirm(false)}>Cancel</button></div></div>}
+      {deleteConfirm && loaded && <div className="conditional-block"><p>Delete "{loaded.name}" from this browser? No constituent records will be deleted.</p><div className="button-row"><button type="button" onClick={() => {
+        try { const next = saved.filter(item => item.name !== loadedName); localStorage.setItem(key, JSON.stringify(next)); setSaved(next); setLoadedName(""); setDeleteConfirm(false); setNotice("Saved query deleted. Current filters are unchanged."); }
+        catch { setNotice("The saved query could not be deleted from browser storage."); }
+      }}>Confirm deletion</button><button type="button" className="secondary" onClick={() => setDeleteConfirm(false)}>Cancel</button></div></div>}
     </section>
     <form className="card grid" onSubmit={async event => {
-      event.preventDefault(); const id = ++request.current; setBusy(true); setResult(null); setNotice("");
+      event.preventDefault(); const id = ++request.current; setBusy(true); setExporting(false); setResult(null); setNotice("");
       try { const response = await previewProfileQuery(value); if (id === request.current) setResult(response); }
       catch { if (id === request.current) setNotice("Preview unavailable. Check your connection and sign-in, then try again."); }
       finally { if (id === request.current) setBusy(false); }
     }}>
       <h2>Find Profiles Where…</h2>
+      <aside className="conditional-block" aria-label="Current query summary"><strong>{value.mode === "all" ? "Match all conditions" : "Match any condition"}</strong><ul>{summary.rules.map((rule, index) => <li key={index}>{rule}</li>)}</ul><p>{summary.credit} · Gifts: {summary.period}. {value.requireGift ? "At least one credited gift is required." : "Profiles without gifts may match."}</p></aside>
       <div className="form-grid">
         <label>Match<select value={value.mode} onChange={event => change({ ...value, mode: event.target.value as ProfileQuery["mode"] })}><option value="all">All conditions</option><option value="any">Any condition</option></select></label>
         <label>Gift period<select value={value.period} onChange={event => change({ ...value, period: event.target.value as ProfileQuery["period"], requireGift: event.target.value === "custom" ? true : value.requireGift })}><option value="year">This calendar year</option><option value="all">All time</option><option value="custom">Custom date range</option></select></label>
@@ -64,9 +94,23 @@ export function ProfileQueryBuilder({ userId, options }: { userId: string; optio
     </form>
     <p role="status">{notice}</p>
     {result?.error && <p role="alert" className="danger">{result.error}</p>}
-    {result?.rows && <section className="table-shell"><h2>{result.count} Matching Profiles</h2><p>Showing up to 200 profiles, once each. Matching is not permission to text. Credit labels summarize the selected period. If duplicate soft credits exist for one gift/profile, only the largest is counted; hard credit takes priority.</p>
+    {result?.rows && <section className="table-shell"><h2 role="status">{result.count} Matching Profiles</h2><p>Showing {result.rows.length} of {result.count} profiles, once each. Matching is not permission to text. Credit labels summarize the selected period. If duplicate soft credits exist for one gift/profile, only the largest is counted; hard credit takes priority.</p>
+      {result.count > 200 ? <p role="alert">Narrow your filters to 200 profiles or fewer before exporting or reviewing a texting audience. No partial list will be used.</p> : null}
+      {canExport && result.count > 0 && <div className="button-row"><button type="button" disabled={exporting || result.count > 200} onClick={async () => {
+        const id = request.current; setExporting(true); setNotice("");
+        try {
+          const response = await exportProfileQuery(value, result.count);
+          if (id !== request.current) return;
+          if (response.error || !response.csv) { setNotice(response.error ?? "Export unavailable."); return; }
+          const url = URL.createObjectURL(new Blob(["\uFEFF", response.csv], { type: "text/csv;charset=utf-8" }));
+          const link = document.createElement("a"); link.href = url; link.download = "matching-profiles.csv"; document.body.appendChild(link); link.click(); link.remove();
+          setTimeout(() => URL.revokeObjectURL(url), 1000);
+          setNotice(`CSV prepared for ${response.count} profiles. Check your downloads. Matches were rechecked before export.`);
+        } catch { if (id === request.current) setNotice("Export failed. Check your connection and permissions, then try again."); }
+        finally { if (id === request.current) setExporting(false); }
+      }}>{exporting ? "Preparing CSV..." : `Download ${result.count} matching profiles (CSV)`}</button><span className="muted">Summary columns: ID, name, recognition, credit, and match reasons.</span></div>}
       {!result.rows.length ? <p>No matches. Try removing a condition.</p> : <div className="table-scroll"><table><thead><tr><th>Profile</th><th>Recognition</th><th>Credit in period</th><th>Why matched</th></tr></thead><tbody>{result.rows.map(row => <tr key={row.id}><td><Link href={`/donors/${row.id}`}>{row.name}</Link><br />{row.number}</td><td>${row.total}</td><td>{row.credit}</td><td>{row.reasons.join("; ")}</td></tr>)}</tbody></table></div>}
     </section>}
-    {result?.rows && result.rows.length > 0 && <AudienceReview key={JSON.stringify(value)} query={value} />}
+    {canReviewAudience && result?.rows && result.rows.length > 0 && result.count <= 200 && <AudienceReview key={`${JSON.stringify(value)}:${request.current}`} query={value} />}
   </div>;
 }
